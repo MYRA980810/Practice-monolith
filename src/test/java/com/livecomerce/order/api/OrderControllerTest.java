@@ -146,7 +146,7 @@ class OrderControllerTest {
     @Test
     void finalize_whenOrderAlreadyFinalized_returns409() throws Exception {
         when(finalizeOrderUseCase.finalize(any()))
-                .thenThrow(new InvalidOrderStateException(ORDER_ID, OrderStatus.PENDING, "finalize"));
+                .thenThrow(new InvalidOrderStateException(ORDER_ID, OrderStatus.PAID, "finalize"));
 
         mvc.perform(post("/api/orders/{id}/finalize", ORDER_ID)
                         .contentType(MediaType.APPLICATION_JSON)
