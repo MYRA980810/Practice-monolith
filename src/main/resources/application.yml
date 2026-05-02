@@ -1,0 +1,80 @@
+spring:
+  application:
+    name: livecomerce
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/livecomerce
+    username: ${DB_USERNAME:livecomerce}
+    password: ${DB_PASSWORD:livecomerce}
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 2
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: false
+    show-sql: false
+    open-in-view: false
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+
+  kafka:
+    bootstrap-servers: ${KAFKA_SERVERS:localhost:9092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+    consumer:
+      group-id: livecomerce-group
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+
+server:
+  port: 8080
+
+jwt:
+  secret: ${JWT_SECRET:livecomerce-secret-key-change-this-in-production-min-32chars}
+  expiration-ms: ${JWT_EXPIRATION_MS:86400000}
+
+order:
+  reservation:
+    ttl-minutes: ${ORDER_RESERVATION_TTL_MINUTES:10}
+    expiry-check-ms: ${ORDER_RESERVATION_EXPIRY_CHECK_MS:60000}
+
+app:
+  billing:
+    success-url: ${BILLING_SUCCESS_URL:http://localhost:3000/billing/success}
+    cancel-url: ${BILLING_CANCEL_URL:http://localhost:3000/billing/cancel}
+    stripe:
+      api-key: ${STRIPE_API_KEY:sk_test_placeholder}
+      webhook-secret: ${STRIPE_WEBHOOK_SECRET:whsec_placeholder}
+      price-ids:
+        STARTER: ${STRIPE_PRICE_STARTER:price_placeholder}
+        PRO: ${STRIPE_PRICE_PRO:price_placeholder}
+        AGENCY: ${STRIPE_PRICE_AGENCY:/v1/prices/price_1TRlgz7T0J4CsjNYiKNJXV4I}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,modulith
+  endpoint:
+    health:
+      show-details: when-authorized
+
+logging:
+  level:
+    com.livecomerce: INFO
+    org.springframework.modulith: DEBUG

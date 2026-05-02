@@ -1,0 +1,38 @@
+package com.livecomerce.auth.api;
+
+import com.livecomerce.auth.application.port.in.AuthenticateUserUseCase;
+import com.livecomerce.auth.application.port.in.RegisterUserUseCase;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+@RequestMapping("/api/auth")
+@RequiredArgsConstructor
+class AuthController {
+
+    private final RegisterUserUseCase registerUseCase;
+    private final AuthenticateUserUseCase authenticateUseCase;
+
+    @PostMapping("/register")
+    ResponseEntity<AuthResponse> register(@Valid @RequestBody RegisterRequest request) {
+        var result = registerUseCase.register(new RegisterUserUseCase.RegisterCommand(
+                request.email(), request.password(), request.firstName(),
+                request.lastName(), request.phone(), request.role()
+        ));
+        return ResponseEntity.status(HttpStatus.CREATED).body(AuthResponse.from(result));
+    }
+
+    @PostMapping("/login")
+    ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
+        var result = authenticateUseCase.authenticate(
+                new AuthenticateUserUseCase.AuthCommand(request.email(), request.password())
+        );
+        return ResponseEntity.ok(AuthResponse.from(result));
+    }
+}
