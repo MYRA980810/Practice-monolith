@@ -4,7 +4,7 @@ import com.livecomerce.order.application.port.in.ConfirmItemPaymentUseCase;
 import com.livecomerce.order.application.port.out.LoadOrderPort;
 import com.livecomerce.order.application.port.out.SaveOrderPort;
 import com.livecomerce.order.domain.Order;
-import com.livecomerce.order.domain.OrderItemPaidEvent;
+import com.livecomerce.order.OrderItemPaidEvent;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;

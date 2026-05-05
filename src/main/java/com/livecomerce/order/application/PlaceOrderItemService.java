@@ -1,5 +1,6 @@
 package com.livecomerce.order.application;
 
+import com.livecomerce.catalog.ReserveStockUseCase;
 import com.livecomerce.order.application.port.in.PlaceOrderItemUseCase;
 import com.livecomerce.order.application.port.out.LoadOrderPort;
 import com.livecomerce.order.application.port.out.SaveOrderPort;
@@ -16,12 +17,16 @@ public class PlaceOrderItemService implements PlaceOrderItemUseCase {
 
     private final LoadOrderPort loadOrderPort;
     private final SaveOrderPort saveOrderPort;
+    private final ReserveStockUseCase reserveStockUseCase;
 
     @Value("${order.reservation.ttl-minutes:10}")
     private int ttlMinutes;
 
     @Override
     public Order placeItem(PlaceOrderItemCommand command) {
+        reserveStockUseCase.reserve(new ReserveStockUseCase.ReserveStockCommand(
+                command.productId(), command.quantity()));
+
         var order = loadOrderPort
                 .loadActiveByBuyerAndLive(command.buyerId(), command.liveSessionId())
                 .orElseGet(() -> Order.open(

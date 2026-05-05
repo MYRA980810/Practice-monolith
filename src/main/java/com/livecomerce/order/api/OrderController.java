@@ -61,7 +61,7 @@ class OrderController {
             @Valid @RequestBody FinalizeOrderRequest request,
             @AuthenticationPrincipal UserPrincipal principal) {
 
-        var order = finalizeOrderUseCase.finalize(new FinalizeOrderUseCase.FinalizeOrderCommand(
+        var order = finalizeOrderUseCase.finalizeOrder(new FinalizeOrderUseCase.FinalizeOrderCommand(
                 id, principal.getUserId(), request.shippingAddress()));
         return ResponseEntity.ok(OrderResponse.from(order));
     }

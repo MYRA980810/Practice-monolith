@@ -133,7 +133,7 @@ class OrderControllerTest {
     @Test
     void finalize_withValidRequest_returns200() throws Exception {
         var finalized = Order.open(BUYER_ID, STORE_ID, LIVE_ID, "MXN");
-        when(finalizeOrderUseCase.finalize(any())).thenReturn(finalized);
+        when(finalizeOrderUseCase.finalizeOrder(any())).thenReturn(finalized);
 
         mvc.perform(post("/api/orders/{id}/finalize", ORDER_ID)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -145,7 +145,7 @@ class OrderControllerTest {
 
     @Test
     void finalize_whenOrderAlreadyFinalized_returns409() throws Exception {
-        when(finalizeOrderUseCase.finalize(any()))
+        when(finalizeOrderUseCase.finalizeOrder(any()))
                 .thenThrow(new InvalidOrderStateException(ORDER_ID, OrderStatus.PAID, "finalize"));
 
         mvc.perform(post("/api/orders/{id}/finalize", ORDER_ID)

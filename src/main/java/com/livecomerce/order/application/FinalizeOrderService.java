@@ -4,6 +4,7 @@ import com.livecomerce.order.application.port.in.FinalizeOrderUseCase;
 import com.livecomerce.order.application.port.out.LoadOrderPort;
 import com.livecomerce.order.application.port.out.SaveOrderPort;
 import com.livecomerce.order.domain.Order;
+import com.livecomerce.order.OrderItemReleasedEvent;
 import com.livecomerce.order.domain.OrderFinalizedEvent;
 import com.livecomerce.order.domain.OrderStatus;
 import lombok.RequiredArgsConstructor;
@@ -21,7 +22,7 @@ public class FinalizeOrderService implements FinalizeOrderUseCase {
     private final ApplicationEventPublisher eventPublisher;
 
     @Override
-    public Order finalize(FinalizeOrderCommand command) {
+    public Order finalizeOrder(FinalizeOrderCommand command) {
         var order = loadOrderPort.loadById(command.orderId())
                 .orElseThrow(() -> new OrderNotFoundException(command.orderId()));
 
@@ -33,8 +34,11 @@ public class FinalizeOrderService implements FinalizeOrderUseCase {
             throw new InvalidOrderStateException(command.orderId(), order.getStatus(), "finalize");
         }
 
-        order.finalizeWith(command.shippingAddress());
+        var expired = order.finalizeWith(command.shippingAddress());
         var saved = saveOrderPort.save(order);
+
+        expired.forEach(item -> eventPublisher.publishEvent(
+                new OrderItemReleasedEvent(saved.getId(), item.getId(), item.getProductId(), item.getQuantity())));
 
         eventPublisher.publishEvent(
                 new OrderFinalizedEvent(saved.getId(), saved.getBuyerId(), saved.getStoreId(), saved.getStatus()));

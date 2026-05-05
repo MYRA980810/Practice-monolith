@@ -97,6 +97,21 @@ public class Product implements Persistable<UUID> {
         this.updatedAt = OffsetDateTime.now();
     }
 
+    public void reserveStock(int qty) {
+        this.stock.reserve(qty);
+        this.updatedAt = OffsetDateTime.now();
+    }
+
+    public void releaseStock(int qty) {
+        this.stock.release(qty);
+        this.updatedAt = OffsetDateTime.now();
+    }
+
+    public void sellStock(int qty) {
+        this.stock.sell(qty);
+        this.updatedAt = OffsetDateTime.now();
+    }
+
     public void deactivate() {
         this.active    = false;
         this.updatedAt = OffsetDateTime.now();

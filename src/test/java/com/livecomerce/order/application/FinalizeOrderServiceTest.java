@@ -57,7 +57,7 @@ class FinalizeOrderServiceTest {
         when(saveOrderPort.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         var command = new FinalizeOrderCommand(ORDER_ID, BUYER_ID, "Calle 123, CDMX");
-        var result = service.finalize(command);
+        var result = service.finalizeOrder(command);
 
         assertThat(result.getStatus()).isEqualTo(OrderStatus.PAID);
         assertThat(result.getShippingAddress()).isEqualTo("Calle 123, CDMX");
@@ -69,7 +69,7 @@ class FinalizeOrderServiceTest {
         when(loadOrderPort.loadById(ORDER_ID)).thenReturn(Optional.of(order));
         when(saveOrderPort.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        var result = service.finalize(new FinalizeOrderCommand(ORDER_ID, BUYER_ID, "Calle 123"));
+        var result = service.finalizeOrder(new FinalizeOrderCommand(ORDER_ID, BUYER_ID, "Calle 123"));
 
         assertThat(result.getStatus()).isEqualTo(OrderStatus.CANCELLED);
     }
@@ -80,7 +80,7 @@ class FinalizeOrderServiceTest {
         when(loadOrderPort.loadById(ORDER_ID)).thenReturn(Optional.of(order));
         when(saveOrderPort.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        service.finalize(new FinalizeOrderCommand(ORDER_ID, BUYER_ID, "Calle 123"));
+        service.finalizeOrder(new FinalizeOrderCommand(ORDER_ID, BUYER_ID, "Calle 123"));
 
         @SuppressWarnings("null")
         var captor = ArgumentCaptor.forClass(OrderFinalizedEvent.class);
@@ -93,7 +93,7 @@ class FinalizeOrderServiceTest {
     void finalize_whenOrderNotFound_throwsOrderNotFoundException() {
         when(loadOrderPort.loadById(ORDER_ID)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> service.finalize(new FinalizeOrderCommand(ORDER_ID, BUYER_ID, "x")))
+        assertThatThrownBy(() -> service.finalizeOrder(new FinalizeOrderCommand(ORDER_ID, BUYER_ID, "x")))
                 .isInstanceOf(OrderNotFoundException.class);
 
         verify(saveOrderPort, never()).save(any());
@@ -105,7 +105,7 @@ class FinalizeOrderServiceTest {
         var otherBuyer = UUID.randomUUID();
         when(loadOrderPort.loadById(ORDER_ID)).thenReturn(Optional.of(order));
 
-        assertThatThrownBy(() -> service.finalize(new FinalizeOrderCommand(ORDER_ID, otherBuyer, "x")))
+        assertThatThrownBy(() -> service.finalizeOrder(new FinalizeOrderCommand(ORDER_ID, otherBuyer, "x")))
                 .isInstanceOf(OrderNotOwnedByBuyerException.class);
     }
 
@@ -115,7 +115,7 @@ class FinalizeOrderServiceTest {
         order.finalizeWith("alguna dirección");
         when(loadOrderPort.loadById(ORDER_ID)).thenReturn(Optional.of(order));
 
-        assertThatThrownBy(() -> service.finalize(new FinalizeOrderCommand(ORDER_ID, BUYER_ID, "x")))
+        assertThatThrownBy(() -> service.finalizeOrder(new FinalizeOrderCommand(ORDER_ID, BUYER_ID, "x")))
                 .isInstanceOf(InvalidOrderStateException.class);
     }
 }

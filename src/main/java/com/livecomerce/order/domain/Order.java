@@ -93,20 +93,23 @@ public class Order implements Persistable<UUID> {
         this.updatedAt = OffsetDateTime.now();
     }
 
-    public void expireReservedItems(OffsetDateTime now) {
-        items.stream()
+    public List<OrderItem> expireReservedItems(OffsetDateTime now) {
+        var expired = items.stream()
                 .filter(i -> i.isExpiredAt(now))
-                .forEach(OrderItem::expire);
+                .toList();
+        expired.forEach(OrderItem::expire);
         this.updatedAt = OffsetDateTime.now();
+        return expired;
     }
 
-    public void finalizeWith(String shippingAddress) {
-        expireReservedItems(OffsetDateTime.now());
+    public List<OrderItem> finalizeWith(String shippingAddress) {
+        var expired = expireReservedItems(OffsetDateTime.now());
         boolean hasPaidItems = items.stream()
                 .anyMatch(i -> i.getStatus() == OrderItemStatus.PAID);
         this.status           = hasPaidItems ? OrderStatus.PAID : OrderStatus.CANCELLED;
         this.shippingAddress  = shippingAddress;
         this.updatedAt        = OffsetDateTime.now();
+        return expired;
     }
 
     public void markShipped(String trackingNumber) {

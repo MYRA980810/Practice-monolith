@@ -1,4 +1,4 @@
-package com.livecomerce.order.domain;
+package com.livecomerce.order;
 
 import java.util.UUID;
 

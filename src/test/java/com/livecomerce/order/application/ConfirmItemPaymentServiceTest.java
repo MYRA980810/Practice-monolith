@@ -4,7 +4,7 @@ import com.livecomerce.order.application.port.in.ConfirmItemPaymentUseCase.Confi
 import com.livecomerce.order.application.port.out.LoadOrderPort;
 import com.livecomerce.order.application.port.out.SaveOrderPort;
 import com.livecomerce.order.domain.Order;
-import com.livecomerce.order.domain.OrderItemPaidEvent;
+import com.livecomerce.order.OrderItemPaidEvent;
 import com.livecomerce.order.domain.OrderItemStatus;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

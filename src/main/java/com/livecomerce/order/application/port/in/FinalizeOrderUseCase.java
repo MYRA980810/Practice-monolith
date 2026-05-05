@@ -6,7 +6,7 @@ import java.util.UUID;
 
 public interface FinalizeOrderUseCase {
 
-    Order finalize(FinalizeOrderCommand command);
+    Order finalizeOrder(FinalizeOrderCommand command);
 
     record FinalizeOrderCommand(UUID orderId, UUID buyerId, String shippingAddress) {}
 }
