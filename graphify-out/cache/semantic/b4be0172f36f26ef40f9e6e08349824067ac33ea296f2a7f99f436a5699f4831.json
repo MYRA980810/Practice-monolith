@@ -1,1 +1,0 @@
-{"nodes": [{"id": "get_order_use_case", "label": "GetOrderUseCase", "file_type": "code", "source_file": "src/main/java/com/livecomerce/order/application/port/in/GetOrderUseCase.java", "source_location": null, "source_url": null, "captured_at": null, "author": null, "contributor": null}], "edges": [], "hyperedges": []}
