@@ -112,6 +112,15 @@ public class Product implements Persistable<UUID> {
         this.updatedAt = OffsetDateTime.now();
     }
 
+    public void update(String name, String description, BigDecimal basePrice, String currency, String sku) {
+        this.name        = name;
+        this.description = description;
+        this.basePrice   = basePrice;
+        this.currency    = currency;
+        this.sku         = sku;
+        this.updatedAt   = OffsetDateTime.now();
+    }
+
     public void deactivate() {
         this.active    = false;
         this.updatedAt = OffsetDateTime.now();

@@ -27,4 +27,9 @@ public class GetStoreService implements GetStoreUseCase {
         return loadStorePort.loadBySlug(slug)
                 .orElseThrow(() -> new StoreNotFoundException(slug));
     }
+
+    @Override
+    public UUID getStoreIdByUserId(UUID userId) {
+        return getByUserId(userId).getId();
+    }
 }

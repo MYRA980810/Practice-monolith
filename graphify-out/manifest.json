@@ -1,0 +1,714 @@
+{
+  "/Volumes/DeveloperDisk/Projects/livecomerce/mvnw": {
+    "mtime": 1776488336.0492885,
+    "hash": "ab50dd89da7da2346b28003352eeeeeb"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/test/java/com/livecomerce/LivecomerceApplicationTests.java": {
+    "mtime": 1776488336.0532887,
+    "hash": "64c716a928a4f3154f2da2575fd52146"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/test/java/com/livecomerce/ModularityTests.java": {
+    "mtime": 1776489369.6240952,
+    "hash": "bb4c80ae1486c608beeb37ec4a7d91f8"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/test/java/com/livecomerce/order/api/OrderControllerTest.java": {
+    "mtime": 1777954703.2396462,
+    "hash": "a1b71369966d26843ef1bc76dcc4b9b7"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/test/java/com/livecomerce/order/application/ConfirmItemPaymentServiceTest.java": {
+    "mtime": 1777956258.4937942,
+    "hash": "4aae64f30f2bf323964b80b03eed337f"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/test/java/com/livecomerce/order/application/PlaceOrderItemServiceTest.java": {
+    "mtime": 1777692528.75839,
+    "hash": "298dbc3e2935bbfbef3e51a8497ff532"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/test/java/com/livecomerce/order/application/FinalizeOrderServiceTest.java": {
+    "mtime": 1777954737.9915557,
+    "hash": "7a0c6ddadedccf33d44305787a682c1b"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/test/java/com/livecomerce/order/application/ReservationExpiryServiceTest.java": {
+    "mtime": 1777692590.622032,
+    "hash": "d4b1a1c81573ab98babe8f2e9f257865"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/test/java/com/livecomerce/auth/api/AuthControllerTest.java": {
+    "mtime": 1776739623.8649352,
+    "hash": "7b0758eaf6aecca2826226fe7868572b"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/test/java/com/livecomerce/auth/application/RegisterUserServiceTest.java": {
+    "mtime": 1776739573.361296,
+    "hash": "e9bfdfa186b5b4d4d43ac871623e34f9"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/test/java/com/livecomerce/auth/application/AuthenticateUserServiceTest.java": {
+    "mtime": 1776739552.8370628,
+    "hash": "34194e7741c701db7ad05e46b94fd0dc"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/test/java/com/livecomerce/auth/infrastructure/security/JwtServiceTest.java": {
+    "mtime": 1776739596.4696243,
+    "hash": "3b9a815343528652049ff4b0020c7b70"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/test/java/com/livecomerce/catalog/api/ProductControllerTest.java": {
+    "mtime": 1777003611.011504,
+    "hash": "8917bf8cf9583c0a9cf00fba4513c3fc"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/test/java/com/livecomerce/catalog/application/CreateProductServiceTest.java": {
+    "mtime": 1777003497.8765645,
+    "hash": "11d1fad03e80594fbd9c11bd8c4d0488"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/test/java/com/livecomerce/catalog/application/AddProductImageServiceTest.java": {
+    "mtime": 1777003570.1041818,
+    "hash": "0d025539fc1e5a56773ef2255c392032"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/test/java/com/livecomerce/catalog/application/AddStockServiceTest.java": {
+    "mtime": 1777003555.7389133,
+    "hash": "09b3a7028f1327f6dd865259021d9fb0"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/test/java/com/livecomerce/catalog/application/GetProductServiceTest.java": {
+    "mtime": 1777003522.7271364,
+    "hash": "467ef5683ccc1863814d0ba876b38e91"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/test/java/com/livecomerce/catalog/domain/StockTest.java": {
+    "mtime": 1777003442.805031,
+    "hash": "3f8300851770247fe309b5c5ef3a6992"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/test/java/com/livecomerce/store/api/StoreControllerTest.java": {
+    "mtime": 1776831424.7460566,
+    "hash": "b7e90678006aa0d3856e044610a73ad9"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/test/java/com/livecomerce/store/application/CreateStoreServiceTest.java": {
+    "mtime": 1776831362.6905222,
+    "hash": "e189661335222a6f257dd78f0fde6b6a"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/test/java/com/livecomerce/store/application/GetStoreServiceTest.java": {
+    "mtime": 1776831390.3052056,
+    "hash": "0d245484f69bf230d31a4e5d7dc02fb1"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/resources/db/migration/V4__create_live_tables.sql": {
+    "mtime": 1776489050.8981311,
+    "hash": "b26fcd1e3010076263282e8f0562819c"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/resources/db/migration/V5__create_order_tables.sql": {
+    "mtime": 1777693811.0181818,
+    "hash": "a890a56480431579417abc38d9f94e02"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/resources/db/migration/V3__create_catalog_tables.sql": {
+    "mtime": 1776489028.8329322,
+    "hash": "1b8a6e50d3c66f9699100784f3810af0"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/resources/db/migration/V1__create_users_table.sql": {
+    "mtime": 1776488869.169969,
+    "hash": "3cc9394936671b693313185e7813ad51"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/resources/db/migration/V8__create_event_publication_table.sql": {
+    "mtime": 1776742718.963066,
+    "hash": "ceaa8ad04d220563138822ffe5051696"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/resources/db/migration/V6__create_payment_tables.sql": {
+    "mtime": 1776489105.7182395,
+    "hash": "05438aeca7cafa44062614bdae9e5fb3"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/resources/db/migration/V2__create_store_tables.sql": {
+    "mtime": 1776488915.1999278,
+    "hash": "e0dac1c939157bb6419322074e4705b2"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/resources/db/migration/V7__create_logistics_tables.sql": {
+    "mtime": 1776489126.8248177,
+    "hash": "5f1af3e743c89adfe6efd387c1b87210"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/LivecomerceApplication.java": {
+    "mtime": 1776488336.0532887,
+    "hash": "877751e1e41a974756950703904a1abf"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/order/OrderItemReleasedEvent.java": {
+    "mtime": 1778637634.870047,
+    "hash": "c58dbe63f6d889fa924dd5e3de08417f"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/order/OrderItemPaidEvent.java": {
+    "mtime": 1778637634.8674812,
+    "hash": "fc881a01089e8f877a5e08e4785f13ea"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/order/package-info.java": {
+    "mtime": 1776489358.6969626,
+    "hash": "45711677ce9e0a2bbe7d792f2067d767"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/order/api/ShipOrderRequest.java": {
+    "mtime": 1777692344.7517295,
+    "hash": "16260060a0ba7c68b3a6b30cd4ca006d"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/order/api/OrderController.java": {
+    "mtime": 1778637634.8726094,
+    "hash": "1aa156de6db1ecb997e53788bc044c9b"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/order/api/OrderItemResponse.java": {
+    "mtime": 1777692368.3898826,
+    "hash": "9f0b6b1004aa8a9e029916280c04010b"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/order/api/OrderResponse.java": {
+    "mtime": 1777692390.0352259,
+    "hash": "ca583025bead9ee1b033f99e139010b1"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/order/api/FinalizeOrderRequest.java": {
+    "mtime": 1777692335.637967,
+    "hash": "8844f142ad70e2542325154a1411a4e0"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/order/api/PlaceOrderItemRequest.java": {
+    "mtime": 1778637634.9102733,
+    "hash": "0b86989279ede58e5ee014f84dfb1011"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/order/application/OrderItemNotFoundException.java": {
+    "mtime": 1777691594.2750456,
+    "hash": "8daef76f8349731e288ca7b06c232a97"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/order/application/ShipOrderService.java": {
+    "mtime": 1777692123.8339336,
+    "hash": "6d82de0d26c4660ce5c72bf4fc1f6ac8"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/order/application/ConfirmItemPaymentService.java": {
+    "mtime": 1778637634.9280813,
+    "hash": "2588b574c8f22dcd8b9668de34bb2394"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/order/application/ReservationExpiryService.java": {
+    "mtime": 1778637634.9486976,
+    "hash": "14823ff3ba978845ff67f271bf7ec789"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/order/application/PlaceOrderItemService.java": {
+    "mtime": 1778637634.9469886,
+    "hash": "7a739452195c2ef4087004f588a45c92"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/order/application/InvalidOrderStateException.java": {
+    "mtime": 1777691636.7583275,
+    "hash": "d58e637c9ece2502df7513f7973a1662"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/order/application/GetOrderService.java": {
+    "mtime": 1777691978.4498367,
+    "hash": "38976d717dd21b88864f11017077773f"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/order/application/OrderNotOwnedByBuyerException.java": {
+    "mtime": 1777691612.523611,
+    "hash": "d673da0c0eeea7c2d5950c1171530095"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/order/application/FinalizeOrderService.java": {
+    "mtime": 1778637634.9292142,
+    "hash": "d08a7d6708d2f876156327fd2c0f6cd1"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/order/application/OrderNotFoundException.java": {
+    "mtime": 1777691583.6587796,
+    "hash": "3419d851d80e7ec27172c5d3fa0fec7a"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/order/application/port/in/ShipOrderUseCase.java": {
+    "mtime": 1777691828.6064613,
+    "hash": "5d7df11be017b2b611a27fada4cee7e1"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/order/application/port/in/FinalizeOrderUseCase.java": {
+    "mtime": 1777953285.8737276,
+    "hash": "a723bb4452a32233c57cc3c0c384269b"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/order/application/port/in/GetOrderUseCase.java": {
+    "mtime": 1777691804.6928809,
+    "hash": "fd1c0c10ed1ebcc5db67dfe11aa06706"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/order/application/port/in/ConfirmItemPaymentUseCase.java": {
+    "mtime": 1777691813.417137,
+    "hash": "c5f2487e7ef56dddcc201ae5e40d9126"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/order/application/port/in/PlaceOrderItemUseCase.java": {
+    "mtime": 1778637634.9704163,
+    "hash": "265f794c63e03d6dcdc3d3ac6672e444"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/order/infrastructure/scheduler/ReservationExpiryScheduler.java": {
+    "mtime": 1777692292.4725807,
+    "hash": "146e108b0893cb4b25c5be77b2e8596b"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/order/infrastructure/persistence/OrderPersistenceAdapter.java": {
+    "mtime": 1777692262.8135865,
+    "hash": "b2c488a1125aba2f01165f59144cde05"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/order/infrastructure/persistence/OrderStatusConverter.java": {
+    "mtime": 1777692172.7949924,
+    "hash": "98dd4762e526e67047f1a32a27ce19fb"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/order/infrastructure/persistence/OrderItemStatusConverter.java": {
+    "mtime": 1777692181.7892246,
+    "hash": "6efff778fcce1cf5316f2bcba4e222e8"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/order/infrastructure/persistence/OrderJpaRepository.java": {
+    "mtime": 1777692242.4793644,
+    "hash": "8d00839f85ac2219c32f10bf3bcc85dd"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/order/domain/Order.java": {
+    "mtime": 1777957505.4538803,
+    "hash": "2f995b901aa17a5366525f64a0174d2d"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/order/domain/OrderItem.java": {
+    "mtime": 1778637634.984808,
+    "hash": "d34cb260ed825d5edf3bc6a5626ee14e"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/order/domain/OrderFinalizedEvent.java": {
+    "mtime": 1777691548.3575335,
+    "hash": "1efc457f032dae3b737bec9db5111848"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/order/domain/OrderStatus.java": {
+    "mtime": 1777693796.6996017,
+    "hash": "5f08a00e81db19b5df78d948220c3cdd"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/order/domain/OrderItemStatus.java": {
+    "mtime": 1777691355.8591673,
+    "hash": "c9e4752e7046dcd8d2fd931aac0666d5"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/auth/api/RegisterRequest.java": {
+    "mtime": 1776489329.5228007,
+    "hash": "17648ff36eb02846d3c491b253be79bb"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/auth/api/AuthController.java": {
+    "mtime": 1776489343.636528,
+    "hash": "f93eebc8e03fd1bb2382d487d5d7c2c1"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/auth/api/AuthResponse.java": {
+    "mtime": 1776489332.9801495,
+    "hash": "a650a232338daf0d38587038c0bd1156"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/auth/api/LoginRequest.java": {
+    "mtime": 1776489331.460179,
+    "hash": "dd2c9f850f9d58352629a417d32fcf5b"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/auth/application/RegisterUserService.java": {
+    "mtime": 1776743837.343081,
+    "hash": "84a7e5fb44a8e6775888e9d4fed3ec15"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/auth/application/InvalidCredentialsException.java": {
+    "mtime": 1776659374.671906,
+    "hash": "dedf4e758edf5cc4529a9467282f57cb"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/auth/application/AuthenticateUserService.java": {
+    "mtime": 1776489272.8453925,
+    "hash": "fb86db0879e3ec6895ba53dc3e9c4fee"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/auth/application/EmailAlreadyTakenException.java": {
+    "mtime": 1776659384.657551,
+    "hash": "96050a540ef4f9f3e21ea9f39246abac"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/auth/application/port/in/RegisterUserUseCase.java": {
+    "mtime": 1776489239.3832324,
+    "hash": "c414f1a2a0bac07c02b2243c7987b30e"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/auth/application/port/in/AuthenticateUserUseCase.java": {
+    "mtime": 1776489245.5513508,
+    "hash": "9030d2cf3c880a2f4fa725a257be0162"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/auth/application/port/in/AuthResult.java": {
+    "mtime": 1776489231.7370908,
+    "hash": "b209e55d9b85d900f380ee18abd9add1"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/auth/infrastructure/security/SecurityConfig.java": {
+    "mtime": 1777179046.2516253,
+    "hash": "897defd0075736cc4dd71b692aa46efb"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/auth/infrastructure/security/JwtProperties.java": {
+    "mtime": 1776489294.1107833,
+    "hash": "2bca27154ce21610f8a108a71170e033"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/auth/infrastructure/security/JwtService.java": {
+    "mtime": 1776919841.8347845,
+    "hash": "172beb8613f5300b050860bbfa1f8582"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/auth/infrastructure/security/JwtAuthFilter.java": {
+    "mtime": 1776919211.7925658,
+    "hash": "c53208e6b7eadddd2cc264398579c284"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/auth/infrastructure/security/UserDetailsAdapter.java": {
+    "mtime": 1776831269.4158566,
+    "hash": "1e112318409a4dc848a611261762de75"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/auth/infrastructure/persistence/UserPersistenceAdapter.java": {
+    "mtime": 1776489289.2509868,
+    "hash": "3bec19cb036d6965308af8eaee716cb1"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/auth/infrastructure/persistence/RoleConverter.java": {
+    "mtime": 1776491642.4918785,
+    "hash": "92df010470d2897e8db780a68f5bf61b"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/auth/infrastructure/persistence/UserJpaRepository.java": {
+    "mtime": 1776489281.0544107,
+    "hash": "764a2512e0137aadbc4ce4e7f7ec9fa3"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/auth/domain/UserRegisteredEvent.java": {
+    "mtime": 1776489178.8904514,
+    "hash": "164f921f15f50c56b24b717271e8c825"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/auth/domain/User.java": {
+    "mtime": 1776743588.1625502,
+    "hash": "2d7ad03b0d154618f4f8843271b9a2a5"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/auth/domain/Role.java": {
+    "mtime": 1776491662.59518,
+    "hash": "1b91231f07d8a17ffb4f54a10cd40198"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/notification/package-info.java": {
+    "mtime": 1776489362.2699883,
+    "hash": "7bc11d536aa6f1736374706ee2fd0640"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/payment/package-info.java": {
+    "mtime": 1776489359.4785502,
+    "hash": "1d9af273aa6c75c21972e8305ae1cb3f"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/catalog/ReserveStockUseCase.java": {
+    "mtime": 1778637634.6842527,
+    "hash": "95bf8547ea30c8f054819f78ef30bb43"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/catalog/package-info.java": {
+    "mtime": 1777957349.24814,
+    "hash": "ee5dc98c82d5ab3e9a290ed8e9c1b82b"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/catalog/api/AddStockRequest.java": {
+    "mtime": 1778637634.7028546,
+    "hash": "494b46507074cc92e7552ceabe2aa58c"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/catalog/api/ProductController.java": {
+    "mtime": 1778637634.7150977,
+    "hash": "8091d8518907e1654cc44fed3a3dcba3"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/catalog/api/CreateProductRequest.java": {
+    "mtime": 1778637634.7145457,
+    "hash": "ab0a1f0e9ac1be3a7877433bcd07d29c"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/catalog/api/ProductResponse.java": {
+    "mtime": 1778637634.731817,
+    "hash": "3e8b9a9012fc42f7d50cb4ba2006fa87"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/catalog/api/AddImageRequest.java": {
+    "mtime": 1777002891.8818743,
+    "hash": "994687c154426bda14c0443e70e2dad9"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/catalog/application/CreateProductService.java": {
+    "mtime": 1778637634.7752566,
+    "hash": "8873dd230621d4634560c32750106c1d"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/catalog/application/ProductNotFoundException.java": {
+    "mtime": 1777002240.5376027,
+    "hash": "d04ecf3615f0106c284dd045187b68d9"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/catalog/application/AddStockService.java": {
+    "mtime": 1778637634.7341459,
+    "hash": "ff882da5921b5dc532e51a561dfd3e1f"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/catalog/application/StockEventListener.java": {
+    "mtime": 1778637634.8167605,
+    "hash": "f78cd0facf48d4b1c4e444d9fc84a5d4"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/catalog/application/AddProductImageService.java": {
+    "mtime": 1777002552.1203003,
+    "hash": "85842e2dfcd030ca9a0c7169f5838f79"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/catalog/application/InsufficientStockException.java": {
+    "mtime": 1777002276.4191782,
+    "hash": "043ee3be7872d59e03d6146efcb49d17"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/catalog/application/ReserveStockService.java": {
+    "mtime": 1778637634.7834325,
+    "hash": "d1aa67f742b31310910df1e699c9e6fa"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/catalog/application/GetProductService.java": {
+    "mtime": 1777002438.3908,
+    "hash": "bd90df6002f5088014dcbd411eaa2d0c"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/catalog/application/port/in/AddStockUseCase.java": {
+    "mtime": 1778637634.8261437,
+    "hash": "bb42162701e221594518acd89dbcf276"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/catalog/application/port/in/CreateProductUseCase.java": {
+    "mtime": 1778637634.8273387,
+    "hash": "a5deca4aa78486bbdda0a07670c04e54"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/catalog/application/port/in/GetProductUseCase.java": {
+    "mtime": 1777002162.7732003,
+    "hash": "307c1fc451c84a67c55e1005e69079e0"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/catalog/application/port/in/AddProductImageUseCase.java": {
+    "mtime": 1777002192.0288684,
+    "hash": "35e3ccfd748d39db06da377909c7ca5a"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/catalog/infrastructure/persistence/ProductJpaRepository.java": {
+    "mtime": 1778637634.8654664,
+    "hash": "c2bdeb377a1e8635f711cc2b1e72458b"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/catalog/infrastructure/persistence/ProductPersistenceAdapter.java": {
+    "mtime": 1777956719.0864122,
+    "hash": "257519cab82dbae39f999444c5c96039"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/catalog/domain/Product.java": {
+    "mtime": 1778637634.838593,
+    "hash": "c4d0d0a419d8e2b0b20e0bc72ac1e658"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/catalog/domain/ProductImage.java": {
+    "mtime": 1777001811.79731,
+    "hash": "5060b474e634661c1d42a460925811d7"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/catalog/domain/ProductCreatedEvent.java": {
+    "mtime": 1777002127.7013245,
+    "hash": "051d077b437b5f23b66dd1f2a5827812"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/catalog/domain/Stock.java": {
+    "mtime": 1778637634.8616111,
+    "hash": "8d10491999227dfd53dd4274f8f067ed"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/shared/DomainException.java": {
+    "mtime": 1776659357.8386292,
+    "hash": "c41ebe19b90661e752b98b5c5e90929c"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/shared/Money.java": {
+    "mtime": 1777171594.1522,
+    "hash": "a586195f83f6ecee7857a17175ba0d56"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/shared/UserPrincipal.java": {
+    "mtime": 1776831256.5197682,
+    "hash": "e33274e90bef264f7ed71440853c52a8"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/shared/Plan.java": {
+    "mtime": 1777178133.2806163,
+    "hash": "7700f93034cd046af0ffa80257ca856d"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/shared/api/GlobalExceptionHandler.java": {
+    "mtime": 1776659947.8420348,
+    "hash": "2fd4198303a77929db2f3877de60133e"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/live/package-info.java": {
+    "mtime": 1776489357.2549791,
+    "hash": "db7a43ff9b68cad4fd9fd6f6a4eddd9e"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/logistics/package-info.java": {
+    "mtime": 1776489360.2704535,
+    "hash": "d1e59d28d799b6b580fded06a7283115"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/billing/package-info.java": {
+    "mtime": 1777178985.3964972,
+    "hash": "aa224a1b5a1997197c7c4e15f4557097"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/billing/api/SubscriptionResponse.java": {
+    "mtime": 1777179312.226971,
+    "hash": "853401a3d5f56327ce21cc2a2d0c8651"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/billing/api/CheckoutResponse.java": {
+    "mtime": 1777178786.8484523,
+    "hash": "9ec30f03beb0439c7ef22127abadde59"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/billing/api/BillingController.java": {
+    "mtime": 1777178940.4119284,
+    "hash": "9d39e88afea36c474c6afc85b3d61cfb"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/billing/api/CheckoutRequest.java": {
+    "mtime": 1777178785.8293734,
+    "hash": "89784628b2cd4912be7376a5aa043351"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/billing/application/PaymentGatewayException.java": {
+    "mtime": 1777518497.2064934,
+    "hash": "201fd6cf6be98674418b043d9e33b147"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/billing/application/CreateCheckoutService.java": {
+    "mtime": 1777179020.2821171,
+    "hash": "a24f0471ad91fce4e08f60b98f690c55"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/billing/application/HandleWebhookService.java": {
+    "mtime": 1777178904.8434935,
+    "hash": "fcd7a71900257bdfe114f61d8209f0a0"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/billing/application/SubscriptionNotFoundException.java": {
+    "mtime": 1777178605.254181,
+    "hash": "5e14dae364f25ea37361d220c3129ad1"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/billing/application/GetSubscriptionService.java": {
+    "mtime": 1777178892.3497765,
+    "hash": "1337e5530301b9ea1975252c6f3cdd41"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/billing/application/port/in/GetSubscriptionUseCase.java": {
+    "mtime": 1777178883.559623,
+    "hash": "b4c711cd851a4246a90536ac0e277d2a"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/billing/application/port/in/CreateCheckoutUseCase.java": {
+    "mtime": 1777178881.887706,
+    "hash": "b1281e1e16d6cee420615e7ea61e2bef"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/billing/application/port/in/HandleWebhookUseCase.java": {
+    "mtime": 1777178530.5649557,
+    "hash": "30c2021c467bf938cbc0a96cb6e0c087"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/billing/infrastructure/config/BillingConfig.java": {
+    "mtime": 1777179040.4151149,
+    "hash": "1e26d5eeea27ecc609cc4b50f3b8fc53"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/billing/infrastructure/config/BillingProperties.java": {
+    "mtime": 1777518260.9574142,
+    "hash": "8ef55b4f15f7e64c8970517a094dae5d"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/billing/infrastructure/persistence/GatewayConverter.java": {
+    "mtime": 1777178718.1921809,
+    "hash": "399dc0ccb8db8869b33fb7c78e3aa67c"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/billing/infrastructure/persistence/SubscriptionPersistenceAdapter.java": {
+    "mtime": 1777178915.0054748,
+    "hash": "a0f6b00065320c2808cf687f845763f2"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/billing/infrastructure/persistence/SubscriptionStatusConverter.java": {
+    "mtime": 1777178726.8621106,
+    "hash": "2822ebf82ade8d5858cb8201541eb92d"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/billing/infrastructure/persistence/SubscriptionJpaRepository.java": {
+    "mtime": 1777178910.985053,
+    "hash": "24db8acefc50a7c02089c4d7c7c03d97"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/billing/infrastructure/job/DowngradeExpiredSubscriptionsJob.java": {
+    "mtime": 1777178920.4650707,
+    "hash": "fe62b897e36a4ee07ab7ff19a1ec4283"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/billing/infrastructure/gateway/MercadoPagoGatewayAdapter.java": {
+    "mtime": 1777178753.461515,
+    "hash": "361a3ad4129a618021817d887c8a2266"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/billing/infrastructure/gateway/ConektaGatewayAdapter.java": {
+    "mtime": 1777178757.6056674,
+    "hash": "3b58322380688e2b2e1f33dd859e8c68"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/billing/infrastructure/gateway/StripeGatewayAdapter.java": {
+    "mtime": 1777518514.2218583,
+    "hash": "3972cbcb003b73242156dd83cf7fcbac"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/billing/domain/SubscriptionStatus.java": {
+    "mtime": 1777178251.6541297,
+    "hash": "996888e46e7a85a3afce9eb2badd1a3a"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/billing/domain/PaymentConfirmedEvent.java": {
+    "mtime": 1777178869.0368712,
+    "hash": "c37dfbda18fcd8d4bf78c25806dea318"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/billing/domain/SubscriptionExpiredEvent.java": {
+    "mtime": 1777178870.610338,
+    "hash": "b93610ad97ea1fac4587c7aa8464f352"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/billing/domain/Gateway.java": {
+    "mtime": 1777178242.9826481,
+    "hash": "19c8e77b0694a187bc226f1c69189e3f"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/billing/domain/Subscription.java": {
+    "mtime": 1777178867.9929512,
+    "hash": "326b81f5306f2d603b7fd1f888528e77"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/billing/domain/package-info.java": {
+    "mtime": 1777178987.6502206,
+    "hash": "a28e15291fa158e46b9a2d8d2893d1a9"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/store/api/CreateStoreRequest.java": {
+    "mtime": 1776831074.8768144,
+    "hash": "1670eab5663abeef6fadd3c345a9c793"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/store/api/StoreController.java": {
+    "mtime": 1777178197.7625134,
+    "hash": "56a3949ca79881977292bf721838c1c7"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/store/api/UpdateStoreRequest.java": {
+    "mtime": 1777169371.1100998,
+    "hash": "21ec6c8aea5c6ebd790773a9fb59bfd9"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/store/api/ChangePlanRequest.java": {
+    "mtime": 1777178191.05733,
+    "hash": "f28393fcd43c970e78def9ada80f69e7"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/store/api/PlanResponse.java": {
+    "mtime": 1777178186.2158263,
+    "hash": "1c26ea4e847015925fd1feaa4a6b0526"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/store/api/StoreResponse.java": {
+    "mtime": 1777172043.944053,
+    "hash": "5106c05da7550ded519e3b3ee1d160ad"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/store/application/UpdateStoreService.java": {
+    "mtime": 1777169345.7241294,
+    "hash": "676ac58c653e14fd285aaadd596b94e5"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/store/application/ChangePlanService.java": {
+    "mtime": 1777171130.6763864,
+    "hash": "cc755e27de282ef40cd313e4d4158260"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/store/application/StoreAlreadyExistsException.java": {
+    "mtime": 1776830657.8213112,
+    "hash": "eb60ccc7500d3de94d27ea910849381f"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/store/application/BillingEventListener.java": {
+    "mtime": 1777178954.2953694,
+    "hash": "866b4beef300b2501a66491da27d97d5"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/store/application/GetStoreService.java": {
+    "mtime": 1776830767.406264,
+    "hash": "62f817e6fdf5486ab0ee8e4845cb82c4"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/store/application/CreateStoreService.java": {
+    "mtime": 1776830748.944236,
+    "hash": "009ae6c6233ef48a4135eee3926b946b"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/store/application/SlugAlreadyTakenException.java": {
+    "mtime": 1776830677.8578627,
+    "hash": "3c59da846a9a394607321102f4971bfc"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/store/application/StoreNotFoundException.java": {
+    "mtime": 1776830698.4809065,
+    "hash": "5c226eba8190621d589152a7d1077c68"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/store/application/port/in/GetStoreUseCase.java": {
+    "mtime": 1776830588.469303,
+    "hash": "d1812927427c2cd565b05ad49f99e56f"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/store/application/port/in/CreateStoreUseCase.java": {
+    "mtime": 1776830569.25476,
+    "hash": "1d511e39728e762fb07a0d2a47b77719"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/store/application/port/in/UpdateStoreUseCase.java": {
+    "mtime": 1777169269.986156,
+    "hash": "264daf008663f65feb2b5761f11dc8c7"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/store/application/port/in/ChangePlanUseCase.java": {
+    "mtime": 1777178176.0787094,
+    "hash": "9cab47f10379afe00073449fe27dddfe"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/store/infrastructure/persistence/PlanConverter.java": {
+    "mtime": 1777178168.0638902,
+    "hash": "ae7159f43b41ead53da065eb488dad75"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/store/infrastructure/persistence/StorePersistenceAdapter.java": {
+    "mtime": 1776830968.0333652,
+    "hash": "2f76ce42f9de3293b61532a30851c7e4"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/store/infrastructure/persistence/StoreJpaRepository.java": {
+    "mtime": 1776830860.1532724,
+    "hash": "13578ef9346d1a2faa5b1249b6a17eec"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/store/domain/StoreCreatedEvent.java": {
+    "mtime": 1776830524.9799101,
+    "hash": "fe83f2aef5eb80bb87988fcff0c7270c"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/java/com/livecomerce/store/domain/Store.java": {
+    "mtime": 1777178157.0405288,
+    "hash": "0b760574d941472058112acc2f6d64fe"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/HELP.md": {
+    "mtime": 1776488336.0532887,
+    "hash": "360b1f9c04cd6e74e0743c715c5e7caf"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/docker-compose.yml": {
+    "mtime": 1776828050.9812527,
+    "hash": "ad9597adc262a7d1fbf6d13c65921d08"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/docs/bugfix-auth-403-register.md": {
+    "mtime": 1776743759.4904146,
+    "hash": "a1fbef5a4134d17739c4ce61cde8c930"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/docs/KEDB.md": {
+    "mtime": 1776920332.1060903,
+    "hash": "ea5b6081b5321d910fba4b8a40a924b2"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/resources/application.yml": {
+    "mtime": 1777692430.0541017,
+    "hash": "9ef58f3ef02c7599c36e7d6a7848fbc7"
+  },
+  "/Volumes/DeveloperDisk/Projects/livecomerce/src/main/resources/application-local.yml": {
+    "mtime": 1776743370.9414823,
+    "hash": "3459c8412ce6c5a5d8834b6abec504a1"
+  }
+}

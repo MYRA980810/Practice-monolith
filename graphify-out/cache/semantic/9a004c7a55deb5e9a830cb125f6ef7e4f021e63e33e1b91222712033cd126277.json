@@ -1,0 +1,1 @@
+{"nodes": [{"id": "product_created_event", "label": "ProductCreatedEvent", "file_type": "code", "source_file": "src/main/java/com/livecomerce/catalog/domain/ProductCreatedEvent.java", "source_location": null, "source_url": null, "captured_at": null, "author": null, "contributor": null}], "edges": [], "hyperedges": []}
