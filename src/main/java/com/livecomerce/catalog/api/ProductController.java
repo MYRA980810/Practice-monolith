@@ -3,7 +3,10 @@ package com.livecomerce.catalog.api;
 import com.livecomerce.catalog.application.port.in.AddProductImageUseCase;
 import com.livecomerce.catalog.application.port.in.AddStockUseCase;
 import com.livecomerce.catalog.application.port.in.CreateProductUseCase;
+import com.livecomerce.catalog.application.port.in.DeactivateProductUseCase;
 import com.livecomerce.catalog.application.port.in.GetProductUseCase;
+import com.livecomerce.catalog.application.port.in.RemoveProductImageUseCase;
+import com.livecomerce.catalog.application.port.in.UpdateProductImageUseCase;
 import com.livecomerce.catalog.application.port.in.UpdateProductUseCase;
 import com.livecomerce.shared.UserPrincipal;
 import com.livecomerce.store.application.port.in.GetStoreUseCase;
@@ -29,6 +32,9 @@ class ProductController {
     private final GetProductUseCase getProductUseCase;
     private final AddStockUseCase addStockUseCase;
     private final AddProductImageUseCase addProductImageUseCase;
+    private final UpdateProductImageUseCase updateProductImageUseCase;
+    private final RemoveProductImageUseCase removeProductImageUseCase;
+    private final DeactivateProductUseCase deactivateProductUseCase;
     private final GetStoreUseCase getStoreUseCase;
 
     private static final String DEFAULT_CURRENCY = "MXN";
@@ -65,7 +71,7 @@ class ProductController {
                 request.name(),
                 request.description(),
                 request.basePrice(),
-                request.currency(),
+                Objects.requireNonNullElse(request.currency(), DEFAULT_CURRENCY),
                 request.sku()
         ));
         return ResponseEntity.ok(ProductResponse.from(product));
@@ -115,5 +121,43 @@ class ProductController {
         var product = addProductImageUseCase.addImage(
                 new AddProductImageUseCase.AddImageCommand(id, request.url(), request.position(), request.primary()));
         return ResponseEntity.ok(ProductResponse.from(product));
+    }
+
+    @PutMapping("/{id}/images/{imageId}")
+    @PreAuthorize("hasRole('SELLER')")
+    ResponseEntity<ProductResponse> updateImage(
+            @PathVariable UUID id,
+            @PathVariable UUID imageId,
+            @Valid @RequestBody UpdateImageRequest request,
+            @AuthenticationPrincipal UserPrincipal principal) {
+
+        var storeId = getStoreUseCase.getStoreIdByUserId(principal.getUserId());
+        var product = updateProductImageUseCase.updateImage(new UpdateProductImageUseCase.UpdateImageCommand(
+                id, storeId, imageId, request.url(), request.position(), request.primary()));
+        return ResponseEntity.ok(ProductResponse.from(product));
+    }
+
+    @DeleteMapping("/{id}/images/{imageId}")
+    @PreAuthorize("hasRole('SELLER')")
+    ResponseEntity<ProductResponse> removeImage(
+            @PathVariable UUID id,
+            @PathVariable UUID imageId,
+            @AuthenticationPrincipal UserPrincipal principal) {
+
+        var storeId = getStoreUseCase.getStoreIdByUserId(principal.getUserId());
+        var product = removeProductImageUseCase.removeImage(new RemoveProductImageUseCase.RemoveImageCommand(
+                id, storeId, imageId));
+        return ResponseEntity.ok(ProductResponse.from(product));
+    }
+
+    @PatchMapping("/{id}/deactivate")
+    @PreAuthorize("hasRole('SELLER')")
+    ResponseEntity<Void> deactivate(
+            @PathVariable UUID id,
+            @AuthenticationPrincipal UserPrincipal principal) {
+
+        var storeId = getStoreUseCase.getStoreIdByUserId(principal.getUserId());
+        deactivateProductUseCase.deactivate(new DeactivateProductUseCase.DeactivateCommand(id, storeId));
+        return ResponseEntity.noContent().build();
     }
 }

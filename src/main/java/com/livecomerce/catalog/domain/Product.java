@@ -121,6 +121,23 @@ public class Product implements Persistable<UUID> {
         this.updatedAt   = OffsetDateTime.now();
     }
 
+    public void updateImage(UUID imageId, String url, int position, boolean primary) {
+        var image = images.stream()
+                .filter(i -> i.getId().equals(imageId))
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("Image not found: " + imageId));
+        image.update(url, position, primary);
+        this.updatedAt = OffsetDateTime.now();
+    }
+
+    public void removeImage(UUID imageId) {
+        boolean removed = images.removeIf(i -> i.getId().equals(imageId));
+        if (!removed) {
+            throw new IllegalArgumentException("Image not found: " + imageId);
+        }
+        this.updatedAt = OffsetDateTime.now();
+    }
+
     public void deactivate() {
         this.active    = false;
         this.updatedAt = OffsetDateTime.now();

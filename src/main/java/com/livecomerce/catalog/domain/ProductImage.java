@@ -43,4 +43,10 @@ public class ProductImage {
         image.createdAt = OffsetDateTime.now();
         return image;
     }
+
+    void update(String url, int position, boolean primary) {
+        this.url      = url;
+        this.position = position;
+        this.primary  = primary;
+    }
 }
