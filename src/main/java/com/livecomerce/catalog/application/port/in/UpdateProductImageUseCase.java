@@ -6,7 +6,7 @@ import java.util.UUID;
 
 public interface UpdateProductImageUseCase {
 
-    record UpdateImageCommand(UUID productId, UUID storeId, UUID imageId, String url, int position, boolean primary) {}
+    record UpdateImageCommand(UUID productId, UUID storeId, UUID imageId, String url, Integer position, Boolean primary) {}
 
     Product updateImage(UpdateImageCommand command);
 }

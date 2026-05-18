@@ -6,7 +6,7 @@ import java.util.UUID;
 
 public interface AddProductImageUseCase {
 
-    record AddImageCommand(UUID productId, String url, int position, boolean primary) {}
+    record AddImageCommand(UUID productId, String url, Integer position, Boolean primary) {}
 
     Product addImage(AddImageCommand command);
 }

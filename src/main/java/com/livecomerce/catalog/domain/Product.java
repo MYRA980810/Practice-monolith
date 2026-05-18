@@ -87,8 +87,22 @@ public class Product implements Persistable<UUID> {
         return product;
     }
 
-    public void addImage(String url, int position, boolean primary) {
-        images.add(ProductImage.of(this, url, position, primary));
+    public void addImage(String url, Integer position, Boolean primary) {
+        boolean isPrimary;
+        int pos;
+        if (images.isEmpty()) {
+            isPrimary = true;
+            pos = 0;
+        } else {
+            isPrimary = Boolean.TRUE.equals(primary);
+            pos = position != null ? position : images.size();
+        }
+        if (isPrimary) {
+            images.stream()
+                .filter(ProductImage::isPrimary)
+                .forEach(i -> i.update(i.getUrl(), i.getPosition(), false));
+        }
+        images.add(ProductImage.of(this, url, pos, isPrimary));
         this.updatedAt = OffsetDateTime.now();
     }
 
@@ -121,19 +135,32 @@ public class Product implements Persistable<UUID> {
         this.updatedAt   = OffsetDateTime.now();
     }
 
-    public void updateImage(UUID imageId, String url, int position, boolean primary) {
+    public void updateImage(UUID imageId, String url, Integer position, Boolean primary) {
         var image = images.stream()
                 .filter(i -> i.getId().equals(imageId))
                 .findFirst()
                 .orElseThrow(() -> new IllegalArgumentException("Image not found: " + imageId));
-        image.update(url, position, primary);
+        boolean isPrimary = Boolean.TRUE.equals(primary);
+        int pos = position != null ? position : image.getPosition();
+        if (isPrimary) {
+            images.stream()
+                .filter(i -> !i.getId().equals(imageId) && i.isPrimary())
+                .forEach(i -> i.update(i.getUrl(), i.getPosition(), false));
+        }
+        image.update(url, pos, isPrimary);
         this.updatedAt = OffsetDateTime.now();
     }
 
     public void removeImage(UUID imageId) {
-        boolean removed = images.removeIf(i -> i.getId().equals(imageId));
-        if (!removed) {
-            throw new IllegalArgumentException("Image not found: " + imageId);
+        var image = images.stream()
+                .filter(i -> i.getId().equals(imageId))
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("Image not found: " + imageId));
+        boolean wasPrimary = image.isPrimary();
+        images.remove(image);
+        if (wasPrimary && !images.isEmpty()) {
+            var first = images.getFirst();
+            first.update(first.getUrl(), first.getPosition(), true);
         }
         this.updatedAt = OffsetDateTime.now();
     }
