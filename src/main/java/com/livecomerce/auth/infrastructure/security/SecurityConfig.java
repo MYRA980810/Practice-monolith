@@ -32,7 +32,7 @@ class SecurityConfig {
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/**", "/actuator/health", "/error").permitAll()
-                        .requestMatchers("/api/stores/plans", "/api/stores/{slug}").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/stores", "/api/stores/plans", "/api/stores/{slug}").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/products", "/api/products/{id}").permitAll()
                         .requestMatchers("/api/billing/webhook/**").permitAll()
                         .anyRequest().authenticated()

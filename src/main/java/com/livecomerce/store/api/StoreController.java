@@ -3,7 +3,9 @@ package com.livecomerce.store.api;
 import com.livecomerce.shared.UserPrincipal;
 import com.livecomerce.store.application.port.in.ChangePlanUseCase;
 import com.livecomerce.store.application.port.in.CreateStoreUseCase;
+import com.livecomerce.store.application.port.in.DeactivateStoreUseCase;
 import com.livecomerce.store.application.port.in.GetStoreUseCase;
+import com.livecomerce.store.application.port.in.ListStoresUseCase;
 import com.livecomerce.store.application.port.in.UpdateStoreUseCase;
 import com.livecomerce.shared.Plan;
 import jakarta.validation.Valid;
@@ -13,6 +15,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 
 import java.util.Arrays;
 import java.util.List;
@@ -26,6 +32,15 @@ class StoreController {
     private final GetStoreUseCase getStoreUseCase;
     private final UpdateStoreUseCase updateStoreUseCase;
     private final ChangePlanUseCase changePlanUseCase;
+    private final DeactivateStoreUseCase deactivateStoreUseCase;
+    private final ListStoresUseCase listStoresUseCase;
+
+    @GetMapping
+    ResponseEntity<Page<StoreCardResponse>> listStores(
+            @PageableDefault(size = 20) Pageable pageable) {
+        var page = listStoresUseCase.listActive(pageable).map(StoreCardResponse::from);
+        return ResponseEntity.ok(page);
+    }
 
     @PostMapping
     @PreAuthorize("hasRole('SELLER')")
@@ -50,9 +65,9 @@ class StoreController {
     }
 
     @GetMapping("/{slug}")
-    ResponseEntity<StoreResponse> getBySlug(@PathVariable String slug) {
+    ResponseEntity<StoreCardResponse> getBySlug(@PathVariable String slug) {
         var store = getStoreUseCase.getBySlug(slug);
-        return ResponseEntity.ok(StoreResponse.from(store));
+        return ResponseEntity.ok(StoreCardResponse.from(store));
     }
 
     @PutMapping("/me")
@@ -76,6 +91,13 @@ class StoreController {
                 .map(PlanResponse::from)
                 .toList();
         return ResponseEntity.ok(plans);
+    }
+
+    @DeleteMapping("/me")
+    @PreAuthorize("hasRole('SELLER')")
+    ResponseEntity<Void> deactivateMyStore(@AuthenticationPrincipal UserPrincipal principal) {
+        deactivateStoreUseCase.deactivate(principal.getUserId());
+        return ResponseEntity.noContent().build();
     }
 
     @PutMapping("/me/plan")

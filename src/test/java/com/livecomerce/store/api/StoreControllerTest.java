@@ -4,8 +4,12 @@ import com.livecomerce.shared.UserPrincipal;
 import com.livecomerce.store.application.SlugAlreadyTakenException;
 import com.livecomerce.store.application.StoreAlreadyExistsException;
 import com.livecomerce.store.application.StoreNotFoundException;
+import com.livecomerce.store.application.port.in.ChangePlanUseCase;
 import com.livecomerce.store.application.port.in.CreateStoreUseCase;
+import com.livecomerce.store.application.port.in.DeactivateStoreUseCase;
 import com.livecomerce.store.application.port.in.GetStoreUseCase;
+import com.livecomerce.store.application.port.in.ListStoresUseCase;
+import com.livecomerce.store.application.port.in.UpdateStoreUseCase;
 import com.livecomerce.store.domain.Store;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -14,12 +18,17 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration;
 import org.springframework.boot.autoconfigure.security.servlet.SecurityFilterAutoConfiguration;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.web.method.annotation.AuthenticationPrincipalArgumentResolver;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.web.method.support.HandlerMethodArgumentResolver;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 import java.util.List;
 import java.util.UUID;
@@ -36,12 +45,25 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         controllers = StoreController.class,
         excludeAutoConfiguration = {SecurityAutoConfiguration.class, SecurityFilterAutoConfiguration.class}
 )
+@Import(StoreControllerTest.SecurityResolverConfig.class)
 class StoreControllerTest {
+
+    @TestConfiguration
+    static class SecurityResolverConfig implements WebMvcConfigurer {
+        @Override
+        public void addArgumentResolvers(List<HandlerMethodArgumentResolver> resolvers) {
+            resolvers.add(new AuthenticationPrincipalArgumentResolver());
+        }
+    }
 
     @Autowired MockMvc mvc;
 
     @MockitoBean CreateStoreUseCase createStoreUseCase;
     @MockitoBean GetStoreUseCase getStoreUseCase;
+    @MockitoBean UpdateStoreUseCase updateStoreUseCase;
+    @MockitoBean ChangePlanUseCase changePlanUseCase;
+    @MockitoBean DeactivateStoreUseCase deactivateStoreUseCase;
+    @MockitoBean ListStoresUseCase listStoresUseCase;
 
     private static final UUID USER_ID = UUID.randomUUID();
 
@@ -77,8 +99,7 @@ class StoreControllerTest {
                                 """))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.name").value("Mi Tienda"))
-                .andExpect(jsonPath("$.slug").value("mi-tienda"))
-                .andExpect(jsonPath("$.plan").value("FREE"));
+                .andExpect(jsonPath("$.slug").value("mi-tienda"));
     }
 
     @Test

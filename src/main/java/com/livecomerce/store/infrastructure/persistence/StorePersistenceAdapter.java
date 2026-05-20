@@ -4,6 +4,8 @@ import com.livecomerce.store.application.port.out.LoadStorePort;
 import com.livecomerce.store.application.port.out.SaveStorePort;
 import com.livecomerce.store.domain.Store;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Component;
 
 import java.util.Optional;
@@ -23,6 +25,17 @@ class StorePersistenceAdapter implements LoadStorePort, SaveStorePort {
     @Override
     public Optional<Store> loadBySlug(String slug) {
         return repository.findBySlug(slug);
+    }
+
+    @Override
+    @SuppressWarnings("null")
+    public Optional<Store> loadById(UUID storeId) {
+        return repository.findById(storeId);
+    }
+
+    @Override
+    public Page<Store> loadAllActive(Pageable pageable) {
+        return repository.findAllByActiveTrue(pageable);
     }
 
     @Override

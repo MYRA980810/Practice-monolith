@@ -10,5 +10,7 @@ public interface GetStoreUseCase {
 
     Store getBySlug(String slug);
 
+    Store getById(UUID storeId);
+
     UUID getStoreIdByUserId(UUID userId);
 }
