@@ -3,6 +3,7 @@ package com.livecomerce.store.application;
 import com.livecomerce.store.application.port.out.LoadStorePort;
 import com.livecomerce.store.application.port.out.SaveStorePort;
 import com.livecomerce.store.domain.Store;
+import com.livecomerce.store.domain.SuspensionReason;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -21,33 +22,46 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
-class DeactivateStoreServiceTest {
+class ReactivateStoreServiceTest {
 
     @Mock LoadStorePort loadStorePort;
     @Mock SaveStorePort saveStorePort;
 
-    @InjectMocks DeactivateStoreService service;
+    @InjectMocks ReactivateStoreService service;
 
     private static final UUID USER_ID = UUID.randomUUID();
 
     @Test
-    void deactivate_whenStoreExists_setsActiveToFalseAndSaves() {
+    void reactivate_whenStoreExistsAndNotSuspended_setsActiveAndSaves() {
         var store = Store.create(USER_ID, "Mi Tienda", "mi-tienda", null);
+        store.deactivate();
         when(loadStorePort.loadByUserId(USER_ID)).thenReturn(Optional.of(store));
 
-        service.deactivate(USER_ID);
+        service.reactivate(USER_ID);
 
         var captor = ArgumentCaptor.forClass(Store.class);
         verify(saveStorePort).save(captor.capture());
-        assertThat(captor.getValue().isActive()).isFalse();
+        assertThat(captor.getValue().isActive()).isTrue();
         assertThat(captor.getValue().isSuspended()).isFalse();
     }
 
     @Test
-    void deactivate_whenStoreNotFound_throwsStoreNotFoundException() {
+    void reactivate_whenStoreIsSuspended_throwsAndDoesNotSave() {
+        var store = Store.create(USER_ID, "Mi Tienda", "mi-tienda", null);
+        store.suspend(SuspensionReason.BILLING);
+        when(loadStorePort.loadByUserId(USER_ID)).thenReturn(Optional.of(store));
+
+        assertThatThrownBy(() -> service.reactivate(USER_ID))
+                .isInstanceOf(StoreCannotBeReactivatedException.class);
+
+        verify(saveStorePort, never()).save(any());
+    }
+
+    @Test
+    void reactivate_whenStoreNotFound_throwsStoreNotFoundException() {
         when(loadStorePort.loadByUserId(USER_ID)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> service.deactivate(USER_ID))
+        assertThatThrownBy(() -> service.reactivate(USER_ID))
                 .isInstanceOf(StoreNotFoundException.class);
 
         verify(saveStorePort, never()).save(any());

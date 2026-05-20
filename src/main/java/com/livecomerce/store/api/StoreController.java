@@ -6,6 +6,7 @@ import com.livecomerce.store.application.port.in.CreateStoreUseCase;
 import com.livecomerce.store.application.port.in.DeactivateStoreUseCase;
 import com.livecomerce.store.application.port.in.GetStoreUseCase;
 import com.livecomerce.store.application.port.in.ListStoresUseCase;
+import com.livecomerce.store.application.port.in.ReactivateStoreUseCase;
 import com.livecomerce.store.application.port.in.UpdateStoreUseCase;
 import com.livecomerce.shared.Plan;
 import jakarta.validation.Valid;
@@ -33,6 +34,7 @@ class StoreController {
     private final UpdateStoreUseCase updateStoreUseCase;
     private final ChangePlanUseCase changePlanUseCase;
     private final DeactivateStoreUseCase deactivateStoreUseCase;
+    private final ReactivateStoreUseCase reactivateStoreUseCase;
     private final ListStoresUseCase listStoresUseCase;
 
     @GetMapping
@@ -98,6 +100,14 @@ class StoreController {
     ResponseEntity<Void> deactivateMyStore(@AuthenticationPrincipal UserPrincipal principal) {
         deactivateStoreUseCase.deactivate(principal.getUserId());
         return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/me/reactivate")
+    @PreAuthorize("hasRole('SELLER')")
+    ResponseEntity<StoreResponse> reactivateMyStore(@AuthenticationPrincipal UserPrincipal principal) {
+        reactivateStoreUseCase.reactivate(principal.getUserId());
+        var store = getStoreUseCase.getByUserId(principal.getUserId());
+        return ResponseEntity.ok(StoreResponse.from(store));
     }
 
     @PutMapping("/me/plan")

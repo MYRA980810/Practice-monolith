@@ -10,10 +10,18 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import java.net.URI;
+import java.util.Objects;
+
+import org.springframework.lang.NonNull;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+    @NonNull
+    private static final URI MALFORMED_REQUEST_TYPE =
+            Objects.requireNonNull(URI.create("https://livecomerce.com/errors/malformed-request"));
+
+    @SuppressWarnings("null")
     @ExceptionHandler(DomainException.class)
     ProblemDetail handleDomain(DomainException e) {
         var detail = ProblemDetail.forStatusAndDetail(e.getStatus(), e.getMessage());
@@ -24,7 +32,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(HttpMessageNotReadableException.class)
     ProblemDetail handleNotReadable(HttpMessageNotReadableException e) {
         var detail = ProblemDetail.forStatus(HttpStatus.BAD_REQUEST);
-        detail.setType(URI.create("https://livecomerce.com/errors/malformed-request"));
+        detail.setType(MALFORMED_REQUEST_TYPE);
         detail.setDetail(resolveDetail(e));
         return detail;
     }

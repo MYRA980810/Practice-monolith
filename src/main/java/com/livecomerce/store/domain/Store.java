@@ -1,6 +1,7 @@
 package com.livecomerce.store.domain;
 
 import com.livecomerce.shared.Plan;
+import com.livecomerce.store.application.StoreCannotBeReactivatedException;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -44,6 +45,13 @@ public class Store implements Persistable<UUID> {
     @Column(name = "is_active", nullable = false)
     private boolean active = true;
 
+    @Column(nullable = false)
+    private boolean suspended = false;
+
+    @Column(name = "suspension_reason", length = 20)
+    @Enumerated(EnumType.STRING)
+    private SuspensionReason suspensionReason;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private OffsetDateTime createdAt;
 
@@ -71,11 +79,12 @@ public class Store implements Persistable<UUID> {
         store.name           = name;
         store.slug           = slug;
         store.description    = description;
-        store.plan           = Plan.FREE;
-        store.commissionRate = new BigDecimal("0.0500");
-        store.active         = true;
-        store.createdAt      = OffsetDateTime.now();
-        store.updatedAt      = OffsetDateTime.now();
+        store.plan            = Plan.FREE;
+        store.commissionRate  = new BigDecimal("0.0500");
+        store.active          = true;
+        store.suspended       = false;
+        store.createdAt       = OffsetDateTime.now();
+        store.updatedAt       = OffsetDateTime.now();
         return store;
     }
 
@@ -95,5 +104,25 @@ public class Store implements Persistable<UUID> {
     public void deactivate() {
         this.active    = false;
         this.updatedAt = OffsetDateTime.now();
+    }
+
+    public void reactivate() {
+        if (this.suspended) {
+            throw new StoreCannotBeReactivatedException();
+        }
+        this.active    = true;
+        this.updatedAt = OffsetDateTime.now();
+    }
+
+    public void suspend(SuspensionReason reason) {
+        this.suspended        = true;
+        this.suspensionReason = reason;
+        this.updatedAt        = OffsetDateTime.now();
+    }
+
+    public void unsuspend() {
+        this.suspended        = false;
+        this.suspensionReason = null;
+        this.updatedAt        = OffsetDateTime.now();
     }
 }

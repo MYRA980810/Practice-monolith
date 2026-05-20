@@ -14,6 +14,7 @@ public record StoreResponse(
         String logoUrl,
         PlanResponse plan,
         boolean active,
+        boolean suspended,
         OffsetDateTime createdAt
 ) {
     public static StoreResponse from(Store store) {
@@ -26,6 +27,7 @@ public record StoreResponse(
                 store.getLogoUrl(),
                 PlanResponse.from(store.getPlan()),
                 store.isActive(),
+                store.isSuspended(),
                 store.getCreatedAt()
         );
     }

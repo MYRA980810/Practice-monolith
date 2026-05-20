@@ -1,12 +1,14 @@
 package com.livecomerce.store.api;
 
 import com.livecomerce.shared.UserPrincipal;
+import com.livecomerce.store.application.StoreCannotBeReactivatedException;
 import com.livecomerce.store.application.StoreNotFoundException;
 import com.livecomerce.store.application.port.in.ChangePlanUseCase;
 import com.livecomerce.store.application.port.in.CreateStoreUseCase;
 import com.livecomerce.store.application.port.in.DeactivateStoreUseCase;
 import com.livecomerce.store.application.port.in.GetStoreUseCase;
 import com.livecomerce.store.application.port.in.ListStoresUseCase;
+import com.livecomerce.store.application.port.in.ReactivateStoreUseCase;
 import com.livecomerce.store.application.port.in.UpdateStoreUseCase;
 import com.livecomerce.store.domain.Store;
 import org.junit.jupiter.api.AfterEach;
@@ -39,6 +41,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -65,6 +68,7 @@ class StoreControllerMvpTest {
     @MockitoBean UpdateStoreUseCase updateStoreUseCase;
     @MockitoBean ChangePlanUseCase changePlanUseCase;
     @MockitoBean DeactivateStoreUseCase deactivateStoreUseCase;
+    @MockitoBean ReactivateStoreUseCase reactivateStoreUseCase;
     @MockitoBean ListStoresUseCase listStoresUseCase;
 
     private static final UUID USER_ID = UUID.randomUUID();
@@ -128,5 +132,39 @@ class StoreControllerMvpTest {
         mvc.perform(get("/api/stores"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.totalElements").value(0));
+    }
+
+    // --- POST /api/stores/me/reactivate ---
+
+    @Test
+    void reactivate_whenSucceeds_returns200WithStoreResponse() throws Exception {
+        var store = Store.create(USER_ID, "Mi Tienda", "mi-tienda", null);
+        doNothing().when(reactivateStoreUseCase).reactivate(USER_ID);
+        when(getStoreUseCase.getByUserId(USER_ID)).thenReturn(store);
+
+        mvc.perform(post("/api/stores/me/reactivate"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.active").value(true))
+                .andExpect(jsonPath("$.suspended").exists());
+
+        verify(reactivateStoreUseCase).reactivate(USER_ID);
+    }
+
+    @Test
+    void reactivate_whenSuspended_returns409() throws Exception {
+        doThrow(new StoreCannotBeReactivatedException())
+                .when(reactivateStoreUseCase).reactivate(USER_ID);
+
+        mvc.perform(post("/api/stores/me/reactivate"))
+                .andExpect(status().isConflict());
+    }
+
+    @Test
+    void reactivate_whenStoreNotFound_returns404() throws Exception {
+        doThrow(new StoreNotFoundException(USER_ID.toString()))
+                .when(reactivateStoreUseCase).reactivate(USER_ID);
+
+        mvc.perform(post("/api/stores/me/reactivate"))
+                .andExpect(status().isNotFound());
     }
 }

@@ -9,6 +9,7 @@ import com.livecomerce.store.application.port.in.CreateStoreUseCase;
 import com.livecomerce.store.application.port.in.DeactivateStoreUseCase;
 import com.livecomerce.store.application.port.in.GetStoreUseCase;
 import com.livecomerce.store.application.port.in.ListStoresUseCase;
+import com.livecomerce.store.application.port.in.ReactivateStoreUseCase;
 import com.livecomerce.store.application.port.in.UpdateStoreUseCase;
 import com.livecomerce.store.domain.Store;
 import org.junit.jupiter.api.AfterEach;
@@ -63,6 +64,7 @@ class StoreControllerTest {
     @MockitoBean UpdateStoreUseCase updateStoreUseCase;
     @MockitoBean ChangePlanUseCase changePlanUseCase;
     @MockitoBean DeactivateStoreUseCase deactivateStoreUseCase;
+    @MockitoBean ReactivateStoreUseCase reactivateStoreUseCase;
     @MockitoBean ListStoresUseCase listStoresUseCase;
 
     private static final UUID USER_ID = UUID.randomUUID();
