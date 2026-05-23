@@ -24,6 +24,10 @@ public class AuthenticateUserService implements AuthenticateUserUseCase {
                 .filter(u -> u.isActive())
                 .orElseThrow(InvalidCredentialsException::new);
 
+        if (!user.isVerified()) {
+            throw new AccountNotVerifiedException();
+        }
+
         if (!passwordEncoder.matches(command.password(), user.getPasswordHash())) {
             throw new InvalidCredentialsException();
         }

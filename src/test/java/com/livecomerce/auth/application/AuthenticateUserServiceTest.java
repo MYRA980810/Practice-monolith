@@ -30,6 +30,7 @@ class AuthenticateUserServiceTest {
     @Test
     void authenticate_withValidCredentials_returnsAuthResult() {
         var user = User.create("seller@test.com", "hash", "John", "Doe", "+1234", Role.SELLER);
+        user.verify();
         when(loadUserPort.loadByEmail("seller@test.com")).thenReturn(Optional.of(user));
         when(passwordEncoder.matches("secret", "hash")).thenReturn(true);
         when(tokenGeneratorPort.generate(user)).thenReturn("jwt-token");
@@ -61,8 +62,18 @@ class AuthenticateUserServiceTest {
     }
 
     @Test
+    void authenticate_whenUserNotVerified_throwsAccountNotVerified() {
+        var user = User.create("seller@test.com", "hash", "John", "Doe", "+1234", Role.SELLER);
+        when(loadUserPort.loadByEmail("seller@test.com")).thenReturn(Optional.of(user));
+
+        assertThatThrownBy(() -> service.authenticate(new AuthCommand("seller@test.com", "pass")))
+                .isInstanceOf(AccountNotVerifiedException.class);
+    }
+
+    @Test
     void authenticate_whenPasswordDoesNotMatch_throwsInvalidCredentials() {
         var user = User.create("seller@test.com", "hash", "John", "Doe", "+1234", Role.SELLER);
+        user.verify();
         when(loadUserPort.loadByEmail("seller@test.com")).thenReturn(Optional.of(user));
         when(passwordEncoder.matches("wrong", "hash")).thenReturn(false);
 
