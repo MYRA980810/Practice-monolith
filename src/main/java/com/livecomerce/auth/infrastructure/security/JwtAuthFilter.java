@@ -35,6 +35,12 @@ class JwtAuthFilter extends OncePerRequestFilter {
         try {
             var token = authHeader.substring(7);
             var claims = jwtService.validateAndExtract(token);
+
+            if ("otp-pending".equals(claims.get("type", String.class))) {
+                chain.doFilter(request, response);
+                return;
+            }
+
             var email = claims.get("email", String.class);
 
             if (email != null && SecurityContextHolder.getContext().getAuthentication() == null) {

@@ -13,6 +13,7 @@ import org.springframework.stereotype.Component;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.Map;
+import java.util.UUID;
 
 @Component
 @RequiredArgsConstructor
@@ -41,6 +42,29 @@ class JwtService implements TokenGeneratorPort {
         log.info("Generated token (last 20 chars): ...{}", token.substring(token.length() - 20));
         log.info("Secret length used for signing: {} bytes", properties.secret().getBytes(StandardCharsets.UTF_8).length);
         return token;
+    }
+
+    @Override
+    public String generatePendingToken(User user) {
+        var key = Keys.hmacShaKeyFor(properties.secret().getBytes(StandardCharsets.UTF_8));
+        var now = new Date();
+        return Jwts.builder()
+                .subject(user.getId().toString())
+                .claims(Map.of("type", "otp-pending"))
+                .issuedAt(now)
+                .expiration(new Date(now.getTime() + 5L * 60 * 1000))
+                .signWith(key)
+                .compact();
+    }
+
+    @Override
+    public UUID extractUserIdFromPendingToken(String token) {
+        var claims = validateAndExtract(token);
+        var type = claims.get("type", String.class);
+        if (!"otp-pending".equals(type)) {
+            throw new io.jsonwebtoken.JwtException("Token is not a pending-verification token");
+        }
+        return UUID.fromString(claims.getSubject());
     }
 
     Claims validateAndExtract(String token) {

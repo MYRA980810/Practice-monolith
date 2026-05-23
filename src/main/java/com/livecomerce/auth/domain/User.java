@@ -39,6 +39,9 @@ public class User implements Persistable<UUID> {
     @Column(name = "is_active", nullable = false)
     private boolean active = true;
 
+    @Column(nullable = false)
+    private boolean verified = false;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private OffsetDateTime createdAt;
 
@@ -77,6 +80,11 @@ public class User implements Persistable<UUID> {
 
     public void deactivate() {
         this.active = false;
+        this.updatedAt = OffsetDateTime.now();
+    }
+
+    public void verify() {
+        this.verified = true;
         this.updatedAt = OffsetDateTime.now();
     }
 }

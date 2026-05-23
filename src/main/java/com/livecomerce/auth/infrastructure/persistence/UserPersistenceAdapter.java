@@ -7,6 +7,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 import java.util.Optional;
+import java.util.UUID;
 
 @Component
 @RequiredArgsConstructor
@@ -17,6 +18,11 @@ class UserPersistenceAdapter implements LoadUserPort, SaveUserPort {
     @Override
     public Optional<User> loadByEmail(String email) {
         return repository.findByEmail(email);
+    }
+
+    @Override
+    public Optional<User> loadById(UUID id) {
+        return repository.findById(id);
     }
 
     @Override

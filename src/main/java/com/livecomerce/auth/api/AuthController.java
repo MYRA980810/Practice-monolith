@@ -2,6 +2,8 @@ package com.livecomerce.auth.api;
 
 import com.livecomerce.auth.application.port.in.AuthenticateUserUseCase;
 import com.livecomerce.auth.application.port.in.RegisterUserUseCase;
+import com.livecomerce.auth.application.port.in.ResendOtpUseCase;
+import com.livecomerce.auth.application.port.in.VerifyOtpUseCase;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -18,14 +20,30 @@ class AuthController {
 
     private final RegisterUserUseCase registerUseCase;
     private final AuthenticateUserUseCase authenticateUseCase;
+    private final VerifyOtpUseCase verifyOtpUseCase;
+    private final ResendOtpUseCase resendOtpUseCase;
 
     @PostMapping("/register")
-    ResponseEntity<AuthResponse> register(@Valid @RequestBody RegisterRequest request) {
+    ResponseEntity<VerificationInitiatedResponse> register(@Valid @RequestBody RegisterRequest request) {
         var result = registerUseCase.register(new RegisterUserUseCase.RegisterCommand(
                 request.email(), request.password(), request.firstName(),
                 request.lastName(), request.phone(), request.role()
         ));
-        return ResponseEntity.status(HttpStatus.CREATED).body(AuthResponse.from(result));
+        return ResponseEntity.status(HttpStatus.ACCEPTED).body(VerificationInitiatedResponse.from(result));
+    }
+
+    @PostMapping("/resend-otp")
+    ResponseEntity<Void> resendOtp(@Valid @RequestBody ResendOtpRequest request) {
+        resendOtpUseCase.resend(new ResendOtpUseCase.ResendCommand(request.pendingToken()));
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/verify-otp")
+    ResponseEntity<AuthResponse> verifyOtp(@Valid @RequestBody VerifyOtpRequest request) {
+        var result = verifyOtpUseCase.verify(new VerifyOtpUseCase.VerifyCommand(
+                request.pendingToken(), request.code()
+        ));
+        return ResponseEntity.ok(AuthResponse.from(result));
     }
 
     @PostMapping("/login")

@@ -4,8 +4,12 @@ import com.livecomerce.auth.application.EmailAlreadyTakenException;
 import com.livecomerce.auth.application.InvalidCredentialsException;
 import com.livecomerce.auth.application.port.in.AuthResult;
 import com.livecomerce.auth.application.port.in.AuthenticateUserUseCase;
+import com.livecomerce.auth.application.port.in.PendingVerificationResult;
 import com.livecomerce.auth.application.port.in.RegisterUserUseCase;
+import com.livecomerce.auth.application.port.in.ResendOtpUseCase;
+import com.livecomerce.auth.application.port.in.VerifyOtpUseCase;
 import com.livecomerce.auth.domain.Role;
+import com.livecomerce.auth.domain.VerificationChannel;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration;
@@ -18,6 +22,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -33,12 +38,17 @@ class AuthControllerTest {
 
     @MockitoBean AuthenticateUserUseCase authenticateUseCase;
     @MockitoBean RegisterUserUseCase registerUseCase;
+    @MockitoBean VerifyOtpUseCase verifyOtpUseCase;
+    @MockitoBean ResendOtpUseCase resendOtpUseCase;
 
     private static final UUID USER_ID = UUID.randomUUID();
 
     private static final AuthResult AUTH_RESULT = AuthResult.of(
             "jwt-token", USER_ID, "seller@test.com", Role.SELLER
     );
+
+    private static final PendingVerificationResult PENDING_RESULT =
+            new PendingVerificationResult("pending-jwt", VerificationChannel.EMAIL);
 
     // --- LOGIN ---
 
@@ -96,8 +106,8 @@ class AuthControllerTest {
     // --- REGISTER ---
 
     @Test
-    void register_withValidData_returns201WithToken() throws Exception {
-        when(registerUseCase.register(any())).thenReturn(AUTH_RESULT);
+    void register_withValidData_returns202WithPendingToken() throws Exception {
+        when(registerUseCase.register(any())).thenReturn(PENDING_RESULT);
 
         mvc.perform(post("/api/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -107,13 +117,59 @@ class AuthControllerTest {
                                   "password":"secret123",
                                   "firstName":"John",
                                   "lastName":"Doe",
-                                  "phone":"+1234",
+                                  "phone":"+5491112345678",
                                   "role":"SELLER"
                                 }
                                 """))
-                .andExpect(status().isCreated())
+                .andExpect(status().isAccepted())
+                .andExpect(jsonPath("$.pendingToken").value("pending-jwt"))
+                .andExpect(jsonPath("$.channel").value("EMAIL"));
+    }
+
+    @Test
+    void verifyOtp_withValidCode_returns200WithToken() throws Exception {
+        when(verifyOtpUseCase.verify(any())).thenReturn(AUTH_RESULT);
+
+        mvc.perform(post("/api/auth/verify-otp")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"pendingToken":"pending-jwt","code":"123456"}
+                                """))
+                .andExpect(status().isOk())
                 .andExpect(jsonPath("$.accessToken").value("jwt-token"))
-                .andExpect(jsonPath("$.role").value("SELLER"));
+                .andExpect(jsonPath("$.tokenType").value("Bearer"));
+    }
+
+    @Test
+    void resendOtp_withValidToken_returns204() throws Exception {
+        doNothing().when(resendOtpUseCase).resend(any());
+
+        mvc.perform(post("/api/auth/resend-otp")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"pendingToken":"pending-jwt"}
+                                """))
+                .andExpect(status().isNoContent());
+    }
+
+    @Test
+    void resendOtp_withBlankToken_returns400() throws Exception {
+        mvc.perform(post("/api/auth/resend-otp")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"pendingToken":""}
+                                """))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void verifyOtp_withMissingFields_returns400() throws Exception {
+        mvc.perform(post("/api/auth/verify-otp")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"pendingToken":"","code":""}
+                                """))
+                .andExpect(status().isBadRequest());
     }
 
     @Test
@@ -128,7 +184,7 @@ class AuthControllerTest {
                                   "password":"secret123",
                                   "firstName":"John",
                                   "lastName":"Doe",
-                                  "phone":"+1234",
+                                  "phone":"+5491112345678",
                                   "role":"SELLER"
                                 }
                                 """))
@@ -147,7 +203,7 @@ class AuthControllerTest {
                                   "password":"secret123",
                                   "firstName":"John",
                                   "lastName":"Doe",
-                                  "phone":"+1234",
+                                  "phone":"+5491112345678",
                                   "role":"ADMIN"
                                 }
                                 """))

@@ -13,5 +13,5 @@ public interface RegisterUserUseCase {
             Role role
     ) {}
 
-    AuthResult register(RegisterCommand command);
+    PendingVerificationResult register(RegisterCommand command);
 }
