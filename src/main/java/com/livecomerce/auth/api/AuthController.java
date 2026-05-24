@@ -1,6 +1,7 @@
 package com.livecomerce.auth.api;
 
 import com.livecomerce.auth.application.port.in.AuthenticateUserUseCase;
+import com.livecomerce.auth.application.port.in.CompleteOAuthRegistrationUseCase;
 import com.livecomerce.auth.application.port.in.RegisterUserUseCase;
 import com.livecomerce.auth.application.port.in.ResendOtpUseCase;
 import com.livecomerce.auth.application.port.in.VerifyOtpUseCase;
@@ -22,6 +23,7 @@ class AuthController {
     private final AuthenticateUserUseCase authenticateUseCase;
     private final VerifyOtpUseCase verifyOtpUseCase;
     private final ResendOtpUseCase resendOtpUseCase;
+    private final CompleteOAuthRegistrationUseCase completeOAuthUseCase;
 
     @PostMapping("/register")
     ResponseEntity<VerificationInitiatedResponse> register(@Valid @RequestBody RegisterRequest request) {
@@ -42,6 +44,14 @@ class AuthController {
     ResponseEntity<AuthResponse> verifyOtp(@Valid @RequestBody VerifyOtpRequest request) {
         var result = verifyOtpUseCase.verify(new VerifyOtpUseCase.VerifyCommand(
                 request.pendingToken(), request.code()
+        ));
+        return ResponseEntity.ok(AuthResponse.from(result));
+    }
+
+    @PostMapping("/oauth2/complete")
+    ResponseEntity<AuthResponse> completeOAuth(@Valid @RequestBody CompleteOAuthRequest request) {
+        var result = completeOAuthUseCase.complete(new CompleteOAuthRegistrationUseCase.CompleteOAuthCommand(
+                request.pendingToken(), request.role()
         ));
         return ResponseEntity.ok(AuthResponse.from(result));
     }

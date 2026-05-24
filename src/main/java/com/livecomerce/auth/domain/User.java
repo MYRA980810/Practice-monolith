@@ -21,11 +21,20 @@ public class User implements Persistable<UUID> {
     @Column(nullable = false, unique = true)
     private String email;
 
-    @Column(name = "password_hash", nullable = false)
+    @Column(name = "password_hash")
     private String passwordHash;
 
-    @Column(nullable = false, length = 10)
+    @Column(length = 10)
     private Role role;
+
+    @Column(length = 20)
+    private String provider;
+
+    @Column(name = "provider_id", length = 255)
+    private String providerId;
+
+    @Column(name = "avatar_url", length = 512)
+    private String avatarUrl;
 
     @Column(name = "first_name", nullable = false, length = 100)
     private String firstName;
@@ -83,8 +92,31 @@ public class User implements Persistable<UUID> {
         this.updatedAt = OffsetDateTime.now();
     }
 
+    public static User createFromOAuth(String email, String firstName, String lastName,
+                                       String provider, String providerId, String avatarUrl) {
+        var user = new User();
+        user.id = UUID.randomUUID();
+        user.isNew = true;
+        user.email = email;
+        user.firstName = firstName != null ? firstName : "";
+        user.lastName  = lastName  != null ? lastName  : "";
+        user.provider   = provider;
+        user.providerId = providerId;
+        user.avatarUrl  = avatarUrl;
+        user.active   = true;
+        user.verified = true;
+        user.createdAt = OffsetDateTime.now();
+        user.updatedAt = OffsetDateTime.now();
+        return user;
+    }
+
     public void verify() {
         this.verified = true;
+        this.updatedAt = OffsetDateTime.now();
+    }
+
+    public void assignRole(Role role) {
+        this.role = role;
         this.updatedAt = OffsetDateTime.now();
     }
 

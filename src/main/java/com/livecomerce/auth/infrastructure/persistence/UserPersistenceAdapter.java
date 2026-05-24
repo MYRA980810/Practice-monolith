@@ -26,6 +26,11 @@ class UserPersistenceAdapter implements LoadUserPort, SaveUserPort {
     }
 
     @Override
+    public Optional<User> loadByProvider(String provider, String providerId) {
+        return repository.findByProviderAndProviderId(provider, providerId);
+    }
+
+    @Override
     public User save(User user) {
         return repository.save(user);
     }

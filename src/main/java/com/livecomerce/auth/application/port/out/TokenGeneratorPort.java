@@ -8,4 +8,6 @@ public interface TokenGeneratorPort {
     String generate(User user);
     String generatePendingToken(User user);
     UUID extractUserIdFromPendingToken(String token);
+    String generateOAuthPendingToken(User user);
+    UUID extractUserIdFromOAuthPendingToken(String token);
 }

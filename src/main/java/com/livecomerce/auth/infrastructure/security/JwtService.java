@@ -25,6 +25,9 @@ class JwtService implements TokenGeneratorPort {
 
     @Override
     public String generate(User user) {
+        if (user.getRole() == null) {
+            throw new IllegalStateException("Cannot generate full JWT for user without a role: " + user.getId());
+        }
         var key = Keys.hmacShaKeyFor(properties.secret().getBytes(StandardCharsets.UTF_8));
         var now = new Date();
 
@@ -63,6 +66,29 @@ class JwtService implements TokenGeneratorPort {
         var type = claims.get("type", String.class);
         if (!"otp-pending".equals(type)) {
             throw new io.jsonwebtoken.JwtException("Token is not a pending-verification token");
+        }
+        return UUID.fromString(claims.getSubject());
+    }
+
+    @Override
+    public String generateOAuthPendingToken(User user) {
+        var key = Keys.hmacShaKeyFor(properties.secret().getBytes(StandardCharsets.UTF_8));
+        var now = new Date();
+        return Jwts.builder()
+                .subject(user.getId().toString())
+                .claims(Map.of("type", "oauth-pending"))
+                .issuedAt(now)
+                .expiration(new Date(now.getTime() + 10L * 60 * 1000))
+                .signWith(key)
+                .compact();
+    }
+
+    @Override
+    public UUID extractUserIdFromOAuthPendingToken(String token) {
+        var claims = validateAndExtract(token);
+        var type = claims.get("type", String.class);
+        if (!"oauth-pending".equals(type)) {
+            throw new io.jsonwebtoken.JwtException("Token is not an OAuth pending token");
         }
         return UUID.fromString(claims.getSubject());
     }
