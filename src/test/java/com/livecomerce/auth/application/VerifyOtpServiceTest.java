@@ -7,6 +7,7 @@ import com.livecomerce.auth.application.port.out.TokenGeneratorPort;
 import com.livecomerce.auth.application.port.out.VerifyOtpPort;
 import com.livecomerce.auth.domain.Role;
 import com.livecomerce.auth.domain.User;
+import com.livecomerce.auth.domain.VerificationChannel;
 import io.jsonwebtoken.JwtException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -42,7 +43,7 @@ class VerifyOtpServiceTest {
 
         when(tokenGeneratorPort.extractUserIdFromPendingToken(PENDING_TOKEN)).thenReturn(USER_ID);
         when(loadUserPort.loadById(USER_ID)).thenReturn(Optional.of(user));
-        when(verifyOtpPort.check("+5491111", RAW_CODE)).thenReturn(true);
+        when(verifyOtpPort.check("+5491111", RAW_CODE, VerificationChannel.WHATSAPP)).thenReturn(true);
         when(saveUserPort.save(any())).thenReturn(user);
         when(tokenGeneratorPort.generate(any())).thenReturn("full-jwt");
 
@@ -57,7 +58,7 @@ class VerifyOtpServiceTest {
 
         when(tokenGeneratorPort.extractUserIdFromPendingToken(PENDING_TOKEN)).thenReturn(USER_ID);
         when(loadUserPort.loadById(USER_ID)).thenReturn(Optional.of(user));
-        when(verifyOtpPort.check("u@test.com", RAW_CODE)).thenReturn(false);
+        when(verifyOtpPort.check("u@test.com", RAW_CODE, VerificationChannel.EMAIL)).thenReturn(false);
 
         assertThatThrownBy(() -> service.verify(new VerifyCommand(PENDING_TOKEN, RAW_CODE)))
                 .isInstanceOf(InvalidOtpException.class);
@@ -72,7 +73,7 @@ class VerifyOtpServiceTest {
 
         when(tokenGeneratorPort.extractUserIdFromPendingToken(PENDING_TOKEN)).thenReturn(USER_ID);
         when(loadUserPort.loadById(USER_ID)).thenReturn(Optional.of(user));
-        when(verifyOtpPort.check("u@test.com", RAW_CODE)).thenReturn(false);
+        when(verifyOtpPort.check("u@test.com", RAW_CODE, VerificationChannel.EMAIL)).thenReturn(false);
 
         assertThatThrownBy(() -> service.verify(new VerifyCommand(PENDING_TOKEN, RAW_CODE)))
                 .isInstanceOf(InvalidOtpException.class);
@@ -95,7 +96,7 @@ class VerifyOtpServiceTest {
 
         when(tokenGeneratorPort.extractUserIdFromPendingToken(PENDING_TOKEN)).thenReturn(USER_ID);
         when(loadUserPort.loadById(USER_ID)).thenReturn(Optional.of(user));
-        when(verifyOtpPort.check("u@test.com", RAW_CODE)).thenReturn(true);
+        when(verifyOtpPort.check("u@test.com", RAW_CODE, VerificationChannel.EMAIL)).thenReturn(true);
         when(saveUserPort.save(any())).thenReturn(user);
         when(tokenGeneratorPort.generate(any())).thenReturn("jwt");
 

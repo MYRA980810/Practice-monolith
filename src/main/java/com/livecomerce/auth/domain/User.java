@@ -87,4 +87,12 @@ public class User implements Persistable<UUID> {
         this.verified = true;
         this.updatedAt = OffsetDateTime.now();
     }
+
+    public VerificationChannel resolveChannel() {
+        return phone != null ? VerificationChannel.WHATSAPP : VerificationChannel.EMAIL;
+    }
+
+    public String resolveRecipient() {
+        return phone != null ? phone : email;
+    }
 }

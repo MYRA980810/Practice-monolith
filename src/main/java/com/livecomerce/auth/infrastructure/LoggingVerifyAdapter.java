@@ -19,8 +19,8 @@ class LoggingVerifyAdapter implements VerifyOtpPort {
     }
 
     @Override
-    public boolean check(String to, String code) {
-        log.info("[LOCAL] Check → {} | code: {} → approved", to, code);
+    public boolean check(String to, String code, VerificationChannel channel) {
+        log.info("[LOCAL] Check → {} | channel: {} | code: {} → approved", to, channel, code);
         return true;
     }
 }

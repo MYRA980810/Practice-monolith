@@ -34,24 +34,27 @@ class TwilioVerifyAdapter implements VerifyOtpPort {
 
     @Override
     public void send(String to, VerificationChannel channel) {
+        String twilioChannel = channel == VerificationChannel.WHATSAPP ? "whatsapp" : "email";
+        String formattedTo   = channel == VerificationChannel.WHATSAPP ? "whatsapp:" + to : to;
         try {
-            Verification.creator(serviceSid, to, "sms").create();
+            Verification.creator(serviceSid, formattedTo, twilioChannel).create();
         } catch (Exception e) {
-            log.error("Failed to send Twilio Verify to {}: {}", to, e.getMessage());
+            log.error("Failed to send Twilio Verify to {}: {}", formattedTo, e.getMessage());
             throw new RuntimeException("Failed to send verification code", e);
         }
     }
 
     @Override
-    public boolean check(String to, String code) {
+    public boolean check(String to, String code, VerificationChannel channel) {
+        String formattedTo = channel == VerificationChannel.WHATSAPP ? "whatsapp:" + to : to;
         try {
             VerificationCheck result = VerificationCheck.creator(serviceSid)
-                    .setTo(to)
+                    .setTo(formattedTo)
                     .setCode(code)
                     .create();
             return "approved".equalsIgnoreCase(result.getStatus().toString());
         } catch (Exception e) {
-            log.error("Failed to check Twilio Verify for {}: {}", to, e.getMessage());
+            log.error("Failed to check Twilio Verify for {}: {}", formattedTo, e.getMessage());
             throw new RuntimeException("Failed to check verification code", e);
         }
     }

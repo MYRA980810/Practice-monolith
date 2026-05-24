@@ -8,7 +8,6 @@ import com.livecomerce.auth.application.port.out.TokenGeneratorPort;
 import com.livecomerce.auth.application.port.out.VerifyOtpPort;
 import com.livecomerce.auth.domain.User;
 import com.livecomerce.auth.domain.UserRegisteredEvent;
-import com.livecomerce.auth.domain.VerificationChannel;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -45,9 +44,8 @@ public class RegisterUserService implements RegisterUserUseCase {
         var saved = saveUserPort.save(user);
         eventPublisher.publishEvent(new UserRegisteredEvent(saved.getId(), saved.getEmail(), saved.getRole()));
 
-        var channel = saved.getPhone() != null ? VerificationChannel.WHATSAPP : VerificationChannel.EMAIL;
-        var recipientAddress = channel == VerificationChannel.WHATSAPP ? saved.getPhone() : saved.getEmail();
-        verifyOtpPort.send(recipientAddress, channel);
+        var channel = saved.resolveChannel();
+        verifyOtpPort.send(saved.resolveRecipient(), channel);
 
         return new PendingVerificationResult(tokenGeneratorPort.generatePendingToken(saved), channel);
     }

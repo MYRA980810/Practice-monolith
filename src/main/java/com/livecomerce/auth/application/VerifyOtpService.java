@@ -6,7 +6,6 @@ import com.livecomerce.auth.application.port.out.LoadUserPort;
 import com.livecomerce.auth.application.port.out.SaveUserPort;
 import com.livecomerce.auth.application.port.out.TokenGeneratorPort;
 import com.livecomerce.auth.application.port.out.VerifyOtpPort;
-import com.livecomerce.auth.domain.VerificationChannel;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,10 +27,10 @@ public class VerifyOtpService implements VerifyOtpUseCase {
         var user = loadUserPort.loadById(userId)
                 .orElseThrow(() -> new IllegalStateException("User not found: " + userId));
 
-        var channel = user.getPhone() != null ? VerificationChannel.WHATSAPP : VerificationChannel.EMAIL;
-        var recipientAddress = channel == VerificationChannel.WHATSAPP ? user.getPhone() : user.getEmail();
+        var channel = user.resolveChannel();
+        var recipientAddress = user.resolveRecipient();
 
-        if (!verifyOtpPort.check(recipientAddress, command.code())) {
+        if (!verifyOtpPort.check(recipientAddress, command.code(), channel)) {
             throw new InvalidOtpException();
         }
 
