@@ -18,7 +18,7 @@ public class User implements Persistable<UUID> {
     @Id
     private UUID id;
 
-    @Column(nullable = false, unique = true)
+    @Column(unique = true)
     private String email;
 
     @Column(name = "password_hash")
@@ -72,6 +72,9 @@ public class User implements Persistable<UUID> {
 
     public static User create(String email, String passwordHash, String firstName,
                               String lastName, String phone, Role role) {
+        if (email == null && phone == null) {
+            throw new IllegalArgumentException("Either email or phone must be provided");
+        }
         var user = new User();
         user.id = UUID.randomUUID();
         user.isNew = true;
@@ -121,7 +124,7 @@ public class User implements Persistable<UUID> {
     }
 
     public VerificationChannel resolveChannel() {
-        return phone != null ? VerificationChannel.WHATSAPP : VerificationChannel.EMAIL;
+        return phone != null ? VerificationChannel.SMS : VerificationChannel.EMAIL;
     }
 
     public String resolveRecipient() {

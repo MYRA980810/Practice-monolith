@@ -39,6 +39,6 @@ public class CompleteOAuthRegistrationService implements CompleteOAuthRegistrati
                 saved.getId(),
                 saved.getEmail(),
                 saved.getRole()
-        );
+        ); // OAuth users always have email (from Google)
     }
 }

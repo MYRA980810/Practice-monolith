@@ -7,6 +7,7 @@ import java.util.UUID;
 
 public interface LoadUserPort {
     Optional<User> loadByEmail(String email);
+    Optional<User> loadByPhone(String phone);
     Optional<User> loadById(UUID id);
     Optional<User> loadByProvider(String provider, String providerId);
 }

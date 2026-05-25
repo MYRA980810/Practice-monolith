@@ -1,9 +1,9 @@
 package com.livecomerce.auth.api;
 
-import jakarta.validation.constraints.Email;
+import com.livecomerce.auth.api.validation.ValidContact;
 import jakarta.validation.constraints.NotBlank;
 
 public record LoginRequest(
-        @Email @NotBlank String email,
+        @ValidContact @NotBlank String contact,
         @NotBlank String password
 ) {}

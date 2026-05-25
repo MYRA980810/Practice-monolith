@@ -10,6 +10,7 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
+import java.util.UUID;
 
 @Component
 @RequiredArgsConstructor
@@ -18,15 +19,24 @@ class UserDetailsAdapter implements UserDetailsService {
     private final LoadUserPort loadUserPort;
 
     @Override
-    public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
-        return loadUserPort.loadByEmail(email)
-                .map(user -> new UserPrincipal(
-                        user.getId(),
-                        user.getEmail(),
-                        user.getPasswordHash(),
-                        List.of(new SimpleGrantedAuthority("ROLE_" + user.getRole().name())),
-                        user.isActive()
-                ))
-                .orElseThrow(() -> new UsernameNotFoundException("User not found: " + email));
+    public UserDetails loadUserByUsername(String id) throws UsernameNotFoundException {
+        UUID userId;
+        try {
+            userId = UUID.fromString(id);
+        } catch (IllegalArgumentException e) {
+            throw new UsernameNotFoundException("Invalid user id: " + id);
+        }
+        return loadUserPort.loadById(userId)
+                .map(user -> {
+                    var contact = user.getEmail() != null ? user.getEmail() : user.getPhone();
+                    return new UserPrincipal(
+                            user.getId(),
+                            contact,
+                            user.getPasswordHash(),
+                            List.of(new SimpleGrantedAuthority("ROLE_" + user.getRole().name())),
+                            user.isActive()
+                    );
+                })
+                .orElseThrow(() -> new UsernameNotFoundException("User not found: " + id));
     }
 }

@@ -37,7 +37,8 @@ public class VerifyOtpService implements VerifyOtpUseCase {
         user.verify();
         var saved = saveUserPort.save(user);
 
-        return AuthResult.of(tokenGeneratorPort.generate(saved), saved.getId(), saved.getEmail(), saved.getRole());
+        var contact = saved.getEmail() != null ? saved.getEmail() : saved.getPhone();
+        return AuthResult.of(tokenGeneratorPort.generate(saved), saved.getId(), contact, saved.getRole());
     }
 
     private java.util.UUID extractUserId(String pendingToken) {

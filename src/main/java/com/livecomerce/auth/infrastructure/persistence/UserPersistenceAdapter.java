@@ -21,6 +21,11 @@ class UserPersistenceAdapter implements LoadUserPort, SaveUserPort {
     }
 
     @Override
+    public Optional<User> loadByPhone(String phone) {
+        return repository.findByPhone(phone);
+    }
+
+    @Override
     public Optional<User> loadById(UUID id) {
         return repository.findById(id);
     }

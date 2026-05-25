@@ -45,7 +45,7 @@ class ResendOtpServiceTest {
         var toCaptor = ArgumentCaptor.forClass(String.class);
         var channelCaptor = ArgumentCaptor.forClass(VerificationChannel.class);
         verify(verifyOtpPort).send(toCaptor.capture(), channelCaptor.capture());
-        assertThat(channelCaptor.getValue()).isEqualTo(VerificationChannel.WHATSAPP);
+        assertThat(channelCaptor.getValue()).isEqualTo(VerificationChannel.SMS);
         assertThat(toCaptor.getValue()).isEqualTo("+5491111");
     }
 

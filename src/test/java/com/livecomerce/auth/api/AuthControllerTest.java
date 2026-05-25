@@ -63,12 +63,12 @@ class AuthControllerTest {
         mvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"email":"seller@test.com","password":"secret123"}
+                                {"contact":"seller@test.com","password":"secret123"}
                                 """))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.accessToken").value("jwt-token"))
                 .andExpect(jsonPath("$.tokenType").value("Bearer"))
-                .andExpect(jsonPath("$.email").value("seller@test.com"))
+                .andExpect(jsonPath("$.contact").value("seller@test.com"))
                 .andExpect(jsonPath("$.role").value("SELLER"));
     }
 
@@ -79,7 +79,7 @@ class AuthControllerTest {
         mvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"email":"seller@test.com","password":"wrong"}
+                                {"contact":"seller@test.com","password":"wrong"}
                                 """))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.status").value(401))
@@ -117,11 +117,10 @@ class AuthControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
-                                  "email":"seller@test.com",
+                                  "contact":"seller@test.com",
                                   "password":"secret123",
                                   "firstName":"John",
                                   "lastName":"Doe",
-                                  "phone":"+5491112345678",
                                   "role":"SELLER"
                                 }
                                 """))
@@ -184,11 +183,10 @@ class AuthControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
-                                  "email":"seller@test.com",
+                                  "contact":"seller@test.com",
                                   "password":"secret123",
                                   "firstName":"John",
                                   "lastName":"Doe",
-                                  "phone":"+5491112345678",
                                   "role":"SELLER"
                                 }
                                 """))

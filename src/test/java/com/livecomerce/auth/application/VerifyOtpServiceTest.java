@@ -43,7 +43,7 @@ class VerifyOtpServiceTest {
 
         when(tokenGeneratorPort.extractUserIdFromPendingToken(PENDING_TOKEN)).thenReturn(USER_ID);
         when(loadUserPort.loadById(USER_ID)).thenReturn(Optional.of(user));
-        when(verifyOtpPort.check("+5491111", RAW_CODE, VerificationChannel.WHATSAPP)).thenReturn(true);
+        when(verifyOtpPort.check("+5491111", RAW_CODE, VerificationChannel.SMS)).thenReturn(true);
         when(saveUserPort.save(any())).thenReturn(user);
         when(tokenGeneratorPort.generate(any())).thenReturn("full-jwt");
 

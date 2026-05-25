@@ -36,20 +36,21 @@ class JwtAuthFilter extends OncePerRequestFilter {
             var token = authHeader.substring(7);
             var claims = jwtService.validateAndExtract(token);
 
-            if ("otp-pending".equals(claims.get("type", String.class))) {
+            var type = claims.get("type", String.class);
+            if ("otp-pending".equals(type) || "oauth-pending".equals(type)) {
                 chain.doFilter(request, response);
                 return;
             }
 
-            var email = claims.get("email", String.class);
+            var userId = claims.getSubject();
 
-            if (email != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-                var userDetails = userDetailsService.loadUserByUsername(email);
+            if (userId != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+                var userDetails = userDetailsService.loadUserByUsername(userId);
                 var auth = new UsernamePasswordAuthenticationToken(
                         userDetails, null, userDetails.getAuthorities()
                 );
                 SecurityContextHolder.getContext().setAuthentication(auth);
-                log.info("Authenticated '{}' with authorities: {}", email, userDetails.getAuthorities());
+                log.info("Authenticated user '{}' with authorities: {}", userId, userDetails.getAuthorities());
             }
         } catch (Exception e) {
             log.warn("JWT validation failed: {}", e.getMessage());

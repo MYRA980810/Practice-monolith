@@ -1,5 +1,6 @@
 package com.livecomerce.auth.application;
 
+import com.livecomerce.auth.api.validation.ContactValidator;
 import com.livecomerce.auth.application.port.in.AuthResult;
 import com.livecomerce.auth.application.port.in.AuthenticateUserUseCase;
 import com.livecomerce.auth.application.port.out.LoadUserPort;
@@ -20,7 +21,11 @@ public class AuthenticateUserService implements AuthenticateUserUseCase {
 
     @Override
     public AuthResult authenticate(AuthCommand command) {
-        var user = loadUserPort.loadByEmail(command.email())
+        var contact = command.contact();
+        var lookup = ContactValidator.isPhone(contact)
+                ? loadUserPort.loadByPhone(contact)
+                : loadUserPort.loadByEmail(contact);
+        var user = lookup
                 .filter(u -> u.isActive())
                 .orElseThrow(InvalidCredentialsException::new);
 
@@ -32,6 +37,7 @@ public class AuthenticateUserService implements AuthenticateUserUseCase {
             throw new InvalidCredentialsException();
         }
 
-        return AuthResult.of(tokenGeneratorPort.generate(user), user.getId(), user.getEmail(), user.getRole());
+        var resolvedContact = user.getEmail() != null ? user.getEmail() : user.getPhone();
+        return AuthResult.of(tokenGeneratorPort.generate(user), user.getId(), resolvedContact, user.getRole());
     }
 }

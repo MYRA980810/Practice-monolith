@@ -30,11 +30,12 @@ class JwtService implements TokenGeneratorPort {
         }
         var key = Keys.hmacShaKeyFor(properties.secret().getBytes(StandardCharsets.UTF_8));
         var now = new Date();
+        var contact = user.getEmail() != null ? user.getEmail() : user.getPhone();
 
         var token = Jwts.builder()
                 .subject(user.getId().toString())
                 .claims(Map.of(
-                        "email", user.getEmail(),
+                        "contact", contact,
                         "role", user.getRole().name()
                 ))
                 .issuedAt(now)

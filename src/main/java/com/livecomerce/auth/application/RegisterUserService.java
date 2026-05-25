@@ -1,5 +1,6 @@
 package com.livecomerce.auth.application;
 
+import com.livecomerce.auth.api.validation.ContactValidator;
 import com.livecomerce.auth.application.port.in.PendingVerificationResult;
 import com.livecomerce.auth.application.port.in.RegisterUserUseCase;
 import com.livecomerce.auth.application.port.out.LoadUserPort;
@@ -28,21 +29,27 @@ public class RegisterUserService implements RegisterUserUseCase {
 
     @Override
     public PendingVerificationResult register(RegisterCommand command) {
-        if (loadUserPort.loadByEmail(command.email()).isPresent()) {
-            throw new EmailAlreadyTakenException(command.email());
+        var contact = command.contact();
+        boolean isPhone = ContactValidator.isPhone(contact);
+
+        if (isPhone) {
+            if (loadUserPort.loadByPhone(contact).isPresent()) throw new PhoneAlreadyTakenException(contact);
+        } else {
+            if (loadUserPort.loadByEmail(contact).isPresent()) throw new EmailAlreadyTakenException(contact);
         }
 
         var user = User.create(
-                command.email(),
+                isPhone ? null : contact,
                 passwordEncoder.encode(command.password()),
                 command.firstName(),
                 command.lastName(),
-                command.phone(),
+                isPhone ? contact : null,
                 command.role()
         );
 
         var saved = saveUserPort.save(user);
-        eventPublisher.publishEvent(new UserRegisteredEvent(saved.getId(), saved.getEmail(), saved.getRole()));
+        var contactValue = saved.getEmail() != null ? saved.getEmail() : saved.getPhone();
+        eventPublisher.publishEvent(new UserRegisteredEvent(saved.getId(), contactValue, saved.getRole()));
 
         var channel = saved.resolveChannel();
         verifyOtpPort.send(saved.resolveRecipient(), channel);

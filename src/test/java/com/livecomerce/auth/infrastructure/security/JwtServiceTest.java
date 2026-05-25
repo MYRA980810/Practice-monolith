@@ -28,7 +28,7 @@ class JwtServiceTest {
         var token = jwtService.generate(user);
         var claims = jwtService.validateAndExtract(token);
 
-        assertThat(claims.get("email", String.class)).isEqualTo("seller@test.com");
+        assertThat(claims.get("contact", String.class)).isEqualTo("seller@test.com");
         assertThat(claims.get("role", String.class)).isEqualTo("SELLER");
     }
 

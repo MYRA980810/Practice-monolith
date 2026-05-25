@@ -28,8 +28,8 @@ class AuthController {
     @PostMapping("/register")
     ResponseEntity<VerificationInitiatedResponse> register(@Valid @RequestBody RegisterRequest request) {
         var result = registerUseCase.register(new RegisterUserUseCase.RegisterCommand(
-                request.email(), request.password(), request.firstName(),
-                request.lastName(), request.phone(), request.role()
+                request.contact(), request.password(), request.firstName(),
+                request.lastName(), request.role()
         ));
         return ResponseEntity.status(HttpStatus.ACCEPTED).body(VerificationInitiatedResponse.from(result));
     }
@@ -59,7 +59,7 @@ class AuthController {
     @PostMapping("/login")
     ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
         var result = authenticateUseCase.authenticate(
-                new AuthenticateUserUseCase.AuthCommand(request.email(), request.password())
+                new AuthenticateUserUseCase.AuthCommand(request.contact(), request.password())
         );
         return ResponseEntity.ok(AuthResponse.from(result));
     }

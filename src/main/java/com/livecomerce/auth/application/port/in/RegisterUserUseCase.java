@@ -5,11 +5,10 @@ import com.livecomerce.auth.domain.Role;
 public interface RegisterUserUseCase {
 
     record RegisterCommand(
-            String email,
+            String contact,
             String password,
             String firstName,
             String lastName,
-            String phone,
             Role role
     ) {}
 

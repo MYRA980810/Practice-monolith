@@ -6,7 +6,7 @@ public record AuthResponse(
         String accessToken,
         String tokenType,
         String userId,
-        String email,
+        String contact,
         String role
 ) {
     public static AuthResponse from(AuthResult result) {
@@ -14,7 +14,7 @@ public record AuthResponse(
                 result.accessToken(),
                 result.tokenType(),
                 result.userId().toString(),
-                result.email(),
+                result.contact(),
                 result.role().name()
         );
     }
