@@ -102,7 +102,7 @@ management:
     health:
       show-details: when-authorized
   server:
-    port: 60000
+    port: 8080
 
 logging:
   level:
