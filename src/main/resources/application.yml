@@ -101,6 +101,8 @@ management:
   endpoint:
     health:
       show-details: when-authorized
+  server:
+    port: 60000
 
 logging:
   level:
