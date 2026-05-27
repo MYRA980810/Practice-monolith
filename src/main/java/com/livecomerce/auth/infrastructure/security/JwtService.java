@@ -94,6 +94,52 @@ class JwtService implements TokenGeneratorPort {
         return UUID.fromString(claims.getSubject());
     }
 
+    @Override
+    public String generateResetPendingToken(User user) {
+        var key = Keys.hmacShaKeyFor(properties.secret().getBytes(StandardCharsets.UTF_8));
+        var now = new Date();
+        return Jwts.builder()
+                .subject(user.getId().toString())
+                .claims(Map.of("type", "reset-pending"))
+                .issuedAt(now)
+                .expiration(new Date(now.getTime() + 5L * 60 * 1000))
+                .signWith(key)
+                .compact();
+    }
+
+    @Override
+    public UUID extractUserIdFromResetPendingToken(String token) {
+        var claims = validateAndExtract(token);
+        var type = claims.get("type", String.class);
+        if (!"reset-pending".equals(type)) {
+            throw new io.jsonwebtoken.JwtException("Token is not a reset-pending token");
+        }
+        return UUID.fromString(claims.getSubject());
+    }
+
+    @Override
+    public String generatePasswordResetToken(User user) {
+        var key = Keys.hmacShaKeyFor(properties.secret().getBytes(StandardCharsets.UTF_8));
+        var now = new Date();
+        return Jwts.builder()
+                .subject(user.getId().toString())
+                .claims(Map.of("type", "password-reset"))
+                .issuedAt(now)
+                .expiration(new Date(now.getTime() + 15L * 60 * 1000))
+                .signWith(key)
+                .compact();
+    }
+
+    @Override
+    public UUID extractUserIdFromPasswordResetToken(String token) {
+        var claims = validateAndExtract(token);
+        var type = claims.get("type", String.class);
+        if (!"password-reset".equals(type)) {
+            throw new io.jsonwebtoken.JwtException("Token is not a password-reset token");
+        }
+        return UUID.fromString(claims.getSubject());
+    }
+
     Claims validateAndExtract(String token) {
         log.info("Validating token (last 20 chars): ...{}", token.substring(Math.max(0, token.length() - 20)));
         log.info("Secret length used for validation: {} bytes", properties.secret().getBytes(StandardCharsets.UTF_8).length);

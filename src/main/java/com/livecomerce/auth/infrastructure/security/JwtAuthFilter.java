@@ -36,7 +36,8 @@ class JwtAuthFilter extends OncePerRequestFilter {
             var claims = jwtService.validateAndExtract(token);
 
             var type = claims.get("type", String.class);
-            if ("otp-pending".equals(type) || "oauth-pending".equals(type)) {
+            if ("otp-pending".equals(type) || "oauth-pending".equals(type)
+                    || "reset-pending".equals(type) || "password-reset".equals(type)) {
                 chain.doFilter(request, response);
                 return;
             }

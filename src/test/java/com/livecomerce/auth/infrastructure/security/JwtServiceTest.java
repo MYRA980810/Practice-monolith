@@ -69,4 +69,52 @@ class JwtServiceTest {
         assertThatThrownBy(() -> jwtService.validateAndExtract(token))
                 .isInstanceOf(Exception.class);
     }
+
+    @Test
+    void generateResetPendingToken_producesTokenWithResetPendingType() {
+        var user = User.create("x@x.com", "hash", "X", "X", null, Role.BUYER);
+        var token = jwtService.generateResetPendingToken(user);
+        var claims = jwtService.validateAndExtract(token);
+        assertThat(claims.get("type", String.class)).isEqualTo("reset-pending");
+    }
+
+    @Test
+    void extractUserIdFromResetPendingToken_returnsCorrectUserId() {
+        var user = User.create("x@x.com", "hash", "X", "X", null, Role.BUYER);
+        var token = jwtService.generateResetPendingToken(user);
+        var extracted = jwtService.extractUserIdFromResetPendingToken(token);
+        assertThat(extracted).isEqualTo(user.getId());
+    }
+
+    @Test
+    void extractUserIdFromResetPendingToken_withWrongType_throwsJwtException() {
+        var user = User.create("x@x.com", "hash", "X", "X", null, Role.BUYER);
+        var wrongToken = jwtService.generatePendingToken(user);
+        assertThatThrownBy(() -> jwtService.extractUserIdFromResetPendingToken(wrongToken))
+                .isInstanceOf(io.jsonwebtoken.JwtException.class);
+    }
+
+    @Test
+    void generatePasswordResetToken_producesTokenWithPasswordResetType() {
+        var user = User.create("x@x.com", "hash", "X", "X", null, Role.BUYER);
+        var token = jwtService.generatePasswordResetToken(user);
+        var claims = jwtService.validateAndExtract(token);
+        assertThat(claims.get("type", String.class)).isEqualTo("password-reset");
+    }
+
+    @Test
+    void extractUserIdFromPasswordResetToken_returnsCorrectUserId() {
+        var user = User.create("x@x.com", "hash", "X", "X", null, Role.BUYER);
+        var token = jwtService.generatePasswordResetToken(user);
+        var extracted = jwtService.extractUserIdFromPasswordResetToken(token);
+        assertThat(extracted).isEqualTo(user.getId());
+    }
+
+    @Test
+    void extractUserIdFromPasswordResetToken_withWrongType_throwsJwtException() {
+        var user = User.create("x@x.com", "hash", "X", "X", null, Role.BUYER);
+        var wrongToken = jwtService.generateResetPendingToken(user);
+        assertThatThrownBy(() -> jwtService.extractUserIdFromPasswordResetToken(wrongToken))
+                .isInstanceOf(io.jsonwebtoken.JwtException.class);
+    }
 }

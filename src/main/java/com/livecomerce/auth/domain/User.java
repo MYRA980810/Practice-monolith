@@ -118,6 +118,11 @@ public class User implements Persistable<UUID> {
         this.updatedAt = OffsetDateTime.now();
     }
 
+    public void updatePasswordHash(String encodedPassword) {
+        this.passwordHash = encodedPassword;
+        this.updatedAt = OffsetDateTime.now();
+    }
+
     public void assignRole(Role role) {
         this.role = role;
         this.updatedAt = OffsetDateTime.now();

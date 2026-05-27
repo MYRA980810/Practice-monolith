@@ -4,11 +4,15 @@ import com.livecomerce.auth.application.EmailAlreadyTakenException;
 import com.livecomerce.auth.application.InvalidCredentialsException;
 import com.livecomerce.auth.application.port.in.AuthResult;
 import com.livecomerce.auth.application.port.in.AuthenticateUserUseCase;
+import com.livecomerce.auth.application.port.in.ForgotPasswordUseCase;
 import com.livecomerce.auth.application.port.in.PendingVerificationResult;
 import com.livecomerce.auth.application.port.in.RegisterUserUseCase;
 import com.livecomerce.auth.application.port.in.CompleteOAuthRegistrationUseCase;
+import com.livecomerce.auth.application.port.in.ResetPasswordUseCase;
+import com.livecomerce.auth.application.port.in.ResetTokenResult;
 import com.livecomerce.auth.application.port.in.ResendOtpUseCase;
 import com.livecomerce.auth.application.port.in.VerifyOtpUseCase;
+import com.livecomerce.auth.application.port.in.VerifyResetCodeUseCase;
 import com.livecomerce.auth.domain.Role;
 import com.livecomerce.auth.domain.VerificationChannel;
 import org.junit.jupiter.api.Test;
@@ -44,6 +48,9 @@ class AuthControllerTest {
     @MockitoBean VerifyOtpUseCase verifyOtpUseCase;
     @MockitoBean ResendOtpUseCase resendOtpUseCase;
     @MockitoBean CompleteOAuthRegistrationUseCase completeOAuthUseCase;
+    @MockitoBean ForgotPasswordUseCase forgotPasswordUseCase;
+    @MockitoBean VerifyResetCodeUseCase verifyResetCodeUseCase;
+    @MockitoBean ResetPasswordUseCase resetPasswordUseCase;
 
     private static final UUID USER_ID = UUID.randomUUID();
 
@@ -229,5 +236,59 @@ class AuthControllerTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.status").value(400))
                 .andExpect(jsonPath("$.errors").isArray());
+    }
+
+    // --- FORGOT PASSWORD ---
+
+    @Test
+    void forgotPassword_withValidContact_returns202() throws Exception {
+        when(forgotPasswordUseCase.forgotPassword(any()))
+                .thenReturn(new PendingVerificationResult("reset-pending-jwt", VerificationChannel.EMAIL));
+
+        mvc.perform(post("/api/auth/forgot-password")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"contact":"user@test.com"}
+                                """))
+                .andExpect(status().isAccepted())
+                .andExpect(jsonPath("$.pendingToken").value("reset-pending-jwt"))
+                .andExpect(jsonPath("$.channel").value("EMAIL"));
+    }
+
+    // --- VERIFY RESET CODE ---
+
+    @Test
+    void verifyResetCode_withValidOtp_returns200WithResetToken() throws Exception {
+        when(verifyResetCodeUseCase.verify(any()))
+                .thenReturn(new ResetTokenResult("password-reset-jwt"));
+
+        mvc.perform(post("/api/auth/verify-reset-code")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"pendingToken":"reset-pending-jwt","code":"123456"}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.resetToken").value("password-reset-jwt"));
+    }
+
+    // --- RESET PASSWORD ---
+
+    @Test
+    void resetPassword_withMatchingPasswords_returns200WithJwt() throws Exception {
+        when(resetPasswordUseCase.reset(any()))
+                .thenReturn(AuthResult.of("access-jwt", USER_ID, "user@test.com", Role.BUYER));
+
+        mvc.perform(post("/api/auth/reset-password")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "resetToken":"password-reset-jwt",
+                                  "newPassword":"newPass123",
+                                  "confirmPassword":"newPass123"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.accessToken").value("access-jwt"))
+                .andExpect(jsonPath("$.tokenType").value("Bearer"));
     }
 }
