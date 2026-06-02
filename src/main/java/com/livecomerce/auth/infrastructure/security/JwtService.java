@@ -3,32 +3,42 @@ package com.livecomerce.auth.infrastructure.security;
 import com.livecomerce.auth.application.port.out.TokenGeneratorPort;
 import com.livecomerce.auth.domain.User;
 import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
-import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
+import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.Map;
 import java.util.UUID;
 
 @Component
-@RequiredArgsConstructor
 class JwtService implements TokenGeneratorPort {
 
     private static final Logger log = LoggerFactory.getLogger(JwtService.class);
 
+    private static final String TYPE_OTP_PENDING    = "otp-pending";
+    private static final String TYPE_OAUTH_PENDING  = "oauth-pending";
+    private static final String TYPE_RESET_PENDING  = "reset-pending";
+    private static final String TYPE_PASSWORD_RESET = "password-reset";
+
     private final JwtProperties properties;
+    private final SecretKey key;
+
+    JwtService(JwtProperties properties) {
+        this.properties = properties;
+        this.key = Keys.hmacShaKeyFor(properties.secret().getBytes(StandardCharsets.UTF_8));
+    }
 
     @Override
     public String generate(User user) {
         if (user.getRole() == null) {
             throw new IllegalStateException("Cannot generate full JWT for user without a role: " + user.getId());
         }
-        var key = Keys.hmacShaKeyFor(properties.secret().getBytes(StandardCharsets.UTF_8));
         var now = new Date();
         var contact = user.getEmail() != null ? user.getEmail() : user.getPhone();
 
@@ -50,104 +60,71 @@ class JwtService implements TokenGeneratorPort {
 
     @Override
     public String generatePendingToken(User user) {
-        var key = Keys.hmacShaKeyFor(properties.secret().getBytes(StandardCharsets.UTF_8));
-        var now = new Date();
-        return Jwts.builder()
-                .subject(user.getId().toString())
-                .claims(Map.of("type", "otp-pending"))
-                .issuedAt(now)
-                .expiration(new Date(now.getTime() + 5L * 60 * 1000))
-                .signWith(key)
-                .compact();
+        return generateTypedToken(user.getId(), TYPE_OTP_PENDING, 5L * 60 * 1000);
     }
 
     @Override
     public UUID extractUserIdFromPendingToken(String token) {
-        var claims = validateAndExtract(token);
-        var type = claims.get("type", String.class);
-        if (!"otp-pending".equals(type)) {
-            throw new io.jsonwebtoken.JwtException("Token is not a pending-verification token");
-        }
-        return UUID.fromString(claims.getSubject());
+        return extractUserIdFromTypedToken(token, TYPE_OTP_PENDING);
     }
 
     @Override
     public String generateOAuthPendingToken(User user) {
-        var key = Keys.hmacShaKeyFor(properties.secret().getBytes(StandardCharsets.UTF_8));
-        var now = new Date();
-        return Jwts.builder()
-                .subject(user.getId().toString())
-                .claims(Map.of("type", "oauth-pending"))
-                .issuedAt(now)
-                .expiration(new Date(now.getTime() + 10L * 60 * 1000))
-                .signWith(key)
-                .compact();
+        return generateTypedToken(user.getId(), TYPE_OAUTH_PENDING, 10L * 60 * 1000);
     }
 
     @Override
     public UUID extractUserIdFromOAuthPendingToken(String token) {
-        var claims = validateAndExtract(token);
-        var type = claims.get("type", String.class);
-        if (!"oauth-pending".equals(type)) {
-            throw new io.jsonwebtoken.JwtException("Token is not an OAuth pending token");
-        }
-        return UUID.fromString(claims.getSubject());
+        return extractUserIdFromTypedToken(token, TYPE_OAUTH_PENDING);
     }
 
     @Override
     public String generateResetPendingToken(User user) {
-        var key = Keys.hmacShaKeyFor(properties.secret().getBytes(StandardCharsets.UTF_8));
-        var now = new Date();
-        return Jwts.builder()
-                .subject(user.getId().toString())
-                .claims(Map.of("type", "reset-pending"))
-                .issuedAt(now)
-                .expiration(new Date(now.getTime() + 5L * 60 * 1000))
-                .signWith(key)
-                .compact();
+        return generateTypedToken(user.getId(), TYPE_RESET_PENDING, 5L * 60 * 1000);
     }
 
     @Override
     public UUID extractUserIdFromResetPendingToken(String token) {
-        var claims = validateAndExtract(token);
-        var type = claims.get("type", String.class);
-        if (!"reset-pending".equals(type)) {
-            throw new io.jsonwebtoken.JwtException("Token is not a reset-pending token");
-        }
-        return UUID.fromString(claims.getSubject());
+        return extractUserIdFromTypedToken(token, TYPE_RESET_PENDING);
     }
 
     @Override
     public String generatePasswordResetToken(User user) {
-        var key = Keys.hmacShaKeyFor(properties.secret().getBytes(StandardCharsets.UTF_8));
-        var now = new Date();
-        return Jwts.builder()
-                .subject(user.getId().toString())
-                .claims(Map.of("type", "password-reset"))
-                .issuedAt(now)
-                .expiration(new Date(now.getTime() + 15L * 60 * 1000))
-                .signWith(key)
-                .compact();
+        return generateTypedToken(user.getId(), TYPE_PASSWORD_RESET, 15L * 60 * 1000);
     }
 
     @Override
     public UUID extractUserIdFromPasswordResetToken(String token) {
-        var claims = validateAndExtract(token);
-        var type = claims.get("type", String.class);
-        if (!"password-reset".equals(type)) {
-            throw new io.jsonwebtoken.JwtException("Token is not a password-reset token");
-        }
-        return UUID.fromString(claims.getSubject());
+        return extractUserIdFromTypedToken(token, TYPE_PASSWORD_RESET);
     }
 
     Claims validateAndExtract(String token) {
         log.info("Validating token (last 20 chars): ...{}", token.substring(Math.max(0, token.length() - 20)));
         log.info("Secret length used for validation: {} bytes", properties.secret().getBytes(StandardCharsets.UTF_8).length);
-        var key = Keys.hmacShaKeyFor(properties.secret().getBytes(StandardCharsets.UTF_8));
         return Jwts.parser()
                 .verifyWith(key)
                 .build()
                 .parseSignedClaims(token)
                 .getPayload();
+    }
+
+    private String generateTypedToken(UUID userId, String type, long expirationMs) {
+        var now = new Date();
+        return Jwts.builder()
+                .subject(userId.toString())
+                .claims(Map.of("type", type))
+                .issuedAt(now)
+                .expiration(new Date(now.getTime() + expirationMs))
+                .signWith(key)
+                .compact();
+    }
+
+    private UUID extractUserIdFromTypedToken(String token, String expectedType) {
+        var claims = validateAndExtract(token);
+        var type = claims.get("type", String.class);
+        if (!expectedType.equals(type)) {
+            throw new JwtException("Token type mismatch: expected '%s' but got '%s'".formatted(expectedType, type));
+        }
+        return UUID.fromString(claims.getSubject());
     }
 }
