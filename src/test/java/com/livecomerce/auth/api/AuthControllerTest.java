@@ -2,8 +2,10 @@ package com.livecomerce.auth.api;
 
 import com.livecomerce.auth.application.EmailAlreadyTakenException;
 import com.livecomerce.auth.application.InvalidCredentialsException;
+import com.livecomerce.auth.application.OAuthCodeInvalidException;
 import com.livecomerce.auth.application.port.in.AuthResult;
 import com.livecomerce.auth.application.port.in.AuthenticateUserUseCase;
+import com.livecomerce.auth.application.port.in.ExchangeOAuthCodeUseCase;
 import com.livecomerce.auth.application.port.in.ForgotPasswordUseCase;
 import com.livecomerce.auth.application.port.in.PendingVerificationResult;
 import com.livecomerce.auth.application.port.in.RegisterUserUseCase;
@@ -51,6 +53,7 @@ class AuthControllerTest {
     @MockitoBean ForgotPasswordUseCase forgotPasswordUseCase;
     @MockitoBean VerifyResetCodeUseCase verifyResetCodeUseCase;
     @MockitoBean ResetPasswordUseCase resetPasswordUseCase;
+    @MockitoBean ExchangeOAuthCodeUseCase exchangeOAuthCodeUseCase;
 
     private static final UUID USER_ID = UUID.randomUUID();
 
@@ -290,5 +293,60 @@ class AuthControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.accessToken").value("access-jwt"))
                 .andExpect(jsonPath("$.tokenType").value("Bearer"));
+    }
+
+    // --- OAUTH2 EXCHANGE ---
+
+    @Test
+    void exchangeOAuthCode_withValidCode_returns200WithAuthResponse() throws Exception {
+        when(exchangeOAuthCodeUseCase.exchange(any()))
+                .thenReturn(AuthResult.of("full-jwt", USER_ID, "oauth@test.com", Role.SELLER));
+
+        mvc.perform(post("/api/auth/oauth2/exchange")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"code":"valid-exchange-code"}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.accessToken").value("full-jwt"))
+                .andExpect(jsonPath("$.tokenType").value("Bearer"))
+                .andExpect(jsonPath("$.contact").value("oauth@test.com"))
+                .andExpect(jsonPath("$.role").value("SELLER"));
+    }
+
+    @Test
+    void exchangeOAuthCode_withBlankCode_returns400WithErrorsArray() throws Exception {
+        mvc.perform(post("/api/auth/oauth2/exchange")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"code":""}
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.errors").isArray());
+    }
+
+    @Test
+    void exchangeOAuthCode_withMissingBody_returns400ProblemDetail() throws Exception {
+        mvc.perform(post("/api/auth/oauth2/exchange")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400));
+    }
+
+    @Test
+    void exchangeOAuthCode_whenUseCaseThrowsOAuthCodeInvalid_returns401ProblemDetail() throws Exception {
+        when(exchangeOAuthCodeUseCase.exchange(any()))
+                .thenThrow(new OAuthCodeInvalidException());
+
+        mvc.perform(post("/api/auth/oauth2/exchange")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"code":"expired-or-used-code"}
+                                """))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.status").value(401))
+                .andExpect(jsonPath("$.type").value("https://livecomerce.com/errors/oauth-code-invalid"));
     }
 }

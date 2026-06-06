@@ -2,6 +2,7 @@ package com.livecomerce.auth.api;
 
 import com.livecomerce.auth.application.port.in.AuthenticateUserUseCase;
 import com.livecomerce.auth.application.port.in.CompleteOAuthRegistrationUseCase;
+import com.livecomerce.auth.application.port.in.ExchangeOAuthCodeUseCase;
 import com.livecomerce.auth.application.port.in.ForgotPasswordUseCase;
 import com.livecomerce.auth.application.port.in.RegisterUserUseCase;
 import com.livecomerce.auth.application.port.in.ResetPasswordUseCase;
@@ -30,6 +31,7 @@ class AuthController {
     private final ForgotPasswordUseCase forgotPasswordUseCase;
     private final VerifyResetCodeUseCase verifyResetCodeUseCase;
     private final ResetPasswordUseCase resetPasswordUseCase;
+    private final ExchangeOAuthCodeUseCase exchangeOAuthCodeUseCase;
 
     @PostMapping("/register")
     ResponseEntity<VerificationInitiatedResponse> register(@Valid @RequestBody RegisterRequest request) {
@@ -92,6 +94,13 @@ class AuthController {
         var result = resetPasswordUseCase.reset(
                 new ResetPasswordUseCase.ResetPasswordCommand(
                         request.resetToken(), request.newPassword(), request.confirmPassword()));
+        return ResponseEntity.ok(AuthResponse.from(result));
+    }
+
+    @PostMapping("/oauth2/exchange")
+    ResponseEntity<AuthResponse> exchangeOAuthCode(@Valid @RequestBody ExchangeCodeRequest request) {
+        var result = exchangeOAuthCodeUseCase.exchange(
+                new ExchangeOAuthCodeUseCase.ExchangeCommand(request.code()));
         return ResponseEntity.ok(AuthResponse.from(result));
     }
 }

@@ -73,6 +73,8 @@ order:
 
 app:
   frontend-url: ${FRONTEND_URL:http://localhost:3000}
+  oauth2:
+    code-ttl-seconds: ${OAUTH2_CODE_TTL_SECONDS:90}
   billing:
     success-url: ${BILLING_SUCCESS_URL:http://localhost:3000/billing/success}
     cancel-url: ${BILLING_CANCEL_URL:http://localhost:3000/billing/cancel}
