@@ -34,7 +34,7 @@ class RemoveProductImageServiceTest {
     private static final UUID STORE_ID = UUID.randomUUID();
 
     private static Product buildProduct() {
-        return Product.create(STORE_ID, "Remera", null, BigDecimal.TEN, "MXN", null);
+        return Product.create(STORE_ID, "Remera", null, BigDecimal.TEN, "MXN", null, null);
     }
 
     @Test

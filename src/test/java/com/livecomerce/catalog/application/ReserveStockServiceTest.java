@@ -1,9 +1,8 @@
 package com.livecomerce.catalog.application;
 
-import com.livecomerce.catalog.ReserveStockUseCase.ReserveStockCommand;
+import com.livecomerce.catalog.application.port.in.ReserveStockUseCase.ReserveStockCommand;
 import com.livecomerce.catalog.application.port.out.LoadProductPort;
 import com.livecomerce.catalog.application.port.out.SaveProductPort;
-import com.livecomerce.catalog.application.InsufficientStockException;
 import com.livecomerce.catalog.domain.Product;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -32,7 +31,7 @@ class ReserveStockServiceTest {
     private static final UUID PRODUCT_ID = UUID.randomUUID();
 
     private static Product buildProduct() {
-        return Product.create(UUID.randomUUID(), "Remera", null, BigDecimal.TEN, "MXN", null);
+        return Product.create(UUID.randomUUID(), "Remera", null, BigDecimal.TEN, "MXN", null, null);
     }
 
     @Test

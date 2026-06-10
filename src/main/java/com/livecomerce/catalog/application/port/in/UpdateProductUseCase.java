@@ -14,7 +14,8 @@ public interface UpdateProductUseCase {
             String description,
             BigDecimal basePrice,
             String currency,
-            String sku
+            String sku,
+            UUID categoryId
     ) {}
 
     Product update(UpdateProductCommand command);

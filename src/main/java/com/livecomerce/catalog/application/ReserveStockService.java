@@ -1,6 +1,6 @@
 package com.livecomerce.catalog.application;
 
-import com.livecomerce.catalog.ReserveStockUseCase;
+import com.livecomerce.catalog.application.port.in.ReserveStockUseCase;
 import com.livecomerce.catalog.application.port.out.LoadProductPort;
 import com.livecomerce.catalog.application.port.out.SaveProductPort;
 import lombok.RequiredArgsConstructor;
@@ -19,6 +19,13 @@ public class ReserveStockService implements ReserveStockUseCase {
     public void reserve(ReserveStockCommand command) {
         var product = loadProductPort.loadById(command.productId())
                 .orElseThrow(() -> new ProductNotFoundException(command.productId()));
+
+        if (!product.getStock().canReserve(command.quantity())) {
+            throw new InsufficientStockException(
+                    command.productId(),
+                    command.quantity(),
+                    product.getStock().getAvailableQuantity());
+        }
 
         product.reserveStock(command.quantity());
 

@@ -13,7 +13,8 @@ public interface CreateProductUseCase {
             String description,
             BigDecimal basePrice,
             String currency,
-            String sku
+            String sku,
+            UUID categoryId
     ) {}
 
     Product create(CreateProductCommand command);

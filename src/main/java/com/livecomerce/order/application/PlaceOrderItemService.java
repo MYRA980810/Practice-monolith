@@ -1,6 +1,6 @@
 package com.livecomerce.order.application;
 
-import com.livecomerce.catalog.ReserveStockUseCase;
+import com.livecomerce.catalog.application.port.in.ReserveStockUseCase;
 import com.livecomerce.order.application.port.in.PlaceOrderItemUseCase;
 import com.livecomerce.order.application.port.out.LoadOrderPort;
 import com.livecomerce.order.application.port.out.SaveOrderPort;

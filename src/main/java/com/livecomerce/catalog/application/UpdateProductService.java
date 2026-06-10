@@ -34,6 +34,10 @@ public class UpdateProductService implements UpdateProductUseCase {
                 command.sku()
         );
 
+        if (command.categoryId() != null) {
+            product.assignCategory(command.categoryId());
+        }
+
         return saveProductPort.save(product);
     }
 }

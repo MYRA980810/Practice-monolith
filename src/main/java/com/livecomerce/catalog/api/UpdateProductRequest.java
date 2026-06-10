@@ -6,11 +6,13 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
 import java.math.BigDecimal;
+import java.util.UUID;
 
 record UpdateProductRequest(
         @NotBlank @Size(max = 255) String name,
         String description,
         @NotNull @DecimalMin("0.01") BigDecimal basePrice,
         @Size(max = 3) String currency,
-        @Size(max = 100) String sku
+        @Size(max = 100) String sku,
+        UUID categoryId
 ) {}

@@ -31,12 +31,12 @@ class CreateProductServiceTest {
     private static final UUID STORE_ID = UUID.randomUUID();
 
     private static final CreateProductCommand VALID_COMMAND = new CreateProductCommand(
-            STORE_ID, "Remera Básica", "Remera de algodón", new BigDecimal("150.00"), "MXN", "SKU-001"
+            STORE_ID, "Remera Básica", "Remera de algodón", new BigDecimal("150.00"), "MXN", "SKU-001", null
     );
 
     private static Product buildProduct() {
         return Product.create(STORE_ID, "Remera Básica", "Remera de algodón",
-                new BigDecimal("150.00"), "MXN", "SKU-001");
+                new BigDecimal("150.00"), "MXN", "SKU-001", null);
     }
 
     @Test
@@ -52,13 +52,13 @@ class CreateProductServiceTest {
     }
 
     @Test
+    @SuppressWarnings("null")
     void create_publishesProductCreatedEvent() {
         var saved = buildProduct();
         when(saveProductPort.save(any())).thenReturn(saved);
 
         service.create(VALID_COMMAND);
 
-        @SuppressWarnings("null")
         var captor = ArgumentCaptor.forClass(ProductCreatedEvent.class);
         verify(eventPublisher).publishEvent(captor.capture());
         assertThat(captor.getValue().storeId()).isEqualTo(STORE_ID);
@@ -82,7 +82,7 @@ class CreateProductServiceTest {
 
     @Test
     void create_withNullCurrency_defaultsToMXN() {
-        var command = new CreateProductCommand(STORE_ID, "Producto", null, BigDecimal.TEN, null, null);
+        var command = new CreateProductCommand(STORE_ID, "Producto", null, BigDecimal.TEN, null, null, null);
         when(saveProductPort.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         var result = service.create(command);

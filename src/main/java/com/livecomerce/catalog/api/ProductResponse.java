@@ -1,5 +1,6 @@
 package com.livecomerce.catalog.api;
 
+import com.livecomerce.catalog.domain.Category;
 import com.livecomerce.catalog.domain.Product;
 import com.livecomerce.catalog.domain.ProductImage;
 import com.livecomerce.catalog.domain.Stock;
@@ -18,6 +19,8 @@ public record ProductResponse(
         String currency,
         String sku,
         boolean active,
+        UUID categoryId,
+        String categoryName,
         StockInfo stock,
         List<ImageInfo> images,
         OffsetDateTime createdAt,
@@ -40,6 +43,10 @@ public record ProductResponse(
     }
 
     public static ProductResponse from(Product product) {
+        return from(product, null);
+    }
+
+    public static ProductResponse from(Product product, Category category) {
         return new ProductResponse(
                 product.getId(),
                 product.getStoreId(),
@@ -49,6 +56,8 @@ public record ProductResponse(
                 product.getCurrency(),
                 product.getSku(),
                 product.isActive(),
+                product.getCategoryId(),
+                category != null ? category.getName() : null,
                 product.getStock() != null ? StockInfo.from(product.getStock()) : null,
                 product.getImages().stream().map(ImageInfo::from).toList(),
                 product.getCreatedAt(),

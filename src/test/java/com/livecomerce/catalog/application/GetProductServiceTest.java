@@ -28,7 +28,7 @@ class GetProductServiceTest {
     private static final UUID PRODUCT_ID = UUID.randomUUID();
 
     private static Product buildProduct() {
-        return Product.create(STORE_ID, "Remera", null, BigDecimal.TEN, "MXN", null);
+        return Product.create(STORE_ID, "Remera", null, BigDecimal.TEN, "MXN", null, null);
     }
 
     // --- getById ---
@@ -57,7 +57,7 @@ class GetProductServiceTest {
     @Test
     void getByStoreId_returnsAllProducts() {
         var p1 = buildProduct();
-        var p2 = Product.create(STORE_ID, "Pantalón", null, new BigDecimal("200.00"), "MXN", null);
+        var p2 = Product.create(STORE_ID, "Pantalón", null, new BigDecimal("200.00"), "MXN", null, null);
         when(loadProductPort.loadByStoreId(STORE_ID)).thenReturn(List.of(p1, p2));
 
         var result = service.getByStoreId(STORE_ID);

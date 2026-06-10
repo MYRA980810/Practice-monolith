@@ -8,6 +8,9 @@ import com.livecomerce.catalog.application.port.in.GetProductUseCase;
 import com.livecomerce.catalog.application.port.in.RemoveProductImageUseCase;
 import com.livecomerce.catalog.application.port.in.UpdateProductImageUseCase;
 import com.livecomerce.catalog.application.port.in.UpdateProductUseCase;
+import com.livecomerce.catalog.application.port.out.LoadCategoryPort;
+import com.livecomerce.catalog.domain.Category;
+import com.livecomerce.catalog.domain.Product;
 import com.livecomerce.shared.UserPrincipal;
 import com.livecomerce.store.application.port.in.GetStoreUseCase;
 import jakarta.validation.Valid;
@@ -36,6 +39,7 @@ class ProductController {
     private final RemoveProductImageUseCase removeProductImageUseCase;
     private final DeactivateProductUseCase deactivateProductUseCase;
     private final GetStoreUseCase getStoreUseCase;
+    private final LoadCategoryPort loadCategoryPort;
 
     private static final String DEFAULT_CURRENCY = "MXN";
 
@@ -52,7 +56,8 @@ class ProductController {
                 request.description(),
                 request.basePrice(),
                 Objects.requireNonNullElse(request.currency(), DEFAULT_CURRENCY),
-                request.sku()
+                request.sku(),
+                request.categoryId()
         ));
         return ResponseEntity.status(HttpStatus.CREATED).body(ProductResponse.from(product));
     }
@@ -72,7 +77,8 @@ class ProductController {
                 request.description(),
                 request.basePrice(),
                 Objects.requireNonNullElse(request.currency(), DEFAULT_CURRENCY),
-                request.sku()
+                request.sku(),
+                request.categoryId()
         ));
         return ResponseEntity.ok(ProductResponse.from(product));
     }
@@ -80,13 +86,13 @@ class ProductController {
     @GetMapping("/{id}")
     ResponseEntity<ProductResponse> getById(@PathVariable UUID id) {
         var product = getProductUseCase.getById(id);
-        return ResponseEntity.ok(ProductResponse.from(product));
+        return ResponseEntity.ok(toResponse(product));
     }
 
     @GetMapping
     ResponseEntity<List<ProductResponse>> getByStore(@RequestParam UUID storeId) {
         var products = getProductUseCase.getByStoreId(storeId).stream()
-                .map(ProductResponse::from)
+                .map(this::toResponse)
                 .toList();
         return ResponseEntity.ok(products);
     }
@@ -96,7 +102,7 @@ class ProductController {
     ResponseEntity<List<ProductResponse>> getMyProducts(@AuthenticationPrincipal UserPrincipal principal) {
         var storeId = getStoreUseCase.getStoreIdByUserId(principal.getUserId());
         var products = getProductUseCase.getByStoreId(storeId).stream()
-                .map(ProductResponse::from)
+                .map(this::toResponse)
                 .toList();
         return ResponseEntity.ok(products);
     }
@@ -159,5 +165,12 @@ class ProductController {
         var storeId = getStoreUseCase.getStoreIdByUserId(principal.getUserId());
         deactivateProductUseCase.deactivate(new DeactivateProductUseCase.DeactivateCommand(id, storeId));
         return ResponseEntity.noContent().build();
+    }
+
+    private ProductResponse toResponse(Product product) {
+        Category category = product.getCategoryId() != null
+                ? loadCategoryPort.loadById(product.getCategoryId()).orElse(null)
+                : null;
+        return ProductResponse.from(product, category);
     }
 }

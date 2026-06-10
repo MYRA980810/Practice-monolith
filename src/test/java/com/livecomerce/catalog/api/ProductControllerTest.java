@@ -4,18 +4,35 @@ import com.livecomerce.catalog.application.ProductNotFoundException;
 import com.livecomerce.catalog.application.port.in.AddProductImageUseCase;
 import com.livecomerce.catalog.application.port.in.AddStockUseCase;
 import com.livecomerce.catalog.application.port.in.CreateProductUseCase;
+import com.livecomerce.catalog.application.port.in.DeactivateProductUseCase;
 import com.livecomerce.catalog.application.port.in.GetProductUseCase;
+import com.livecomerce.catalog.application.port.in.RemoveProductImageUseCase;
+import com.livecomerce.catalog.application.port.in.UpdateProductImageUseCase;
+import com.livecomerce.catalog.application.port.in.UpdateProductUseCase;
+import com.livecomerce.catalog.application.port.out.LoadCategoryPort;
 import com.livecomerce.catalog.domain.Product;
+import com.livecomerce.shared.UserPrincipal;
+import com.livecomerce.store.application.port.in.GetStoreUseCase;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration;
 import org.springframework.boot.autoconfigure.security.oauth2.client.OAuth2ClientAutoConfiguration;
 import org.springframework.boot.autoconfigure.security.oauth2.client.servlet.OAuth2ClientWebSecurityAutoConfiguration;
+import org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration;
 import org.springframework.boot.autoconfigure.security.servlet.SecurityFilterAutoConfiguration;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.web.method.annotation.AuthenticationPrincipalArgumentResolver;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.web.method.support.HandlerMethodArgumentResolver;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -33,20 +50,50 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         controllers = ProductController.class,
         excludeAutoConfiguration = {SecurityAutoConfiguration.class, SecurityFilterAutoConfiguration.class, OAuth2ClientAutoConfiguration.class, OAuth2ClientWebSecurityAutoConfiguration.class}
 )
+@Import(ProductControllerTest.SecurityResolverConfig.class)
 class ProductControllerTest {
+
+    @TestConfiguration
+    static class SecurityResolverConfig implements WebMvcConfigurer {
+        @Override
+        public void addArgumentResolvers(List<HandlerMethodArgumentResolver> resolvers) {
+            resolvers.add(new AuthenticationPrincipalArgumentResolver());
+        }
+    }
 
     @Autowired MockMvc mvc;
 
     @MockitoBean CreateProductUseCase createProductUseCase;
+    @MockitoBean UpdateProductUseCase updateProductUseCase;
     @MockitoBean GetProductUseCase getProductUseCase;
     @MockitoBean AddStockUseCase addStockUseCase;
     @MockitoBean AddProductImageUseCase addProductImageUseCase;
+    @MockitoBean UpdateProductImageUseCase updateProductImageUseCase;
+    @MockitoBean RemoveProductImageUseCase removeProductImageUseCase;
+    @MockitoBean DeactivateProductUseCase deactivateProductUseCase;
+    @MockitoBean GetStoreUseCase getStoreUseCase;
+    @MockitoBean LoadCategoryPort loadCategoryPort;
 
     private static final UUID STORE_ID   = UUID.randomUUID();
     private static final UUID PRODUCT_ID = UUID.randomUUID();
 
+    @BeforeEach
+    void setUpPrincipal() {
+        var principal = new UserPrincipal(
+                STORE_ID, "seller@test.com", "hash",
+                List.of(new SimpleGrantedAuthority("ROLE_SELLER")), true
+        );
+        var auth = new UsernamePasswordAuthenticationToken(principal, null, principal.getAuthorities());
+        SecurityContextHolder.getContext().setAuthentication(auth);
+    }
+
+    @AfterEach
+    void clearSecurityContext() {
+        SecurityContextHolder.clearContext();
+    }
+
     private static Product buildProduct() {
-        return Product.create(STORE_ID, "Remera Básica", "Descripción", new BigDecimal("150.00"), "MXN", "SKU-001");
+        return Product.create(STORE_ID, "Remera Básica", "Descripción", new BigDecimal("150.00"), "MXN", "SKU-001", null);
     }
 
     // --- POST /api/products ---
@@ -86,11 +133,11 @@ class ProductControllerTest {
     }
 
     @Test
-    void create_withMissingStoreId_returns400() throws Exception {
+    void create_withMissingBasePrice_returns400() throws Exception {
         mvc.perform(post("/api/products")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"name": "Remera", "basePrice": 100.00}
+                                {"name": "Remera"}
                                 """))
                 .andExpect(status().isBadRequest());
     }
@@ -132,7 +179,7 @@ class ProductControllerTest {
     @Test
     void getByStore_returnsProductList() throws Exception {
         var p1 = buildProduct();
-        var p2 = Product.create(STORE_ID, "Pantalón", null, new BigDecimal("200.00"), "MXN", null);
+        var p2 = Product.create(STORE_ID, "Pantalón", null, new BigDecimal("200.00"), "MXN", null, null);
         when(getProductUseCase.getByStoreId(STORE_ID)).thenReturn(List.of(p1, p2));
 
         mvc.perform(get("/api/products").param("storeId", STORE_ID.toString()))

@@ -34,7 +34,7 @@ class UpdateProductServiceTest {
     private static final UUID STORE_ID = UUID.randomUUID();
 
     private static Product buildProduct() {
-        return Product.create(STORE_ID, "Original Name", null, BigDecimal.TEN, "MXN", null);
+        return Product.create(STORE_ID, "Original Name", null, BigDecimal.TEN, "MXN", null, null);
     }
 
     @Test
@@ -44,7 +44,7 @@ class UpdateProductServiceTest {
         when(saveProductPort.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         var result = service.update(
-                new UpdateProductCommand(PRODUCT_ID, STORE_ID, "New Name", "desc", BigDecimal.valueOf(99), "USD", "SKU-001"));
+                new UpdateProductCommand(PRODUCT_ID, STORE_ID, "New Name", "desc", BigDecimal.valueOf(99), "USD", "SKU-001", null));
 
         assertThat(result.getName()).isEqualTo("New Name");
         assertThat(result.getBasePrice()).isEqualByComparingTo(BigDecimal.valueOf(99));
@@ -55,7 +55,7 @@ class UpdateProductServiceTest {
         when(loadProductPort.loadById(PRODUCT_ID)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.update(
-                new UpdateProductCommand(PRODUCT_ID, STORE_ID, "Name", null, BigDecimal.TEN, "MXN", null)))
+                new UpdateProductCommand(PRODUCT_ID, STORE_ID, "Name", null, BigDecimal.TEN, "MXN", null, null)))
                 .isInstanceOf(ProductNotFoundException.class);
 
         verify(saveProductPort, never()).save(any());
@@ -69,7 +69,7 @@ class UpdateProductServiceTest {
         var differentStoreId = UUID.randomUUID();
 
         assertThatThrownBy(() -> service.update(
-                new UpdateProductCommand(PRODUCT_ID, differentStoreId, "Name", null, BigDecimal.TEN, "MXN", null)))
+                new UpdateProductCommand(PRODUCT_ID, differentStoreId, "Name", null, BigDecimal.TEN, "MXN", null, null)))
                 .isInstanceOf(AccessDeniedException.class);
 
         verify(saveProductPort, never()).save(any());

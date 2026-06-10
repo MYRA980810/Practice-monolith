@@ -25,7 +25,8 @@ public class CreateProductService implements CreateProductUseCase {
                 command.description(),
                 command.basePrice(),
                 command.currency(),
-                command.sku()
+                command.sku(),
+                command.categoryId()
         );
 
         var saved = saveProductPort.save(product);

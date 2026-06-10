@@ -49,6 +49,9 @@ public class Product implements Persistable<UUID> {
     @Column(name = "updated_at", nullable = false)
     private OffsetDateTime updatedAt;
 
+    @Column(name = "category_id")
+    private UUID categoryId;
+
     @OneToOne(mappedBy = "product", cascade = CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = true)
     private Stock stock;
 
@@ -70,7 +73,7 @@ public class Product implements Persistable<UUID> {
     }
 
     public static Product create(UUID storeId, String name, String description,
-                                 BigDecimal basePrice, String currency, String sku) {
+                                 BigDecimal basePrice, String currency, String sku, UUID categoryId) {
         var product = new Product();
         product.id          = UUID.randomUUID();
         product.isNew       = true;
@@ -80,11 +83,17 @@ public class Product implements Persistable<UUID> {
         product.basePrice   = basePrice;
         product.currency    = currency != null ? currency : "MXN";
         product.sku         = sku;
+        product.categoryId  = categoryId;
         product.active      = true;
         product.createdAt   = OffsetDateTime.now();
         product.updatedAt   = OffsetDateTime.now();
         product.stock       = Stock.emptyFor(product);
         return product;
+    }
+
+    public void assignCategory(UUID categoryId) {
+        this.categoryId = categoryId;
+        this.updatedAt  = OffsetDateTime.now();
     }
 
     public void addImage(String url, Integer position, Boolean primary) {

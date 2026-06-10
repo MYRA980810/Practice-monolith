@@ -31,7 +31,7 @@ class AddStockServiceTest {
     private static final UUID PRODUCT_ID = UUID.randomUUID();
 
     private static Product buildProduct() {
-        return Product.create(UUID.randomUUID(), "Remera", null, BigDecimal.TEN, "MXN", null);
+        return Product.create(UUID.randomUUID(), "Remera", null, BigDecimal.TEN, "MXN", null, null);
     }
 
     @Test

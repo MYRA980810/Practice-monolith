@@ -1,4 +1,4 @@
-package com.livecomerce.catalog;
+package com.livecomerce.catalog.application.port.in;
 
 import java.util.UUID;
 
