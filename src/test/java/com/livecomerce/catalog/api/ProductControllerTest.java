@@ -74,8 +74,9 @@ class ProductControllerTest {
     @MockitoBean GetStoreUseCase getStoreUseCase;
     @MockitoBean LoadCategoryPort loadCategoryPort;
 
-    private static final UUID STORE_ID   = UUID.randomUUID();
-    private static final UUID PRODUCT_ID = UUID.randomUUID();
+    private static final UUID STORE_ID    = UUID.randomUUID();
+    private static final UUID PRODUCT_ID  = UUID.randomUUID();
+    private static final UUID CATEGORY_ID = UUID.randomUUID();
 
     @BeforeEach
     void setUpPrincipal() {
@@ -111,9 +112,10 @@ class ProductControllerTest {
                                   "description": "Descripción",
                                   "basePrice": 150.00,
                                   "currency": "MXN",
-                                  "sku": "SKU-001"
+                                  "sku": "SKU-001",
+                                  "categoryId": "%s"
                                 }
-                                """.formatted(STORE_ID)))
+                                """.formatted(STORE_ID, CATEGORY_ID)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.name").value("Remera Básica"))
                 .andExpect(jsonPath("$.currency").value("MXN"))
@@ -140,6 +142,17 @@ class ProductControllerTest {
                                 {"name": "Remera"}
                                 """))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void create_withMissingCategoryId_returns400() throws Exception {
+        mvc.perform(post("/api/products")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"name": "Remera", "basePrice": 100.00}
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors").isArray());
     }
 
     @Test

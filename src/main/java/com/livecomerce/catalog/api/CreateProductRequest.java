@@ -14,5 +14,5 @@ record CreateProductRequest(
         @NotNull @DecimalMin("0.01") BigDecimal basePrice,
         @Size(max = 3) String currency,
         @Size(max = 100) String sku,
-        UUID categoryId
+        @NotNull UUID categoryId
 ) {}
