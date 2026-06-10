@@ -28,7 +28,7 @@ public class CreateStoreService implements CreateStoreUseCase {
             throw new SlugAlreadyTakenException(command.slug());
         }
 
-        var store = Store.create(command.userId(), command.name(), command.slug(), command.description());
+        var store = Store.create(command.userId(), command.name(), command.slug(), command.description(), command.logoUrl());
         var saved = saveStorePort.save(store);
 
         eventPublisher.publishEvent(new StoreCreatedEvent(saved.getId(), saved.getUserId(), saved.getSlug()));

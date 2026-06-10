@@ -33,7 +33,7 @@ class ReactivateStoreServiceTest {
 
     @Test
     void reactivate_whenStoreExistsAndNotSuspended_setsActiveAndSaves() {
-        var store = Store.create(USER_ID, "Mi Tienda", "mi-tienda", null);
+        var store = Store.create(USER_ID, "Mi Tienda", "mi-tienda", null, null);
         store.deactivate();
         when(loadStorePort.loadByUserId(USER_ID)).thenReturn(Optional.of(store));
 
@@ -47,7 +47,7 @@ class ReactivateStoreServiceTest {
 
     @Test
     void reactivate_whenStoreIsSuspended_throwsAndDoesNotSave() {
-        var store = Store.create(USER_ID, "Mi Tienda", "mi-tienda", null);
+        var store = Store.create(USER_ID, "Mi Tienda", "mi-tienda", null, null);
         store.suspend(SuspensionReason.BILLING);
         when(loadStorePort.loadByUserId(USER_ID)).thenReturn(Optional.of(store));
 

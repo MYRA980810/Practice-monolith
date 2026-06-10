@@ -87,7 +87,7 @@ class StoreControllerTest {
     }
 
     private static Store buildStore() {
-        return Store.create(USER_ID, "Mi Tienda", "mi-tienda", "Descripción");
+        return Store.create(USER_ID, "Mi Tienda", "mi-tienda", "Descripción", null);
     }
 
     // --- POST /api/stores ---

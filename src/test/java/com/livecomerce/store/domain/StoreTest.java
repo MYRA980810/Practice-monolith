@@ -13,11 +13,11 @@ class StoreTest {
     private static final UUID USER_ID = UUID.randomUUID();
 
     private Store activeStore() {
-        return Store.create(USER_ID, "Test Store", "test-store", null);
+        return Store.create(USER_ID, "Test Store", "test-store", null, null);
     }
 
     private Store suspendedStore() {
-        var store = Store.create(USER_ID, "Test Store", "test-store", null);
+        var store = Store.create(USER_ID, "Test Store", "test-store", null, null);
         store.suspend(SuspensionReason.BILLING);
         return store;
     }

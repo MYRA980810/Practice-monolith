@@ -54,7 +54,8 @@ class StoreController {
                 principal.getUserId(),
                 request.name(),
                 request.slug(),
-                request.description()
+                request.description(),
+                request.logoUrl()
         ));
         return ResponseEntity.status(HttpStatus.CREATED).body(StoreResponse.from(store));
     }

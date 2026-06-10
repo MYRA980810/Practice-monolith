@@ -71,7 +71,7 @@ public class Store implements Persistable<UUID> {
         this.isNew = false;
     }
 
-    public static Store create(UUID userId, String name, String slug, String description) {
+    public static Store create(UUID userId, String name, String slug, String description, String logoUrl) {
         var store = new Store();
         store.id             = UUID.randomUUID();
         store.isNew          = true;
@@ -79,6 +79,7 @@ public class Store implements Persistable<UUID> {
         store.name           = name;
         store.slug           = slug;
         store.description    = description;
+        store.logoUrl        = logoUrl;
         store.plan            = Plan.FREE;
         store.commissionRate  = new BigDecimal("0.0500");
         store.active          = true;

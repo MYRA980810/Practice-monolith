@@ -32,7 +32,7 @@ class DeactivateStoreServiceTest {
 
     @Test
     void deactivate_whenStoreExists_setsActiveToFalseAndSaves() {
-        var store = Store.create(USER_ID, "Mi Tienda", "mi-tienda", null);
+        var store = Store.create(USER_ID, "Mi Tienda", "mi-tienda", null, null);
         when(loadStorePort.loadByUserId(USER_ID)).thenReturn(Optional.of(store));
 
         service.deactivate(USER_ID);

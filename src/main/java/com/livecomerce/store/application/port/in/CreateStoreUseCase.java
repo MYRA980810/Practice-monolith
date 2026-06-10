@@ -10,7 +10,8 @@ public interface CreateStoreUseCase {
             UUID userId,
             String name,
             String slug,
-            String description
+            String description,
+            String logoUrl
     ) {}
 
     Store create(CreateStoreCommand command);

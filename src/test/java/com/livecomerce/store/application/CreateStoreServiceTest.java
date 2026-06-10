@@ -33,12 +33,12 @@ class CreateStoreServiceTest {
     private static final UUID USER_ID = UUID.randomUUID();
 
     private static final CreateStoreCommand VALID_COMMAND = new CreateStoreCommand(
-            USER_ID, "Mi Tienda", "mi-tienda", "Descripción de prueba"
+            USER_ID, "Mi Tienda", "mi-tienda", "Descripción de prueba", null
     );
 
     @Test
     void create_withNewUserAndSlug_savesStoreAndReturnsIt() {
-        var saved = Store.create(USER_ID, "Mi Tienda", "mi-tienda", "Descripción");
+        var saved = Store.create(USER_ID, "Mi Tienda", "mi-tienda", "Descripción", null);
         when(loadStorePort.loadByUserId(USER_ID)).thenReturn(Optional.empty());
         when(loadStorePort.loadBySlug("mi-tienda")).thenReturn(Optional.empty());
         when(saveStorePort.save(any())).thenReturn(saved);
@@ -52,7 +52,7 @@ class CreateStoreServiceTest {
 
     @Test
     void create_whenUserAlreadyHasStore_throwsStoreAlreadyExists() {
-        var existing = Store.create(USER_ID, "Otra", "otra", null);
+        var existing = Store.create(USER_ID, "Otra", "otra", null, null);
         when(loadStorePort.loadByUserId(USER_ID)).thenReturn(Optional.of(existing));
 
         assertThatThrownBy(() -> service.create(VALID_COMMAND))
@@ -64,7 +64,7 @@ class CreateStoreServiceTest {
     @Test
     void create_whenSlugAlreadyTaken_throwsSlugAlreadyTaken() {
         when(loadStorePort.loadByUserId(USER_ID)).thenReturn(Optional.empty());
-        var other = Store.create(UUID.randomUUID(), "Otra", "mi-tienda", null);
+        var other = Store.create(UUID.randomUUID(), "Otra", "mi-tienda", null, null);
         when(loadStorePort.loadBySlug("mi-tienda")).thenReturn(Optional.of(other));
 
         assertThatThrownBy(() -> service.create(VALID_COMMAND))
@@ -74,15 +74,15 @@ class CreateStoreServiceTest {
     }
 
     @Test
+    @SuppressWarnings("null")
     void create_publishesStoreCreatedEvent() {
-        var saved = Store.create(USER_ID, "Mi Tienda", "mi-tienda", null);
+        var saved = Store.create(USER_ID, "Mi Tienda", "mi-tienda", null, null);
         when(loadStorePort.loadByUserId(any())).thenReturn(Optional.empty());
         when(loadStorePort.loadBySlug(any())).thenReturn(Optional.empty());
         when(saveStorePort.save(any())).thenReturn(saved);
 
         service.create(VALID_COMMAND);
 
-        @SuppressWarnings("null")
         var captor = ArgumentCaptor.forClass(StoreCreatedEvent.class);
         verify(eventPublisher).publishEvent(captor.capture());
         assertThat(captor.getValue().userId()).isEqualTo(USER_ID);
@@ -91,7 +91,7 @@ class CreateStoreServiceTest {
 
     @Test
     void create_newStoreHasFreePlan() {
-        var saved = Store.create(USER_ID, "Mi Tienda", "mi-tienda", null);
+        var saved = Store.create(USER_ID, "Mi Tienda", "mi-tienda", null, null);
         when(loadStorePort.loadByUserId(any())).thenReturn(Optional.empty());
         when(loadStorePort.loadBySlug(any())).thenReturn(Optional.empty());
         when(saveStorePort.save(any())).thenReturn(saved);

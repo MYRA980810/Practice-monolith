@@ -116,7 +116,7 @@ class StoreControllerMvpTest {
 
     @Test
     void listStores_returnsPageOfActiveStores() throws Exception {
-        var store = Store.create(UUID.randomUUID(), "Tienda A", "tienda-a", "Descripción");
+        var store = Store.create(UUID.randomUUID(), "Tienda A", "tienda-a", "Descripción", null);
         var page = new PageImpl<>(List.of(store), PageRequest.of(0, 20), 1);
         when(listStoresUseCase.listActive(any())).thenReturn(page);
 
@@ -140,7 +140,7 @@ class StoreControllerMvpTest {
 
     @Test
     void reactivate_whenSucceeds_returns200WithStoreResponse() throws Exception {
-        var store = Store.create(USER_ID, "Mi Tienda", "mi-tienda", null);
+        var store = Store.create(USER_ID, "Mi Tienda", "mi-tienda", null, null);
         doNothing().when(reactivateStoreUseCase).reactivate(USER_ID);
         when(getStoreUseCase.getByUserId(USER_ID)).thenReturn(store);
 

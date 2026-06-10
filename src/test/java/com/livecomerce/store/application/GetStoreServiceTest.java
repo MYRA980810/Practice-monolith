@@ -26,7 +26,7 @@ class GetStoreServiceTest {
 
     @Test
     void getByUserId_whenStoreExists_returnsStore() {
-        var store = Store.create(USER_ID, "Mi Tienda", "mi-tienda", null);
+        var store = Store.create(USER_ID, "Mi Tienda", "mi-tienda", null, null);
         when(loadStorePort.loadByUserId(USER_ID)).thenReturn(Optional.of(store));
 
         var result = service.getByUserId(USER_ID);
@@ -45,7 +45,7 @@ class GetStoreServiceTest {
 
     @Test
     void getBySlug_whenStoreExists_returnsStore() {
-        var store = Store.create(USER_ID, "Mi Tienda", "mi-tienda", null);
+        var store = Store.create(USER_ID, "Mi Tienda", "mi-tienda", null, null);
         when(loadStorePort.loadBySlug("mi-tienda")).thenReturn(Optional.of(store));
 
         var result = service.getBySlug("mi-tienda");

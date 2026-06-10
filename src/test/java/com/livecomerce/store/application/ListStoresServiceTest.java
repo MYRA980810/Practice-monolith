@@ -27,7 +27,7 @@ class ListStoresServiceTest {
     @Test
     void listActive_returnsPaginatedActiveStores() {
         var pageable = PageRequest.of(0, 20);
-        var store = Store.create(UUID.randomUUID(), "Tienda A", "tienda-a", null);
+        var store = Store.create(UUID.randomUUID(), "Tienda A", "tienda-a", null, null);
         var page = new PageImpl<>(List.of(store), pageable, 1);
         when(loadStorePort.loadAllActive(pageable)).thenReturn(page);
 
