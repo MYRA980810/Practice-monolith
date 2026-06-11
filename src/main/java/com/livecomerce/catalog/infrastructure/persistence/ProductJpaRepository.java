@@ -16,4 +16,10 @@ interface ProductJpaRepository extends JpaRepository<Product, UUID> {
 
     @Query("SELECT DISTINCT p FROM Product p LEFT JOIN FETCH p.variants v LEFT JOIN FETCH v.stock WHERE p.storeId = :storeId AND p.active = true")
     List<Product> findByStoreIdActiveWithDetails(@Param("storeId") UUID storeId);
+
+    @Query("SELECT DISTINCT p FROM Product p LEFT JOIN FETCH p.images WHERE p.storeId = :storeId AND p.active = true")
+    List<Product> findByStoreIdActiveWithImages(@Param("storeId") UUID storeId);
+
+    @Query("SELECT DISTINCT p FROM Product p LEFT JOIN FETCH p.options o WHERE p.storeId = :storeId AND p.active = true")
+    List<Product> findByStoreIdActiveWithOptions(@Param("storeId") UUID storeId);
 }

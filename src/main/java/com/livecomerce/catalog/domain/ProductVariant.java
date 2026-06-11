@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.BatchSize;
 import org.springframework.data.domain.Persistable;
 
 import java.math.BigDecimal;
@@ -52,6 +53,7 @@ public class ProductVariant implements Persistable<UUID> {
             joinColumns = @JoinColumn(name = "variant_id"),
             inverseJoinColumns = @JoinColumn(name = "option_value_id")
     )
+    @BatchSize(size = 20)
     private Set<ProductOptionValue> optionValues = new HashSet<>();
 
     @Transient

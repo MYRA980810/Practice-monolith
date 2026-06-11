@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.BatchSize;
 import org.springframework.data.domain.Persistable;
 
 import java.time.OffsetDateTime;
@@ -36,6 +37,7 @@ public class ProductOption implements Persistable<UUID> {
 
     @OneToMany(mappedBy = "option", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @OrderBy("position ASC")
+    @BatchSize(size = 20)
     private List<ProductOptionValue> values = new ArrayList<>();
 
     @Transient

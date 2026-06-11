@@ -17,7 +17,7 @@ public class ProductOptionValue implements Persistable<UUID> {
     @Id
     private UUID id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "option_id", nullable = false)
     private ProductOption option;
 

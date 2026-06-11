@@ -23,7 +23,12 @@ class ProductPersistenceAdapter implements LoadProductPort, SaveProductPort {
 
     @Override
     public List<Product> loadByStoreId(UUID storeId) {
-        return repository.findByStoreIdActiveWithDetails(storeId);
+        List<Product> products = repository.findByStoreIdActiveWithDetails(storeId);
+        // Hydrate remaining lazy collections within the same session so callers
+        // with open-in-view=false don't hit LazyInitializationException
+        repository.findByStoreIdActiveWithImages(storeId);
+        repository.findByStoreIdActiveWithOptions(storeId);
+        return products;
     }
 
     @Override
