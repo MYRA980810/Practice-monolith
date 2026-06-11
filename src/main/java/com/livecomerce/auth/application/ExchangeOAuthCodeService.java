@@ -32,6 +32,6 @@ public class ExchangeOAuthCodeService implements ExchangeOAuthCodeUseCase {
                 ? tokenGeneratorPort.generate(user)
                 : tokenGeneratorPort.generateOAuthPendingToken(user);
 
-        return AuthResult.of(jwt, user.getId(), user.getEmail(), user.getRole());
+        return AuthResult.of(jwt, user.getId(), user.getEmail(), user.getRole(), user.getAvatarUrl());
     }
 }

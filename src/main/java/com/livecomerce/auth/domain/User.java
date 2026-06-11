@@ -128,6 +128,11 @@ public class User implements Persistable<UUID> {
         this.updatedAt = OffsetDateTime.now();
     }
 
+    public void updateAvatar(String avatarUrl) {
+        this.avatarUrl = avatarUrl;
+        this.updatedAt = OffsetDateTime.now();
+    }
+
     public VerificationChannel resolveChannel() {
         return phone != null ? VerificationChannel.SMS : VerificationChannel.EMAIL;
     }

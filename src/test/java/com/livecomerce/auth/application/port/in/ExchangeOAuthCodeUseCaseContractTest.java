@@ -16,7 +16,7 @@ class ExchangeOAuthCodeUseCaseContractTest {
     @Test
     void interface_implementableWithExchangeMethod() {
         ExchangeOAuthCodeUseCase impl = command ->
-                AuthResult.of("jwt-token", UUID.randomUUID(), "user@test.com", Role.SELLER);
+                AuthResult.of("jwt-token", UUID.randomUUID(), "user@test.com", Role.SELLER, null);
 
         var command = new ExchangeOAuthCodeUseCase.ExchangeCommand("some-code");
         assertThat(command.code()).isEqualTo("some-code");

@@ -1,6 +1,10 @@
 spring:
   application:
     name: livecomerce
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 5MB
   profiles:
     active: ${SPRING_PROFILES_ACTIVE:prod}
 
@@ -85,6 +89,11 @@ app:
         STARTER: ${STRIPE_PRICE_STARTER:price_placeholder}
         PRO: ${STRIPE_PRICE_PRO:price_placeholder}
         AGENCY: ${STRIPE_PRICE_AGENCY:/v1/prices/price_1TRlgz7T0J4CsjNYiKNJXV4I}
+
+cloudinary:
+  cloud-name: ${CLOUDINARY_CLOUD_NAME:placeholder}
+  api-key: ${CLOUDINARY_API_KEY:placeholder}
+  api-secret: ${CLOUDINARY_API_SECRET:placeholder}
 
 resend:
   api-key: ${RESEND_API_KEY:re_placeholder}

@@ -38,6 +38,6 @@ public class ResetPasswordService implements ResetPasswordUseCase {
         user.updatePasswordHash(passwordEncoder.encode(command.newPassword()));
         var saved = saveUserPort.save(user);
         var contact = saved.getEmail() != null ? saved.getEmail() : saved.getPhone();
-        return AuthResult.of(tokenGeneratorPort.generate(saved), saved.getId(), contact, saved.getRole());
+        return AuthResult.of(tokenGeneratorPort.generate(saved), saved.getId(), contact, saved.getRole(), saved.getAvatarUrl());
     }
 }

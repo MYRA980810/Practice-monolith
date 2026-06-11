@@ -38,7 +38,8 @@ public class CompleteOAuthRegistrationService implements CompleteOAuthRegistrati
                 tokenGeneratorPort.generate(saved),
                 saved.getId(),
                 saved.getEmail(),
-                saved.getRole()
-        ); // OAuth users always have email (from Google)
+                saved.getRole(),
+                saved.getAvatarUrl()
+        );
     }
 }

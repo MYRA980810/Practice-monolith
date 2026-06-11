@@ -7,12 +7,17 @@ import com.livecomerce.auth.application.port.in.ForgotPasswordUseCase;
 import com.livecomerce.auth.application.port.in.RegisterUserUseCase;
 import com.livecomerce.auth.application.port.in.ResetPasswordUseCase;
 import com.livecomerce.auth.application.port.in.ResendOtpUseCase;
+import com.livecomerce.auth.application.port.in.UpdateUserAvatarUseCase;
+import com.livecomerce.auth.application.port.in.UpdateUserAvatarUseCase.UpdateUserAvatarCommand;
 import com.livecomerce.auth.application.port.in.VerifyOtpUseCase;
 import com.livecomerce.auth.application.port.in.VerifyResetCodeUseCase;
+import com.livecomerce.shared.UserPrincipal;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -32,6 +37,7 @@ class AuthController {
     private final VerifyResetCodeUseCase verifyResetCodeUseCase;
     private final ResetPasswordUseCase resetPasswordUseCase;
     private final ExchangeOAuthCodeUseCase exchangeOAuthCodeUseCase;
+    private final UpdateUserAvatarUseCase updateUserAvatarUseCase;
 
     @PostMapping("/register")
     ResponseEntity<VerificationInitiatedResponse> register(@Valid @RequestBody RegisterRequest request) {
@@ -102,5 +108,14 @@ class AuthController {
         var result = exchangeOAuthCodeUseCase.exchange(
                 new ExchangeOAuthCodeUseCase.ExchangeCommand(request.code()));
         return ResponseEntity.ok(AuthResponse.from(result));
+    }
+
+    @PatchMapping("/me/avatar")
+    ResponseEntity<UpdateAvatarResponse> updateAvatar(
+            @Valid @RequestBody UpdateAvatarRequest request,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        var avatarUrl = updateUserAvatarUseCase.updateAvatar(
+                new UpdateUserAvatarCommand(principal.getUserId(), request.avatarUrl()));
+        return ResponseEntity.ok(new UpdateAvatarResponse(avatarUrl));
     }
 }

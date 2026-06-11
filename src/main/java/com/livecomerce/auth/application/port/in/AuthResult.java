@@ -4,9 +4,9 @@ import com.livecomerce.auth.domain.Role;
 
 import java.util.UUID;
 
-public record AuthResult(String accessToken, String tokenType, UUID userId, String contact, Role role) {
+public record AuthResult(String accessToken, String tokenType, UUID userId, String contact, Role role, String avatarUrl) {
 
-    public static AuthResult of(String token, UUID userId, String contact, Role role) {
-        return new AuthResult(token, "Bearer", userId, contact, role);
+    public static AuthResult of(String token, UUID userId, String contact, Role role, String avatarUrl) {
+        return new AuthResult(token, "Bearer", userId, contact, role, avatarUrl);
     }
 }

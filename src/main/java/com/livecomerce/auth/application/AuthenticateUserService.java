@@ -38,6 +38,6 @@ public class AuthenticateUserService implements AuthenticateUserUseCase {
         }
 
         var resolvedContact = user.getEmail() != null ? user.getEmail() : user.getPhone();
-        return AuthResult.of(tokenGeneratorPort.generate(user), user.getId(), resolvedContact, user.getRole());
+        return AuthResult.of(tokenGeneratorPort.generate(user), user.getId(), resolvedContact, user.getRole(), user.getAvatarUrl());
     }
 }

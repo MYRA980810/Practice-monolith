@@ -7,7 +7,8 @@ public record AuthResponse(
         String tokenType,
         String userId,
         String contact,
-        String role
+        String role,
+        String avatarUrl
 ) {
     public static AuthResponse from(AuthResult result) {
         return new AuthResponse(
@@ -15,7 +16,8 @@ public record AuthResponse(
                 result.tokenType(),
                 result.userId().toString(),
                 result.contact(),
-                result.role().name()
+                result.role() != null ? result.role().name() : null,
+                result.avatarUrl()
         );
     }
 }
