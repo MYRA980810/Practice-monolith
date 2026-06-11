@@ -34,6 +34,7 @@ class OrderController {
                 request.storeId(),
                 request.liveSessionId(),
                 request.productId(),
+                request.variantId(),
                 request.productName(),
                 request.unitPrice(),
                 request.currency(),

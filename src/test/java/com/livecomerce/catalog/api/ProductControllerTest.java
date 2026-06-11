@@ -1,9 +1,12 @@
 package com.livecomerce.catalog.api;
 
 import com.livecomerce.catalog.application.ProductNotFoundException;
+import com.livecomerce.catalog.application.ProductVariantNotFoundException;
 import com.livecomerce.catalog.application.port.in.AddProductImageUseCase;
+import com.livecomerce.catalog.application.port.in.AddProductOptionUseCase;
 import com.livecomerce.catalog.application.port.in.AddStockUseCase;
 import com.livecomerce.catalog.application.port.in.CreateProductUseCase;
+import com.livecomerce.catalog.application.port.in.CreateProductVariantUseCase;
 import com.livecomerce.catalog.application.port.in.DeactivateProductUseCase;
 import com.livecomerce.catalog.application.port.in.GetProductUseCase;
 import com.livecomerce.catalog.application.port.in.RemoveProductImageUseCase;
@@ -73,10 +76,13 @@ class ProductControllerTest {
     @MockitoBean DeactivateProductUseCase deactivateProductUseCase;
     @MockitoBean GetStoreUseCase getStoreUseCase;
     @MockitoBean LoadCategoryPort loadCategoryPort;
+    @MockitoBean AddProductOptionUseCase addProductOptionUseCase;
+    @MockitoBean CreateProductVariantUseCase createProductVariantUseCase;
 
     private static final UUID STORE_ID    = UUID.randomUUID();
     private static final UUID PRODUCT_ID  = UUID.randomUUID();
     private static final UUID CATEGORY_ID = UUID.randomUUID();
+    private static final UUID VARIANT_ID  = UUID.randomUUID();
 
     @BeforeEach
     void setUpPrincipal() {
@@ -200,15 +206,17 @@ class ProductControllerTest {
                 .andExpect(jsonPath("$.length()").value(2));
     }
 
-    // --- POST /api/products/{id}/stock ---
+    // --- POST /api/products/{id}/variants/{variantId}/stock ---
 
     @Test
-    void addStock_withValidQty_returns200() throws Exception {
+    void addVariantStock_withValidQty_returns200() throws Exception {
         var product = buildProduct();
         product.addStock(20);
-        when(addStockUseCase.addStock(any())).thenReturn(product);
+        var variant = product.defaultVariant();
+        when(addStockUseCase.addStock(any())).thenReturn(variant);
+        when(getProductUseCase.getById(PRODUCT_ID)).thenReturn(product);
 
-        mvc.perform(post("/api/products/{id}/stock", PRODUCT_ID)
+        mvc.perform(post("/api/products/{id}/variants/{variantId}/stock", PRODUCT_ID, VARIANT_ID)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"quantity": 20}
@@ -219,8 +227,8 @@ class ProductControllerTest {
     }
 
     @Test
-    void addStock_withZeroQty_returns400() throws Exception {
-        mvc.perform(post("/api/products/{id}/stock", PRODUCT_ID)
+    void addVariantStock_withZeroQty_returns400() throws Exception {
+        mvc.perform(post("/api/products/{id}/variants/{variantId}/stock", PRODUCT_ID, VARIANT_ID)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"quantity": 0}
@@ -229,10 +237,10 @@ class ProductControllerTest {
     }
 
     @Test
-    void addStock_whenProductNotFound_returns404() throws Exception {
-        when(addStockUseCase.addStock(any())).thenThrow(new ProductNotFoundException(PRODUCT_ID));
+    void addVariantStock_whenVariantNotFound_returns404() throws Exception {
+        when(addStockUseCase.addStock(any())).thenThrow(new ProductVariantNotFoundException(VARIANT_ID));
 
-        mvc.perform(post("/api/products/{id}/stock", PRODUCT_ID)
+        mvc.perform(post("/api/products/{id}/variants/{variantId}/stock", PRODUCT_ID, VARIANT_ID)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"quantity": 10}

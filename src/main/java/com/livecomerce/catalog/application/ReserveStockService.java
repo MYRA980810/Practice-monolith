@@ -1,8 +1,8 @@
 package com.livecomerce.catalog.application;
 
 import com.livecomerce.catalog.application.port.in.ReserveStockUseCase;
-import com.livecomerce.catalog.application.port.out.LoadProductPort;
-import com.livecomerce.catalog.application.port.out.SaveProductPort;
+import com.livecomerce.catalog.application.port.out.LoadProductVariantPort;
+import com.livecomerce.catalog.application.port.out.SaveProductVariantPort;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -12,23 +12,23 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 public class ReserveStockService implements ReserveStockUseCase {
 
-    private final LoadProductPort loadProductPort;
-    private final SaveProductPort saveProductPort;
+    private final LoadProductVariantPort loadProductVariantPort;
+    private final SaveProductVariantPort saveProductVariantPort;
 
     @Override
     public void reserve(ReserveStockCommand command) {
-        var product = loadProductPort.loadById(command.productId())
-                .orElseThrow(() -> new ProductNotFoundException(command.productId()));
+        var variant = loadProductVariantPort.loadById(command.variantId())
+                .orElseThrow(() -> new ProductVariantNotFoundException(command.variantId()));
 
-        if (!product.getStock().canReserve(command.quantity())) {
+        if (!variant.canReserve(command.quantity())) {
             throw new InsufficientStockException(
-                    command.productId(),
+                    command.variantId(),
                     command.quantity(),
-                    product.getStock().getAvailableQuantity());
+                    variant.getStock().getAvailableQuantity());
         }
 
-        product.reserveStock(command.quantity());
+        variant.reserveStock(command.quantity());
 
-        saveProductPort.save(product);
+        saveProductVariantPort.save(variant);
     }
 }

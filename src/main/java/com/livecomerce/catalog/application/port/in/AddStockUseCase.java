@@ -1,12 +1,12 @@
 package com.livecomerce.catalog.application.port.in;
 
-import com.livecomerce.catalog.domain.Product;
+import com.livecomerce.catalog.domain.ProductVariant;
 
 import java.util.UUID;
 
 public interface AddStockUseCase {
 
-    record AddStockCommand(UUID productId, int quantity) {}
+    record AddStockCommand(UUID variantId, int quantity) {}
 
-    Product addStock(AddStockCommand command);
+    ProductVariant addStock(AddStockCommand command);
 }

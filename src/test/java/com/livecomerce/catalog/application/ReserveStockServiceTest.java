@@ -1,9 +1,10 @@
 package com.livecomerce.catalog.application;
 
 import com.livecomerce.catalog.application.port.in.ReserveStockUseCase.ReserveStockCommand;
-import com.livecomerce.catalog.application.port.out.LoadProductPort;
-import com.livecomerce.catalog.application.port.out.SaveProductPort;
+import com.livecomerce.catalog.application.port.out.LoadProductVariantPort;
+import com.livecomerce.catalog.application.port.out.SaveProductVariantPort;
 import com.livecomerce.catalog.domain.Product;
+import com.livecomerce.catalog.domain.ProductVariant;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -23,45 +24,45 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class ReserveStockServiceTest {
 
-    @Mock LoadProductPort loadProductPort;
-    @Mock SaveProductPort saveProductPort;
+    @Mock LoadProductVariantPort loadProductVariantPort;
+    @Mock SaveProductVariantPort saveProductVariantPort;
 
     @InjectMocks ReserveStockService service;
 
-    private static final UUID PRODUCT_ID = UUID.randomUUID();
+    private static final UUID VARIANT_ID = UUID.randomUUID();
 
-    private static Product buildProduct() {
-        return Product.create(UUID.randomUUID(), "Remera", null, BigDecimal.TEN, "MXN", null, null);
+    private static ProductVariant buildVariant() {
+        var product = Product.create(UUID.randomUUID(), "Remera", null, BigDecimal.TEN, "MXN", null, null);
+        return product.defaultVariant();
     }
 
     @Test
     void reserve_whenSufficientStock_reservesAndSaves() {
-        var product = buildProduct();
-        product.addStock(10);
-        when(loadProductPort.loadById(PRODUCT_ID)).thenReturn(Optional.of(product));
-        when(saveProductPort.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        var variant = buildVariant();
+        variant.addStock(10);
+        when(loadProductVariantPort.loadById(VARIANT_ID)).thenReturn(Optional.of(variant));
 
-        service.reserve(new ReserveStockCommand(PRODUCT_ID, 5));
+        service.reserve(new ReserveStockCommand(VARIANT_ID, 5));
 
-        verify(saveProductPort).save(any());
+        verify(saveProductVariantPort).save(any());
     }
 
     @Test
-    void reserve_whenProductNotFound_throwsProductNotFoundException() {
-        when(loadProductPort.loadById(PRODUCT_ID)).thenReturn(Optional.empty());
+    void reserve_whenVariantNotFound_throwsProductVariantNotFoundException() {
+        when(loadProductVariantPort.loadById(VARIANT_ID)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> service.reserve(new ReserveStockCommand(PRODUCT_ID, 1)))
-                .isInstanceOf(ProductNotFoundException.class);
+        assertThatThrownBy(() -> service.reserve(new ReserveStockCommand(VARIANT_ID, 1)))
+                .isInstanceOf(ProductVariantNotFoundException.class);
 
-        verify(saveProductPort, never()).save(any());
+        verify(saveProductVariantPort, never()).save(any());
     }
 
     @Test
     void reserve_whenInsufficientStock_throwsInsufficientStockException() {
-        var product = buildProduct();
-        when(loadProductPort.loadById(PRODUCT_ID)).thenReturn(Optional.of(product));
+        var variant = buildVariant();
+        when(loadProductVariantPort.loadById(VARIANT_ID)).thenReturn(Optional.of(variant));
 
-        assertThatThrownBy(() -> service.reserve(new ReserveStockCommand(PRODUCT_ID, 1)))
+        assertThatThrownBy(() -> service.reserve(new ReserveStockCommand(VARIANT_ID, 1)))
                 .isInstanceOf(InsufficientStockException.class);
     }
 }

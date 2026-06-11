@@ -25,6 +25,9 @@ public class OrderItem {
     @Column(name = "product_id", nullable = false)
     private UUID productId;
 
+    @Column(name = "variant_id", nullable = false)
+    private UUID variantId;
+
     @Column(name = "product_name", nullable = false)
     private String productName;
 
@@ -52,12 +55,13 @@ public class OrderItem {
     @Column(name = "created_at", nullable = false, updatable = false)
     private OffsetDateTime createdAt;
 
-    static OrderItem reserve(Order order, UUID productId, String productName,
+    static OrderItem reserve(Order order, UUID productId, UUID variantId, String productName,
                              BigDecimal unitPrice, String currency, int qty, int ttlMinutes) {
         var item = new OrderItem();
         item.id            = UUID.randomUUID();
         item.order         = order;
         item.productId     = productId;
+        item.variantId     = variantId;
         item.productName   = productName;
         item.unitPrice     = unitPrice;
         item.currency      = currency;

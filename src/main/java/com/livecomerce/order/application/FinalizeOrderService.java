@@ -38,7 +38,7 @@ public class FinalizeOrderService implements FinalizeOrderUseCase {
         var saved = saveOrderPort.save(order);
 
         expired.forEach(item -> eventPublisher.publishEvent(
-                new OrderItemReleasedEvent(saved.getId(), item.getId(), item.getProductId(), item.getQuantity())));
+                new OrderItemReleasedEvent(saved.getId(), item.getId(), item.getProductId(), item.getVariantId(), item.getQuantity())));
 
         eventPublisher.publishEvent(
                 new OrderFinalizedEvent(saved.getId(), saved.getBuyerId(), saved.getStoreId(), saved.getStatus()));

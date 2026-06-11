@@ -78,10 +78,10 @@ public class Order implements Persistable<UUID> {
         return order;
     }
 
-    public OrderItem addItem(UUID productId, String productName,
+    public OrderItem addItem(UUID productId, UUID variantId, String productName,
                              java.math.BigDecimal unitPrice, String currency,
                              int qty, int ttlMinutes) {
-        var item = OrderItem.reserve(this, productId, productName, unitPrice, currency, qty, ttlMinutes);
+        var item = OrderItem.reserve(this, productId, variantId, productName, unitPrice, currency, qty, ttlMinutes);
         this.items.add(item);
         this.updatedAt = OffsetDateTime.now();
         return item;

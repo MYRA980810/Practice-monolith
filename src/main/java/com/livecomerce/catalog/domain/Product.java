@@ -1,17 +1,16 @@
 package com.livecomerce.catalog.domain;
 
+import com.livecomerce.catalog.application.DuplicateVariantException;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.BatchSize;
 import org.springframework.data.domain.Persistable;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
 @Entity
 @Table(name = "products")
@@ -37,9 +36,6 @@ public class Product implements Persistable<UUID> {
     @Column(nullable = false, length = 3)
     private String currency;
 
-    @Column(length = 100)
-    private String sku;
-
     @Column(name = "is_active", nullable = false)
     private boolean active = true;
 
@@ -52,11 +48,17 @@ public class Product implements Persistable<UUID> {
     @Column(name = "category_id")
     private UUID categoryId;
 
-    @OneToOne(mappedBy = "product", cascade = CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = true)
-    private Stock stock;
+    @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = true)
+    @OrderBy("position ASC")
+    private List<ProductOption> options = new ArrayList<>();
 
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = true)
     @OrderBy("position ASC")
+    private List<ProductVariant> variants = new ArrayList<>();
+
+    @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = true)
+    @OrderBy("position ASC")
+    @BatchSize(size = 20)
     private List<ProductImage> images = new ArrayList<>();
 
     @Transient
@@ -72,6 +74,11 @@ public class Product implements Persistable<UUID> {
         this.isNew = false;
     }
 
+    @Override
+    public UUID getId() {
+        return id;
+    }
+
     public static Product create(UUID storeId, String name, String description,
                                  BigDecimal basePrice, String currency, String sku, UUID categoryId) {
         var product = new Product();
@@ -82,18 +89,80 @@ public class Product implements Persistable<UUID> {
         product.description = description;
         product.basePrice   = basePrice;
         product.currency    = currency != null ? currency : "MXN";
-        product.sku         = sku;
         product.categoryId  = categoryId;
         product.active      = true;
         product.createdAt   = OffsetDateTime.now();
         product.updatedAt   = OffsetDateTime.now();
-        product.stock       = Stock.emptyFor(product);
+        product.variants.add(ProductVariant.createDefault(product, sku));
         return product;
+    }
+
+    public ProductVariant defaultVariant() {
+        return variants.stream()
+                .filter(ProductVariant::isDefault)
+                .findFirst()
+                .orElseThrow(() -> new IllegalStateException("No default variant"));
     }
 
     public void assignCategory(UUID categoryId) {
         this.categoryId = categoryId;
         this.updatedAt  = OffsetDateTime.now();
+    }
+
+    public ProductOption addOption(String name, List<String> values) {
+        var option = ProductOption.of(this, name, options.size(), values);
+        options.add(option);
+        this.updatedAt = OffsetDateTime.now();
+        return option;
+    }
+
+    public ProductVariant addVariant(Map<String, String> selection, String sku, BigDecimal priceOverride) {
+        var selectedValues = new HashSet<ProductOptionValue>();
+        for (var option : options) {
+            var valueName = selection.get(option.getName());
+            if (valueName == null)
+                throw new IllegalArgumentException("Missing option: " + option.getName());
+            selectedValues.add(option.findValue(valueName));
+        }
+
+        for (var existing : variants) {
+            if (!existing.isDefault() && existing.getOptionValues().equals(selectedValues))
+                throw new DuplicateVariantException(id, selection);
+        }
+
+        var variant = ProductVariant.create(this, sku, priceOverride, selectedValues, variants.size());
+        variants.add(variant);
+        this.updatedAt = OffsetDateTime.now();
+        return variant;
+    }
+
+    public void addStock(int qty) {
+        defaultVariant().addStock(qty);
+        this.updatedAt = OffsetDateTime.now();
+    }
+
+    public void reserveStock(int qty) {
+        defaultVariant().reserveStock(qty);
+        this.updatedAt = OffsetDateTime.now();
+    }
+
+    public void releaseStock(int qty) {
+        defaultVariant().releaseStock(qty);
+        this.updatedAt = OffsetDateTime.now();
+    }
+
+    public void sellStock(int qty) {
+        defaultVariant().sellStock(qty);
+        this.updatedAt = OffsetDateTime.now();
+    }
+
+    public void update(String name, String description, BigDecimal basePrice, String currency, String sku) {
+        this.name        = name;
+        this.description = description;
+        this.basePrice   = basePrice;
+        this.currency    = currency;
+        defaultVariant().updateSku(sku);
+        this.updatedAt   = OffsetDateTime.now();
     }
 
     public void addImage(String url, Integer position, Boolean primary) {
@@ -113,35 +182,6 @@ public class Product implements Persistable<UUID> {
         }
         images.add(ProductImage.of(this, url, pos, isPrimary));
         this.updatedAt = OffsetDateTime.now();
-    }
-
-    public void addStock(int qty) {
-        this.stock.add(qty);
-        this.updatedAt = OffsetDateTime.now();
-    }
-
-    public void reserveStock(int qty) {
-        this.stock.reserve(qty);
-        this.updatedAt = OffsetDateTime.now();
-    }
-
-    public void releaseStock(int qty) {
-        this.stock.release(qty);
-        this.updatedAt = OffsetDateTime.now();
-    }
-
-    public void sellStock(int qty) {
-        this.stock.sell(qty);
-        this.updatedAt = OffsetDateTime.now();
-    }
-
-    public void update(String name, String description, BigDecimal basePrice, String currency, String sku) {
-        this.name        = name;
-        this.description = description;
-        this.basePrice   = basePrice;
-        this.currency    = currency;
-        this.sku         = sku;
-        this.updatedAt   = OffsetDateTime.now();
     }
 
     public void updateImage(UUID imageId, String url, Integer position, Boolean primary) {
@@ -177,6 +217,14 @@ public class Product implements Persistable<UUID> {
     public void deactivate() {
         this.active    = false;
         this.updatedAt = OffsetDateTime.now();
+    }
+
+    public List<ProductOption> getOptions() {
+        return Collections.unmodifiableList(options);
+    }
+
+    public List<ProductVariant> getVariants() {
+        return Collections.unmodifiableList(variants);
     }
 
     public List<ProductImage> getImages() {

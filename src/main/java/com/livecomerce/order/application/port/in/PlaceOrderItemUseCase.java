@@ -14,6 +14,7 @@ public interface PlaceOrderItemUseCase {
             UUID storeId,
             UUID liveSessionId,
             UUID productId,
+            UUID variantId,
             String productName,
             BigDecimal unitPrice,
             String currency,

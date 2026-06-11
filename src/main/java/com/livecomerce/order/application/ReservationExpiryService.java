@@ -26,7 +26,7 @@ public class ReservationExpiryService {
                     var expired = order.expireReservedItems(now);
                     saveOrderPort.save(order);
                     expired.forEach(item -> eventPublisher.publishEvent(
-                            new OrderItemReleasedEvent(order.getId(), item.getId(), item.getProductId(), item.getQuantity())));
+                            new OrderItemReleasedEvent(order.getId(), item.getId(), item.getProductId(), item.getVariantId(), item.getQuantity())));
                 });
     }
 }

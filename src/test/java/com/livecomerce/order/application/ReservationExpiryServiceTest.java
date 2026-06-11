@@ -34,7 +34,7 @@ class ReservationExpiryServiceTest {
     @Test
     void expireOverdueReservations_marksExpiredItemsAsExpired() {
         var order = Order.open(BUYER_ID, STORE_ID, null, "MXN");
-        order.addItem(UUID.randomUUID(), "Producto", new BigDecimal("99"), "MXN", 1, 10);
+        order.addItem(UUID.randomUUID(), UUID.randomUUID(), "Producto", new BigDecimal("99"), "MXN", 1, 10);
 
         // Manually expire the TTL by simulating past reservedUntil via expireReservedItems directly
         order.expireReservedItems(OffsetDateTime.now().plusMinutes(20));

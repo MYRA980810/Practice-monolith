@@ -25,7 +25,7 @@ public class PlaceOrderItemService implements PlaceOrderItemUseCase {
     @Override
     public Order placeItem(PlaceOrderItemCommand command) {
         reserveStockUseCase.reserve(new ReserveStockUseCase.ReserveStockCommand(
-                command.productId(), command.quantity()));
+                command.variantId(), command.quantity()));
 
         var order = loadOrderPort
                 .loadActiveByBuyerAndLive(command.buyerId(), command.liveSessionId())
@@ -37,6 +37,7 @@ public class PlaceOrderItemService implements PlaceOrderItemUseCase {
 
         order.addItem(
                 command.productId(),
+                command.variantId(),
                 command.productName(),
                 command.unitPrice(),
                 command.currency(),

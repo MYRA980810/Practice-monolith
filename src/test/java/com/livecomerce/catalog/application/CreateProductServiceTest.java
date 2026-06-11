@@ -48,7 +48,7 @@ class CreateProductServiceTest {
 
         assertThat(result.getName()).isEqualTo("Remera Básica");
         assertThat(result.getStoreId()).isEqualTo(STORE_ID);
-        assertThat(result.getSku()).isEqualTo("SKU-001");
+        assertThat(result.defaultVariant().getSku()).isEqualTo("SKU-001");
     }
 
     @Test
@@ -74,7 +74,7 @@ class CreateProductServiceTest {
 
         var captor = ArgumentCaptor.forClass(Product.class);
         verify(saveProductPort).save(captor.capture());
-        var stock = captor.getValue().getStock();
+        var stock = captor.getValue().defaultVariant().getStock();
         assertThat(stock.getTotalQuantity()).isEqualTo(0);
         assertThat(stock.getAvailableQuantity()).isEqualTo(0);
         assertThat(stock.getReservedQuantity()).isEqualTo(0);

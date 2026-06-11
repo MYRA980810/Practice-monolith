@@ -18,8 +18,8 @@ public class Stock {
     private UUID id;
 
     @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "product_id", nullable = false, unique = true)
-    Product product;
+    @JoinColumn(name = "variant_id", nullable = false, unique = true)
+    ProductVariant variant;
 
     @Column(name = "total_quantity", nullable = false)
     private int totalQuantity;
@@ -36,10 +36,10 @@ public class Stock {
     @Column(name = "updated_at", nullable = false)
     private OffsetDateTime updatedAt;
 
-    static Stock emptyFor(Product product) {
+    static Stock emptyFor(ProductVariant variant) {
         var stock = new Stock();
         stock.id                = UUID.randomUUID();
-        stock.product           = product;
+        stock.variant           = variant;
         stock.totalQuantity     = 0;
         stock.availableQuantity = 0;
         stock.reservedQuantity  = 0;

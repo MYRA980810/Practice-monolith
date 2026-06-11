@@ -39,14 +39,14 @@ class FinalizeOrderServiceTest {
 
     private Order buildOpenOrderWithPaidItem() {
         var order = Order.open(BUYER_ID, STORE_ID, LIVE_ID, "MXN");
-        order.addItem(UUID.randomUUID(), "Producto", new BigDecimal("100"), "MXN", 1, 10);
+        order.addItem(UUID.randomUUID(), UUID.randomUUID(), "Producto", new BigDecimal("100"), "MXN", 1, 10);
         order.confirmItemPayment(order.getItems().getFirst().getId());
         return order;
     }
 
     private Order buildOpenOrderWithOnlyReservedItems() {
         var order = Order.open(BUYER_ID, STORE_ID, LIVE_ID, "MXN");
-        order.addItem(UUID.randomUUID(), "Producto", new BigDecimal("100"), "MXN", 1, 10);
+        order.addItem(UUID.randomUUID(), UUID.randomUUID(), "Producto", new BigDecimal("100"), "MXN", 1, 10);
         return order;
     }
 

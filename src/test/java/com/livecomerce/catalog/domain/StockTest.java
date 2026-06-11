@@ -16,7 +16,7 @@ class StockTest {
     @BeforeEach
     void setUp() {
         var product = Product.create(UUID.randomUUID(), "Producto", null, BigDecimal.TEN, "MXN", null, null);
-        stock = product.getStock();
+        stock = product.defaultVariant().getStock();
     }
 
     // --- add ---

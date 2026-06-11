@@ -88,7 +88,7 @@ class OrderControllerTest {
 
     private static Order buildOrder() {
         var order = Order.open(BUYER_ID, STORE_ID, LIVE_ID, "MXN");
-        order.addItem(UUID.randomUUID(), "Playera Roja", new BigDecimal("199.00"), "MXN", 1, 10);
+        order.addItem(UUID.randomUUID(), UUID.randomUUID(), "Playera Roja", new BigDecimal("199.00"), "MXN", 1, 10);
         return order;
     }
 
@@ -105,12 +105,13 @@ class OrderControllerTest {
                                   "storeId":"%s",
                                   "liveSessionId":"%s",
                                   "productId":"%s",
+                                  "variantId":"%s",
                                   "productName":"Playera Roja",
                                   "unitPrice":199.00,
                                   "currency":"MXN",
                                   "quantity":1
                                 }
-                                """.formatted(STORE_ID, LIVE_ID, UUID.randomUUID())))
+                                """.formatted(STORE_ID, LIVE_ID, UUID.randomUUID(), UUID.randomUUID())))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.status").value("OPEN"))
                 .andExpect(jsonPath("$.items").isArray())

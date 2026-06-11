@@ -1,8 +1,10 @@
 package com.livecomerce.catalog.api;
 
 import com.livecomerce.catalog.application.port.in.AddProductImageUseCase;
+import com.livecomerce.catalog.application.port.in.AddProductOptionUseCase;
 import com.livecomerce.catalog.application.port.in.AddStockUseCase;
 import com.livecomerce.catalog.application.port.in.CreateProductUseCase;
+import com.livecomerce.catalog.application.port.in.CreateProductVariantUseCase;
 import com.livecomerce.catalog.application.port.in.DeactivateProductUseCase;
 import com.livecomerce.catalog.application.port.in.GetProductUseCase;
 import com.livecomerce.catalog.application.port.in.RemoveProductImageUseCase;
@@ -40,6 +42,8 @@ class ProductController {
     private final DeactivateProductUseCase deactivateProductUseCase;
     private final GetStoreUseCase getStoreUseCase;
     private final LoadCategoryPort loadCategoryPort;
+    private final AddProductOptionUseCase addProductOptionUseCase;
+    private final CreateProductVariantUseCase createProductVariantUseCase;
 
     private static final String DEFAULT_CURRENCY = "MXN";
 
@@ -107,15 +111,54 @@ class ProductController {
         return ResponseEntity.ok(products);
     }
 
-    @PostMapping("/{id}/stock")
+    @PostMapping("/{id}/options")
     @PreAuthorize("hasRole('SELLER')")
-    ResponseEntity<ProductResponse> addStock(
+    @ResponseStatus(HttpStatus.OK)
+    ProductResponse addOption(
             @PathVariable UUID id,
+            @RequestBody @Valid AddProductOptionRequest request,
+            @AuthenticationPrincipal UserPrincipal principal) {
+
+        var storeId = getStoreUseCase.getStoreIdByUserId(principal.getUserId());
+        var product = addProductOptionUseCase.addOption(
+                new AddProductOptionUseCase.AddProductOptionCommand(id, storeId, request.name(), request.values()));
+        return toResponse(product);
+    }
+
+    @PostMapping("/{id}/variants")
+    @PreAuthorize("hasRole('SELLER')")
+    @ResponseStatus(HttpStatus.CREATED)
+    VariantResponse createVariant(
+            @PathVariable UUID id,
+            @RequestBody @Valid CreateProductVariantRequest request,
+            @AuthenticationPrincipal UserPrincipal principal) {
+
+        var storeId = getStoreUseCase.getStoreIdByUserId(principal.getUserId());
+        var variant = createProductVariantUseCase.createVariant(
+                new CreateProductVariantUseCase.CreateProductVariantCommand(
+                        id, storeId, request.options(), request.sku(), request.priceOverride()));
+        var product = getProductUseCase.getById(id);
+        return VariantResponse.from(variant, product.getBasePrice());
+    }
+
+    @GetMapping("/{id}/variants")
+    List<VariantResponse> listVariants(@PathVariable UUID id) {
+        var product = getProductUseCase.getById(id);
+        return product.getVariants().stream()
+                .map(v -> VariantResponse.from(v, product.getBasePrice()))
+                .toList();
+    }
+
+    @PostMapping("/{id}/variants/{variantId}/stock")
+    @PreAuthorize("hasRole('SELLER')")
+    ResponseEntity<VariantResponse> addVariantStock(
+            @PathVariable UUID id,
+            @PathVariable UUID variantId,
             @Valid @RequestBody AddStockRequest request) {
 
-        var product = addStockUseCase.addStock(
-                new AddStockUseCase.AddStockCommand(id, request.quantity()));
-        return ResponseEntity.ok(ProductResponse.from(product));
+        var variant = addStockUseCase.addStock(new AddStockUseCase.AddStockCommand(variantId, request.quantity()));
+        var product = getProductUseCase.getById(id);
+        return ResponseEntity.ok(VariantResponse.from(variant, product.getBasePrice()));
     }
 
     @PostMapping("/{id}/images")

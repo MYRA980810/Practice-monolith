@@ -34,7 +34,7 @@ public class ConfirmItemPaymentService implements ConfirmItemPaymentUseCase {
         var saved = saveOrderPort.save(order);
 
         eventPublisher.publishEvent(new OrderItemPaidEvent(
-                saved.getId(), item.getId(), item.getProductId(), item.getQuantity()));
+                saved.getId(), item.getId(), item.getProductId(), item.getVariantId(), item.getQuantity()));
 
         return saved;
     }

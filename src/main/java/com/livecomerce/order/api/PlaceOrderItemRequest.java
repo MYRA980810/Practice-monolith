@@ -12,6 +12,7 @@ public record PlaceOrderItemRequest(
         @NotNull UUID storeId,
         UUID liveSessionId,
         @NotNull UUID productId,
+        @NotNull UUID variantId,
         @NotBlank String productName,
         @NotNull @DecimalMin("0.01") BigDecimal unitPrice,
         @NotBlank String currency,

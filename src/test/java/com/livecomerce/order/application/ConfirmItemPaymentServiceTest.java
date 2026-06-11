@@ -38,7 +38,7 @@ class ConfirmItemPaymentServiceTest {
 
     private Order buildOrderWithReservedItem() {
         var order = Order.open(BUYER_ID, STORE_ID, null, "MXN");
-        order.addItem(UUID.randomUUID(), "Playera", new BigDecimal("199"), "MXN", 2, 10);
+        order.addItem(UUID.randomUUID(), UUID.randomUUID(), "Playera", new BigDecimal("199"), "MXN", 2, 10);
         return order;
     }
 

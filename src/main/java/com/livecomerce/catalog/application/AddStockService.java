@@ -1,9 +1,9 @@
 package com.livecomerce.catalog.application;
 
 import com.livecomerce.catalog.application.port.in.AddStockUseCase;
-import com.livecomerce.catalog.application.port.out.LoadProductPort;
-import com.livecomerce.catalog.application.port.out.SaveProductPort;
-import com.livecomerce.catalog.domain.Product;
+import com.livecomerce.catalog.application.port.out.LoadProductVariantPort;
+import com.livecomerce.catalog.application.port.out.SaveProductVariantPort;
+import com.livecomerce.catalog.domain.ProductVariant;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -13,16 +13,16 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 public class AddStockService implements AddStockUseCase {
 
-    private final LoadProductPort loadProductPort;
-    private final SaveProductPort saveProductPort;
+    private final LoadProductVariantPort loadProductVariantPort;
+    private final SaveProductVariantPort saveProductVariantPort;
 
     @Override
-    public Product addStock(AddStockCommand command) {
-        var product = loadProductPort.loadById(command.productId())
-                .orElseThrow(() -> new ProductNotFoundException(command.productId()));
+    public ProductVariant addStock(AddStockCommand command) {
+        var variant = loadProductVariantPort.loadById(command.variantId())
+                .orElseThrow(() -> new ProductVariantNotFoundException(command.variantId()));
 
-        product.addStock(command.quantity());
+        variant.addStock(command.quantity());
 
-        return saveProductPort.save(product);
+        return saveProductVariantPort.save(variant);
     }
 }

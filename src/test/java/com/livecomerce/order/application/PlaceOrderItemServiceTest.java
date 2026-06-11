@@ -37,9 +37,10 @@ class PlaceOrderItemServiceTest {
     private static final UUID STORE_ID    = UUID.randomUUID();
     private static final UUID LIVE_ID     = UUID.randomUUID();
     private static final UUID PRODUCT_ID  = UUID.randomUUID();
+    private static final UUID VARIANT_ID  = UUID.randomUUID();
 
     private static final PlaceOrderItemCommand VALID_COMMAND = new PlaceOrderItemCommand(
-            BUYER_ID, STORE_ID, LIVE_ID, PRODUCT_ID,
+            BUYER_ID, STORE_ID, LIVE_ID, PRODUCT_ID, VARIANT_ID,
             "Playera Roja", new BigDecimal("199.00"), "MXN", 1
     );
 

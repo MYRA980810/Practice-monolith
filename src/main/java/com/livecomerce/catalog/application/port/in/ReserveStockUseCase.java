@@ -4,7 +4,7 @@ import java.util.UUID;
 
 public interface ReserveStockUseCase {
 
-    record ReserveStockCommand(UUID productId, int quantity) {}
+    record ReserveStockCommand(UUID variantId, int quantity) {}
 
     void reserve(ReserveStockCommand command);
 }
