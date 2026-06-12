@@ -3,7 +3,7 @@ package com.livecomerce.catalog.application;
 import com.livecomerce.catalog.application.port.in.AddStockUseCase;
 import com.livecomerce.catalog.application.port.out.LoadProductVariantPort;
 import com.livecomerce.catalog.application.port.out.SaveProductVariantPort;
-import com.livecomerce.catalog.domain.ProductVariant;
+import com.livecomerce.catalog.application.query.VariantView;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,12 +17,13 @@ public class AddStockService implements AddStockUseCase {
     private final SaveProductVariantPort saveProductVariantPort;
 
     @Override
-    public ProductVariant addStock(AddStockCommand command) {
+    public VariantView addStock(AddStockCommand command) {
         var variant = loadProductVariantPort.loadById(command.variantId())
                 .orElseThrow(() -> new ProductVariantNotFoundException(command.variantId()));
 
         variant.addStock(command.quantity());
 
-        return saveProductVariantPort.save(variant);
+        var saved = saveProductVariantPort.save(variant);
+        return GetProductService.toVariantView(saved, saved.getProduct().getBasePrice());
     }
 }

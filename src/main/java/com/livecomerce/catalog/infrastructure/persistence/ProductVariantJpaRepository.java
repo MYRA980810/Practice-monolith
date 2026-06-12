@@ -11,7 +11,7 @@ import java.util.UUID;
 
 interface ProductVariantJpaRepository extends JpaRepository<ProductVariant, UUID> {
 
-    @Query("SELECT v FROM ProductVariant v JOIN FETCH v.stock WHERE v.id = :id")
+    @Query("SELECT v FROM ProductVariant v JOIN FETCH v.stock JOIN FETCH v.product LEFT JOIN FETCH v.optionValues WHERE v.id = :id")
     Optional<ProductVariant> findByIdWithStock(@Param("id") UUID id);
 
     @Query("SELECT v FROM ProductVariant v JOIN FETCH v.stock WHERE v.product.id = :productId")

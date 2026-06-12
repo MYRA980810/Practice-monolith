@@ -28,6 +28,7 @@ class ProductPersistenceAdapter implements LoadProductPort, SaveProductPort {
         // with open-in-view=false don't hit LazyInitializationException
         repository.findByStoreIdActiveWithImages(storeId);
         repository.findByStoreIdActiveWithOptions(storeId);
+        repository.findByStoreIdActiveWithVariantOptionValues(storeId);
         return products;
     }
 

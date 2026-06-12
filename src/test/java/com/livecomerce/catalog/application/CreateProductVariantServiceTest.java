@@ -40,16 +40,17 @@ class CreateProductVariantServiceTest {
     }
 
     @Test
-    void createVariant_whenValid_returnsNewVariant() {
+    void createVariant_whenValid_returnsVariantView() {
         var product = buildProductWithColorOption();
         when(loadProductPort.loadById(PRODUCT_ID)).thenReturn(Optional.of(product));
         when(saveProductPort.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        var variant = service.createVariant(new CreateProductVariantCommand(
+        var result = service.createVariant(new CreateProductVariantCommand(
                 PRODUCT_ID, STORE_ID, Map.of("Color", "Red"), "SKU-RED", new BigDecimal("15.00")));
 
-        assertThat(variant.isDefault()).isFalse();
-        assertThat(variant.getSku()).isEqualTo("SKU-RED");
+        assertThat(result.isDefault()).isFalse();
+        assertThat(result.sku()).isEqualTo("SKU-RED");
+        assertThat(result.effectivePrice()).isEqualByComparingTo("15.00");
     }
 
     @Test

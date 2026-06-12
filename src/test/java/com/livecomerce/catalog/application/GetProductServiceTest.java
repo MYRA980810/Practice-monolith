@@ -1,5 +1,6 @@
 package com.livecomerce.catalog.application;
 
+import com.livecomerce.catalog.application.port.out.LoadCategoryPort;
 import com.livecomerce.catalog.application.port.out.LoadProductPort;
 import com.livecomerce.catalog.domain.Product;
 import org.junit.jupiter.api.Test;
@@ -21,10 +22,11 @@ import static org.mockito.Mockito.when;
 class GetProductServiceTest {
 
     @Mock LoadProductPort loadProductPort;
+    @Mock LoadCategoryPort loadCategoryPort;
 
     @InjectMocks GetProductService service;
 
-    private static final UUID STORE_ID  = UUID.randomUUID();
+    private static final UUID STORE_ID   = UUID.randomUUID();
     private static final UUID PRODUCT_ID = UUID.randomUUID();
 
     private static Product buildProduct() {
@@ -34,14 +36,14 @@ class GetProductServiceTest {
     // --- getById ---
 
     @Test
-    void getById_whenProductExists_returnsIt() {
+    void getById_whenProductExists_returnsView() {
         var product = buildProduct();
         when(loadProductPort.loadById(PRODUCT_ID)).thenReturn(Optional.of(product));
 
         var result = service.getById(PRODUCT_ID);
 
-        assertThat(result.getName()).isEqualTo("Remera");
-        assertThat(result.getStoreId()).isEqualTo(STORE_ID);
+        assertThat(result.name()).isEqualTo("Remera");
+        assertThat(result.storeId()).isEqualTo(STORE_ID);
     }
 
     @Test
@@ -55,7 +57,7 @@ class GetProductServiceTest {
     // --- getByStoreId ---
 
     @Test
-    void getByStoreId_returnsAllProducts() {
+    void getByStoreId_returnsAllProductViews() {
         var p1 = buildProduct();
         var p2 = Product.create(STORE_ID, "Pantalón", null, new BigDecimal("200.00"), "MXN", null, null);
         when(loadProductPort.loadByStoreId(STORE_ID)).thenReturn(List.of(p1, p2));

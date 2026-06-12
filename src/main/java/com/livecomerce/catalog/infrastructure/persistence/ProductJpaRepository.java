@@ -11,11 +11,14 @@ import java.util.UUID;
 
 interface ProductJpaRepository extends JpaRepository<Product, UUID> {
 
-    @Query("SELECT p FROM Product p LEFT JOIN FETCH p.variants v LEFT JOIN FETCH v.stock WHERE p.id = :id")
+    @Query("SELECT p FROM Product p LEFT JOIN FETCH p.variants v LEFT JOIN FETCH v.stock LEFT JOIN FETCH v.optionValues WHERE p.id = :id")
     Optional<Product> findByIdWithDetails(@Param("id") UUID id);
 
     @Query("SELECT DISTINCT p FROM Product p LEFT JOIN FETCH p.variants v LEFT JOIN FETCH v.stock WHERE p.storeId = :storeId AND p.active = true")
     List<Product> findByStoreIdActiveWithDetails(@Param("storeId") UUID storeId);
+
+    @Query("SELECT DISTINCT p FROM Product p LEFT JOIN FETCH p.variants v LEFT JOIN FETCH v.optionValues WHERE p.storeId = :storeId AND p.active = true")
+    List<Product> findByStoreIdActiveWithVariantOptionValues(@Param("storeId") UUID storeId);
 
     @Query("SELECT DISTINCT p FROM Product p LEFT JOIN FETCH p.images WHERE p.storeId = :storeId AND p.active = true")
     List<Product> findByStoreIdActiveWithImages(@Param("storeId") UUID storeId);

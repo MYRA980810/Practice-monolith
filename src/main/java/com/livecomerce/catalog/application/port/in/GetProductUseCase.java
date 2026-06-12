@@ -1,13 +1,13 @@
 package com.livecomerce.catalog.application.port.in;
 
-import com.livecomerce.catalog.domain.Product;
+import com.livecomerce.catalog.application.query.ProductView;
 
 import java.util.List;
 import java.util.UUID;
 
 public interface GetProductUseCase {
 
-    Product getById(UUID productId);
+    ProductView getById(UUID productId);
 
-    List<Product> getByStoreId(UUID storeId);
+    List<ProductView> getByStoreId(UUID storeId);
 }

@@ -10,9 +10,8 @@ import com.livecomerce.catalog.application.port.in.GetProductUseCase;
 import com.livecomerce.catalog.application.port.in.RemoveProductImageUseCase;
 import com.livecomerce.catalog.application.port.in.UpdateProductImageUseCase;
 import com.livecomerce.catalog.application.port.in.UpdateProductUseCase;
-import com.livecomerce.catalog.application.port.out.LoadCategoryPort;
-import com.livecomerce.catalog.domain.Category;
-import com.livecomerce.catalog.domain.Product;
+import com.livecomerce.catalog.application.query.ProductView;
+import com.livecomerce.catalog.application.query.VariantView;
 import com.livecomerce.shared.UserPrincipal;
 import com.livecomerce.store.application.port.in.GetStoreUseCase;
 import jakarta.validation.Valid;
@@ -41,7 +40,6 @@ class ProductController {
     private final RemoveProductImageUseCase removeProductImageUseCase;
     private final DeactivateProductUseCase deactivateProductUseCase;
     private final GetStoreUseCase getStoreUseCase;
-    private final LoadCategoryPort loadCategoryPort;
     private final AddProductOptionUseCase addProductOptionUseCase;
     private final CreateProductVariantUseCase createProductVariantUseCase;
 
@@ -49,7 +47,7 @@ class ProductController {
 
     @PostMapping
     @PreAuthorize("hasRole('SELLER')")
-    ResponseEntity<ProductResponse> create(
+    ResponseEntity<ProductView> create(
             @Valid @RequestBody CreateProductRequest request,
             @AuthenticationPrincipal UserPrincipal principal) {
 
@@ -63,18 +61,18 @@ class ProductController {
                 request.sku(),
                 request.categoryId()
         ));
-        return ResponseEntity.status(HttpStatus.CREATED).body(ProductResponse.from(product));
+        return ResponseEntity.status(HttpStatus.CREATED).body(getProductUseCase.getById(product.getId()));
     }
 
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('SELLER')")
-    ResponseEntity<ProductResponse> update(
+    ResponseEntity<ProductView> update(
             @PathVariable UUID id,
             @Valid @RequestBody UpdateProductRequest request,
             @AuthenticationPrincipal UserPrincipal principal) {
 
         var storeId = getStoreUseCase.getStoreIdByUserId(principal.getUserId());
-        var product = updateProductUseCase.update(new UpdateProductUseCase.UpdateProductCommand(
+        updateProductUseCase.update(new UpdateProductUseCase.UpdateProductCommand(
                 id,
                 storeId,
                 request.name(),
@@ -84,119 +82,104 @@ class ProductController {
                 request.sku(),
                 request.categoryId()
         ));
-        return ResponseEntity.ok(ProductResponse.from(product));
+        return ResponseEntity.ok(getProductUseCase.getById(id));
     }
 
     @GetMapping("/{id}")
-    ResponseEntity<ProductResponse> getById(@PathVariable UUID id) {
-        var product = getProductUseCase.getById(id);
-        return ResponseEntity.ok(toResponse(product));
+    ResponseEntity<ProductView> getById(@PathVariable UUID id) {
+        return ResponseEntity.ok(getProductUseCase.getById(id));
     }
 
     @GetMapping
-    ResponseEntity<List<ProductResponse>> getByStore(@RequestParam UUID storeId) {
-        var products = getProductUseCase.getByStoreId(storeId).stream()
-                .map(this::toResponse)
-                .toList();
-        return ResponseEntity.ok(products);
+    ResponseEntity<List<ProductView>> getByStore(@RequestParam UUID storeId) {
+        return ResponseEntity.ok(getProductUseCase.getByStoreId(storeId));
     }
 
     @GetMapping("/me")
     @PreAuthorize("hasRole('SELLER')")
-    ResponseEntity<List<ProductResponse>> getMyProducts(@AuthenticationPrincipal UserPrincipal principal) {
+    ResponseEntity<List<ProductView>> getMyProducts(@AuthenticationPrincipal UserPrincipal principal) {
         var storeId = getStoreUseCase.getStoreIdByUserId(principal.getUserId());
-        var products = getProductUseCase.getByStoreId(storeId).stream()
-                .map(this::toResponse)
-                .toList();
-        return ResponseEntity.ok(products);
+        return ResponseEntity.ok(getProductUseCase.getByStoreId(storeId));
     }
 
     @PostMapping("/{id}/options")
     @PreAuthorize("hasRole('SELLER')")
     @ResponseStatus(HttpStatus.OK)
-    ProductResponse addOption(
+    ProductView addOption(
             @PathVariable UUID id,
             @RequestBody @Valid AddProductOptionRequest request,
             @AuthenticationPrincipal UserPrincipal principal) {
 
         var storeId = getStoreUseCase.getStoreIdByUserId(principal.getUserId());
-        var product = addProductOptionUseCase.addOption(
+        addProductOptionUseCase.addOption(
                 new AddProductOptionUseCase.AddProductOptionCommand(id, storeId, request.name(), request.values()));
-        return toResponse(product);
+        return getProductUseCase.getById(id);
     }
 
     @PostMapping("/{id}/variants")
     @PreAuthorize("hasRole('SELLER')")
     @ResponseStatus(HttpStatus.CREATED)
-    VariantResponse createVariant(
+    VariantView createVariant(
             @PathVariable UUID id,
             @RequestBody @Valid CreateProductVariantRequest request,
             @AuthenticationPrincipal UserPrincipal principal) {
 
         var storeId = getStoreUseCase.getStoreIdByUserId(principal.getUserId());
-        var variant = createProductVariantUseCase.createVariant(
+        return createProductVariantUseCase.createVariant(
                 new CreateProductVariantUseCase.CreateProductVariantCommand(
                         id, storeId, request.options(), request.sku(), request.priceOverride()));
-        var product = getProductUseCase.getById(id);
-        return VariantResponse.from(variant, product.getBasePrice());
     }
 
     @GetMapping("/{id}/variants")
-    List<VariantResponse> listVariants(@PathVariable UUID id) {
-        var product = getProductUseCase.getById(id);
-        return product.getVariants().stream()
-                .map(v -> VariantResponse.from(v, product.getBasePrice()))
-                .toList();
+    List<VariantView> listVariants(@PathVariable UUID id) {
+        return getProductUseCase.getById(id).variants();
     }
 
     @PostMapping("/{id}/variants/{variantId}/stock")
     @PreAuthorize("hasRole('SELLER')")
-    ResponseEntity<VariantResponse> addVariantStock(
+    ResponseEntity<VariantView> addVariantStock(
             @PathVariable UUID id,
             @PathVariable UUID variantId,
             @Valid @RequestBody AddStockRequest request) {
 
-        var variant = addStockUseCase.addStock(new AddStockUseCase.AddStockCommand(variantId, request.quantity()));
-        var product = getProductUseCase.getById(id);
-        return ResponseEntity.ok(VariantResponse.from(variant, product.getBasePrice()));
+        return ResponseEntity.ok(addStockUseCase.addStock(new AddStockUseCase.AddStockCommand(variantId, request.quantity())));
     }
 
     @PostMapping("/{id}/images")
     @PreAuthorize("hasRole('SELLER')")
-    ResponseEntity<ProductResponse> addImage(
+    ResponseEntity<ProductView> addImage(
             @PathVariable UUID id,
             @Valid @RequestBody AddImageRequest request) {
 
-        var product = addProductImageUseCase.addImage(
+        addProductImageUseCase.addImage(
                 new AddProductImageUseCase.AddImageCommand(id, request.url(), request.position(), request.primary()));
-        return ResponseEntity.ok(ProductResponse.from(product));
+        return ResponseEntity.ok(getProductUseCase.getById(id));
     }
 
     @PutMapping("/{id}/images/{imageId}")
     @PreAuthorize("hasRole('SELLER')")
-    ResponseEntity<ProductResponse> updateImage(
+    ResponseEntity<ProductView> updateImage(
             @PathVariable UUID id,
             @PathVariable UUID imageId,
             @Valid @RequestBody UpdateImageRequest request,
             @AuthenticationPrincipal UserPrincipal principal) {
 
         var storeId = getStoreUseCase.getStoreIdByUserId(principal.getUserId());
-        var product = updateProductImageUseCase.updateImage(new UpdateProductImageUseCase.UpdateImageCommand(
+        updateProductImageUseCase.updateImage(new UpdateProductImageUseCase.UpdateImageCommand(
                 id, storeId, imageId, request.url(), request.position(), request.primary()));
-        return ResponseEntity.ok(ProductResponse.from(product));
+        return ResponseEntity.ok(getProductUseCase.getById(id));
     }
 
     @DeleteMapping("/{id}/images/{imageId}")
     @PreAuthorize("hasRole('SELLER')")
-    ResponseEntity<ProductResponse> removeImage(
+    ResponseEntity<ProductView> removeImage(
             @PathVariable UUID id,
             @PathVariable UUID imageId,
             @AuthenticationPrincipal UserPrincipal principal) {
 
         var storeId = getStoreUseCase.getStoreIdByUserId(principal.getUserId());
-        var product = removeProductImageUseCase.removeImage(new RemoveProductImageUseCase.RemoveImageCommand(
-                id, storeId, imageId));
-        return ResponseEntity.ok(ProductResponse.from(product));
+        removeProductImageUseCase.removeImage(new RemoveProductImageUseCase.RemoveImageCommand(id, storeId, imageId));
+        return ResponseEntity.ok(getProductUseCase.getById(id));
     }
 
     @PatchMapping("/{id}/deactivate")
@@ -208,12 +191,5 @@ class ProductController {
         var storeId = getStoreUseCase.getStoreIdByUserId(principal.getUserId());
         deactivateProductUseCase.deactivate(new DeactivateProductUseCase.DeactivateCommand(id, storeId));
         return ResponseEntity.noContent().build();
-    }
-
-    private ProductResponse toResponse(Product product) {
-        Category category = product.getCategoryId() != null
-                ? loadCategoryPort.loadById(product.getCategoryId()).orElse(null)
-                : null;
-        return ProductResponse.from(product, category);
     }
 }

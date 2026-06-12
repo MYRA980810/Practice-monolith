@@ -1,6 +1,6 @@
 package com.livecomerce.catalog.application.port.in;
 
-import com.livecomerce.catalog.domain.ProductVariant;
+import com.livecomerce.catalog.application.query.VariantView;
 
 import java.math.BigDecimal;
 import java.util.Map;
@@ -16,5 +16,5 @@ public interface CreateProductVariantUseCase {
             BigDecimal priceOverride
     ) {}
 
-    ProductVariant createVariant(CreateProductVariantCommand command);
+    VariantView createVariant(CreateProductVariantCommand command);
 }

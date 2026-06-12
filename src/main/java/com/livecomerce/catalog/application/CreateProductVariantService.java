@@ -3,7 +3,7 @@ package com.livecomerce.catalog.application;
 import com.livecomerce.catalog.application.port.in.CreateProductVariantUseCase;
 import com.livecomerce.catalog.application.port.out.LoadProductPort;
 import com.livecomerce.catalog.application.port.out.SaveProductPort;
-import com.livecomerce.catalog.domain.ProductVariant;
+import com.livecomerce.catalog.application.query.VariantView;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
@@ -18,7 +18,7 @@ public class CreateProductVariantService implements CreateProductVariantUseCase 
     private final SaveProductPort saveProductPort;
 
     @Override
-    public ProductVariant createVariant(CreateProductVariantCommand command) {
+    public VariantView createVariant(CreateProductVariantCommand command) {
         var product = loadProductPort.loadById(command.productId())
                 .orElseThrow(() -> new ProductNotFoundException(command.productId()));
 
@@ -30,9 +30,11 @@ public class CreateProductVariantService implements CreateProductVariantUseCase 
 
         var saved = saveProductPort.save(product);
 
-        return saved.getVariants().stream()
+        var variant = saved.getVariants().stream()
                 .filter(v -> !v.isDefault())
                 .reduce((a, b) -> b)
                 .orElseThrow(() -> new IllegalStateException("No non-default variant found after save"));
+
+        return GetProductService.toVariantView(variant, saved.getBasePrice());
     }
 }

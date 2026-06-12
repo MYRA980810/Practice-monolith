@@ -4,7 +4,6 @@ import com.livecomerce.catalog.application.port.in.AddStockUseCase.AddStockComma
 import com.livecomerce.catalog.application.port.out.LoadProductVariantPort;
 import com.livecomerce.catalog.application.port.out.SaveProductVariantPort;
 import com.livecomerce.catalog.domain.Product;
-import com.livecomerce.catalog.domain.ProductVariant;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -31,21 +30,21 @@ class AddStockServiceTest {
 
     private static final UUID VARIANT_ID = UUID.randomUUID();
 
-    private static ProductVariant buildVariant() {
-        var product = Product.create(UUID.randomUUID(), "Remera", null, BigDecimal.TEN, "MXN", null, null);
-        return product.defaultVariant();
+    private static Product buildProduct() {
+        return Product.create(UUID.randomUUID(), "Remera", null, BigDecimal.TEN, "MXN", null, null);
     }
 
     @Test
-    void addStock_whenVariantExists_increasesStock() {
-        var variant = buildVariant();
+    void addStock_whenVariantExists_returnsViewWithUpdatedStock() {
+        var product = buildProduct();
+        var variant = product.defaultVariant();
         when(loadProductVariantPort.loadById(VARIANT_ID)).thenReturn(Optional.of(variant));
         when(saveProductVariantPort.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         var result = service.addStock(new AddStockCommand(VARIANT_ID, 20));
 
-        assertThat(result.getStock().getTotalQuantity()).isEqualTo(20);
-        assertThat(result.getStock().getAvailableQuantity()).isEqualTo(20);
+        assertThat(result.stock().totalQuantity()).isEqualTo(20);
+        assertThat(result.stock().availableQuantity()).isEqualTo(20);
     }
 
     @Test
@@ -58,7 +57,8 @@ class AddStockServiceTest {
 
     @Test
     void addStock_savesVariantAfterUpdate() {
-        var variant = buildVariant();
+        var product = buildProduct();
+        var variant = product.defaultVariant();
         when(loadProductVariantPort.loadById(VARIANT_ID)).thenReturn(Optional.of(variant));
         when(saveProductVariantPort.save(any())).thenAnswer(inv -> inv.getArgument(0));
 

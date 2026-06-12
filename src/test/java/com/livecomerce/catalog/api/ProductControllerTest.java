@@ -12,7 +12,8 @@ import com.livecomerce.catalog.application.port.in.GetProductUseCase;
 import com.livecomerce.catalog.application.port.in.RemoveProductImageUseCase;
 import com.livecomerce.catalog.application.port.in.UpdateProductImageUseCase;
 import com.livecomerce.catalog.application.port.in.UpdateProductUseCase;
-import com.livecomerce.catalog.application.port.out.LoadCategoryPort;
+import com.livecomerce.catalog.application.query.ProductView;
+import com.livecomerce.catalog.application.query.VariantView;
 import com.livecomerce.catalog.domain.Product;
 import com.livecomerce.shared.UserPrincipal;
 import com.livecomerce.store.application.port.in.GetStoreUseCase;
@@ -38,6 +39,7 @@ import org.springframework.web.method.support.HandlerMethodArgumentResolver;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 import java.math.BigDecimal;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -75,14 +77,12 @@ class ProductControllerTest {
     @MockitoBean RemoveProductImageUseCase removeProductImageUseCase;
     @MockitoBean DeactivateProductUseCase deactivateProductUseCase;
     @MockitoBean GetStoreUseCase getStoreUseCase;
-    @MockitoBean LoadCategoryPort loadCategoryPort;
     @MockitoBean AddProductOptionUseCase addProductOptionUseCase;
     @MockitoBean CreateProductVariantUseCase createProductVariantUseCase;
 
-    private static final UUID STORE_ID    = UUID.randomUUID();
-    private static final UUID PRODUCT_ID  = UUID.randomUUID();
-    private static final UUID CATEGORY_ID = UUID.randomUUID();
-    private static final UUID VARIANT_ID  = UUID.randomUUID();
+    private static final UUID STORE_ID   = UUID.randomUUID();
+    private static final UUID PRODUCT_ID = UUID.randomUUID();
+    private static final UUID VARIANT_ID = UUID.randomUUID();
 
     @BeforeEach
     void setUpPrincipal() {
@@ -99,8 +99,28 @@ class ProductControllerTest {
         SecurityContextHolder.clearContext();
     }
 
+    private static ProductView buildProductView() {
+        var stock = new ProductView.StockInfo(0, 0, 0);
+        return new ProductView(
+                PRODUCT_ID, STORE_ID, "Remera Básica", "Descripción",
+                new BigDecimal("150.00"), "MXN", "SKU-001",
+                true, null, null,
+                stock, List.of(), List.of(), List.of(),
+                OffsetDateTime.now(), OffsetDateTime.now()
+        );
+    }
+
     private static Product buildProduct() {
         return Product.create(STORE_ID, "Remera Básica", "Descripción", new BigDecimal("150.00"), "MXN", "SKU-001", null);
+    }
+
+    private static VariantView buildVariantView() {
+        return new VariantView(
+                VARIANT_ID, PRODUCT_ID, "SKU-001", null,
+                new BigDecimal("150.00"), true, 0,
+                List.of(),
+                new VariantView.StockInfo(20, 20, 0)
+        );
     }
 
     // --- POST /api/products ---
@@ -108,6 +128,7 @@ class ProductControllerTest {
     @Test
     void create_withValidRequest_returns201WithProduct() throws Exception {
         when(createProductUseCase.create(any())).thenReturn(buildProduct());
+        when(getProductUseCase.getById(any())).thenReturn(buildProductView());
 
         mvc.perform(post("/api/products")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -121,7 +142,7 @@ class ProductControllerTest {
                                   "sku": "SKU-001",
                                   "categoryId": "%s"
                                 }
-                                """.formatted(STORE_ID, CATEGORY_ID)))
+                                """.formatted(STORE_ID, UUID.randomUUID())))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.name").value("Remera Básica"))
                 .andExpect(jsonPath("$.currency").value("MXN"))
@@ -176,7 +197,7 @@ class ProductControllerTest {
 
     @Test
     void getById_whenProductExists_returns200() throws Exception {
-        when(getProductUseCase.getById(any())).thenReturn(buildProduct());
+        when(getProductUseCase.getById(any())).thenReturn(buildProductView());
 
         mvc.perform(get("/api/products/{id}", PRODUCT_ID))
                 .andExpect(status().isOk())
@@ -197,9 +218,7 @@ class ProductControllerTest {
 
     @Test
     void getByStore_returnsProductList() throws Exception {
-        var p1 = buildProduct();
-        var p2 = Product.create(STORE_ID, "Pantalón", null, new BigDecimal("200.00"), "MXN", null, null);
-        when(getProductUseCase.getByStoreId(STORE_ID)).thenReturn(List.of(p1, p2));
+        when(getProductUseCase.getByStoreId(STORE_ID)).thenReturn(List.of(buildProductView(), buildProductView()));
 
         mvc.perform(get("/api/products").param("storeId", STORE_ID.toString()))
                 .andExpect(status().isOk())
@@ -210,11 +229,7 @@ class ProductControllerTest {
 
     @Test
     void addVariantStock_withValidQty_returns200() throws Exception {
-        var product = buildProduct();
-        product.addStock(20);
-        var variant = product.defaultVariant();
-        when(addStockUseCase.addStock(any())).thenReturn(variant);
-        when(getProductUseCase.getById(PRODUCT_ID)).thenReturn(product);
+        when(addStockUseCase.addStock(any())).thenReturn(buildVariantView());
 
         mvc.perform(post("/api/products/{id}/variants/{variantId}/stock", PRODUCT_ID, VARIANT_ID)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -252,8 +267,8 @@ class ProductControllerTest {
 
     @Test
     void addImage_withValidRequest_returns200() throws Exception {
-        var product = buildProduct();
-        when(addProductImageUseCase.addImage(any())).thenReturn(product);
+        when(addProductImageUseCase.addImage(any())).thenReturn(buildProduct());
+        when(getProductUseCase.getById(any())).thenReturn(buildProductView());
 
         mvc.perform(post("/api/products/{id}/images", PRODUCT_ID)
                         .contentType(MediaType.APPLICATION_JSON)
