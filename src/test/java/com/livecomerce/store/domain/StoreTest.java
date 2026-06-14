@@ -1,6 +1,7 @@
 package com.livecomerce.store.domain;
 
 import com.livecomerce.store.application.StoreCannotBeReactivatedException;
+import com.livecomerce.store.application.StoreCannotBeReopenedException;
 import org.junit.jupiter.api.Test;
 
 import java.util.UUID;
@@ -61,5 +62,59 @@ class StoreTest {
 
         assertThat(store.isActive()).isFalse();
         assertThat(store.isSuspended()).isFalse();
+    }
+
+    // --- closeTemporarily / reopen ---
+
+    @Test
+    void create_isNotTemporarilyClosed_byDefault() {
+        var store = activeStore();
+        assertThat(store.isTemporarilyClosed()).isFalse();
+    }
+
+    @Test
+    void closeTemporarily_whenActive_setsTemporarilyClosedTrue() {
+        var store = activeStore();
+        store.closeTemporarily();
+        assertThat(store.isTemporarilyClosed()).isTrue();
+    }
+
+    @Test
+    void closeTemporarily_whenAlreadyClosed_isIdempotent() {
+        var store = activeStore();
+        store.closeTemporarily();
+        store.closeTemporarily();
+        assertThat(store.isTemporarilyClosed()).isTrue();
+    }
+
+    @Test
+    void closeTemporarily_whenInactive_throwsIllegalStateException() {
+        var store = activeStore();
+        store.deactivate();
+        assertThatThrownBy(store::closeTemporarily)
+                .isInstanceOf(IllegalStateException.class);
+    }
+
+    @Test
+    void reopen_whenTemporarilyClosed_setsTemporarilyClosedFalse() {
+        var store = activeStore();
+        store.closeTemporarily();
+        store.reopen();
+        assertThat(store.isTemporarilyClosed()).isFalse();
+    }
+
+    @Test
+    void reopen_whenNotClosed_isIdempotent() {
+        var store = activeStore();
+        store.reopen();
+        assertThat(store.isTemporarilyClosed()).isFalse();
+    }
+
+    @Test
+    void reopen_whenSuspended_throwsStoreCannotBeReopenedException() {
+        var store = suspendedStore();
+        store.closeTemporarily();
+        assertThatThrownBy(store::reopen)
+                .isInstanceOf(StoreCannotBeReopenedException.class);
     }
 }

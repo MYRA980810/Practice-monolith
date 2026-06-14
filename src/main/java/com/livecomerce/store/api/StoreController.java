@@ -2,11 +2,13 @@ package com.livecomerce.store.api;
 
 import com.livecomerce.shared.UserPrincipal;
 import com.livecomerce.store.application.port.in.ChangePlanUseCase;
+import com.livecomerce.store.application.port.in.CloseStoreTemporarilyUseCase;
 import com.livecomerce.store.application.port.in.CreateStoreUseCase;
 import com.livecomerce.store.application.port.in.DeactivateStoreUseCase;
 import com.livecomerce.store.application.port.in.GetStoreUseCase;
 import com.livecomerce.store.application.port.in.ListStoresUseCase;
 import com.livecomerce.store.application.port.in.ReactivateStoreUseCase;
+import com.livecomerce.store.application.port.in.ReopenStoreUseCase;
 import com.livecomerce.store.application.port.in.UpdateStoreUseCase;
 import com.livecomerce.shared.Plan;
 import jakarta.validation.Valid;
@@ -35,6 +37,8 @@ class StoreController {
     private final ChangePlanUseCase changePlanUseCase;
     private final DeactivateStoreUseCase deactivateStoreUseCase;
     private final ReactivateStoreUseCase reactivateStoreUseCase;
+    private final CloseStoreTemporarilyUseCase closeStoreTemporarilyUseCase;
+    private final ReopenStoreUseCase reopenStoreUseCase;
     private final ListStoresUseCase listStoresUseCase;
 
     @GetMapping
@@ -109,6 +113,20 @@ class StoreController {
         reactivateStoreUseCase.reactivate(principal.getUserId());
         var store = getStoreUseCase.getByUserId(principal.getUserId());
         return ResponseEntity.ok(StoreResponse.from(store));
+    }
+
+    @PatchMapping("/me/close")
+    @PreAuthorize("hasRole('SELLER')")
+    ResponseEntity<Void> closeMyStore(@AuthenticationPrincipal UserPrincipal principal) {
+        closeStoreTemporarilyUseCase.close(principal.getUserId());
+        return ResponseEntity.noContent().build();
+    }
+
+    @PatchMapping("/me/reopen")
+    @PreAuthorize("hasRole('SELLER')")
+    ResponseEntity<Void> reopenMyStore(@AuthenticationPrincipal UserPrincipal principal) {
+        reopenStoreUseCase.reopen(principal.getUserId());
+        return ResponseEntity.noContent().build();
     }
 
     @PutMapping("/me/plan")

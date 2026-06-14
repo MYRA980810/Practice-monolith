@@ -3,12 +3,14 @@ package com.livecomerce.store.application;
 import com.livecomerce.store.application.port.out.LoadStorePort;
 import com.livecomerce.store.application.port.out.SaveStorePort;
 import com.livecomerce.store.domain.Store;
+import com.livecomerce.store.StoreDeactivatedEvent;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 
 import java.util.Optional;
 import java.util.UUID;
@@ -25,6 +27,7 @@ class DeactivateStoreServiceTest {
 
     @Mock LoadStorePort loadStorePort;
     @Mock SaveStorePort saveStorePort;
+    @Mock ApplicationEventPublisher eventPublisher;
 
     @InjectMocks DeactivateStoreService service;
 
@@ -44,6 +47,18 @@ class DeactivateStoreServiceTest {
     }
 
     @Test
+    void deactivate_whenStoreExists_publishesStoreDeactivatedEvent() {
+        var store = Store.create(USER_ID, "Mi Tienda", "mi-tienda", null, null);
+        when(loadStorePort.loadByUserId(USER_ID)).thenReturn(Optional.of(store));
+
+        service.deactivate(USER_ID);
+
+        var captor = ArgumentCaptor.forClass(StoreDeactivatedEvent.class);
+        verify(eventPublisher).publishEvent(captor.capture());
+        assertThat(captor.getValue().storeId()).isEqualTo(store.getId());
+    }
+
+    @Test
     void deactivate_whenStoreNotFound_throwsStoreNotFoundException() {
         when(loadStorePort.loadByUserId(USER_ID)).thenReturn(Optional.empty());
 
@@ -51,5 +66,6 @@ class DeactivateStoreServiceTest {
                 .isInstanceOf(StoreNotFoundException.class);
 
         verify(saveStorePort, never()).save(any());
+        verify(eventPublisher, never()).publishEvent(any());
     }
 }

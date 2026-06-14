@@ -3,9 +3,11 @@ package com.livecomerce.catalog.infrastructure.persistence;
 import com.livecomerce.catalog.domain.Product;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -15,16 +17,16 @@ interface ProductJpaRepository extends JpaRepository<Product, UUID>, JpaSpecific
     @Query("SELECT p FROM Product p LEFT JOIN FETCH p.variants v LEFT JOIN FETCH v.stock LEFT JOIN FETCH v.optionValues WHERE p.id = :id")
     Optional<Product> findByIdWithDetails(@Param("id") UUID id);
 
-    @Query("SELECT DISTINCT p FROM Product p LEFT JOIN FETCH p.variants v LEFT JOIN FETCH v.stock WHERE p.storeId = :storeId AND p.active = true")
+    @Query("SELECT DISTINCT p FROM Product p LEFT JOIN FETCH p.variants v LEFT JOIN FETCH v.stock WHERE p.storeId = :storeId AND p.active = true AND p.paused = false")
     List<Product> findByStoreIdActiveWithDetails(@Param("storeId") UUID storeId);
 
-    @Query("SELECT DISTINCT p FROM Product p LEFT JOIN FETCH p.variants v LEFT JOIN FETCH v.optionValues WHERE p.storeId = :storeId AND p.active = true")
+    @Query("SELECT DISTINCT p FROM Product p LEFT JOIN FETCH p.variants v LEFT JOIN FETCH v.optionValues WHERE p.storeId = :storeId AND p.active = true AND p.paused = false")
     List<Product> findByStoreIdActiveWithVariantOptionValues(@Param("storeId") UUID storeId);
 
-    @Query("SELECT DISTINCT p FROM Product p LEFT JOIN FETCH p.images WHERE p.storeId = :storeId AND p.active = true")
+    @Query("SELECT DISTINCT p FROM Product p LEFT JOIN FETCH p.images WHERE p.storeId = :storeId AND p.active = true AND p.paused = false")
     List<Product> findByStoreIdActiveWithImages(@Param("storeId") UUID storeId);
 
-    @Query("SELECT DISTINCT p FROM Product p LEFT JOIN FETCH p.options o WHERE p.storeId = :storeId AND p.active = true")
+    @Query("SELECT DISTINCT p FROM Product p LEFT JOIN FETCH p.options o WHERE p.storeId = :storeId AND p.active = true AND p.paused = false")
     List<Product> findByStoreIdActiveWithOptions(@Param("storeId") UUID storeId);
 
     @Query("SELECT DISTINCT p FROM Product p LEFT JOIN FETCH p.variants v LEFT JOIN FETCH v.stock WHERE p.id IN :ids")
@@ -38,4 +40,8 @@ interface ProductJpaRepository extends JpaRepository<Product, UUID>, JpaSpecific
 
     @Query("SELECT DISTINCT p FROM Product p LEFT JOIN FETCH p.options WHERE p.id IN :ids")
     List<Product> findByIdsWithOptions(@Param("ids") List<UUID> ids);
+
+    @Modifying
+    @Query("UPDATE Product p SET p.active = false, p.updatedAt = :now WHERE p.storeId = :storeId AND p.active = true")
+    void deactivateAllByStoreId(@Param("storeId") UUID storeId, @Param("now") OffsetDateTime now);
 }

@@ -1,0 +1,2 @@
+ALTER TABLE products ADD COLUMN paused BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE stores   ADD COLUMN temporarily_closed BOOLEAN NOT NULL DEFAULT false;

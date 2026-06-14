@@ -14,5 +14,5 @@ interface StoreJpaRepository extends JpaRepository<Store, UUID> {
 
     Optional<Store> findBySlug(String slug);
 
-    Page<Store> findAllByActiveTrue(Pageable pageable);
+    Page<Store> findAllByActiveTrueAndTemporarilyClosedFalse(Pageable pageable);
 }

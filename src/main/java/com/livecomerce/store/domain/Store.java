@@ -2,6 +2,7 @@ package com.livecomerce.store.domain;
 
 import com.livecomerce.shared.Plan;
 import com.livecomerce.store.application.StoreCannotBeReactivatedException;
+import com.livecomerce.store.application.StoreCannotBeReopenedException;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -47,6 +48,9 @@ public class Store implements Persistable<UUID> {
 
     @Column(nullable = false)
     private boolean suspended = false;
+
+    @Column(name = "temporarily_closed", nullable = false)
+    private boolean temporarilyClosed = false;
 
     @Column(name = "suspension_reason", length = 20)
     @Enumerated(EnumType.STRING)
@@ -125,5 +129,21 @@ public class Store implements Persistable<UUID> {
         this.suspended        = false;
         this.suspensionReason = null;
         this.updatedAt        = OffsetDateTime.now();
+    }
+
+    public void closeTemporarily() {
+        if (!this.active) {
+            throw new IllegalStateException("Cannot temporarily close an inactive store");
+        }
+        this.temporarilyClosed = true;
+        this.updatedAt         = OffsetDateTime.now();
+    }
+
+    public void reopen() {
+        if (this.suspended) {
+            throw new StoreCannotBeReopenedException();
+        }
+        this.temporarilyClosed = false;
+        this.updatedAt         = OffsetDateTime.now();
     }
 }

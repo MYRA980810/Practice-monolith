@@ -1,11 +1,9 @@
 package com.livecomerce.store.application;
 
-import com.livecomerce.store.application.port.in.DeactivateStoreUseCase;
+import com.livecomerce.store.application.port.in.ReopenStoreUseCase;
 import com.livecomerce.store.application.port.out.LoadStorePort;
 import com.livecomerce.store.application.port.out.SaveStorePort;
-import com.livecomerce.store.StoreDeactivatedEvent;
 import lombok.RequiredArgsConstructor;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -14,18 +12,17 @@ import java.util.UUID;
 @Service
 @RequiredArgsConstructor
 @Transactional
-public class DeactivateStoreService implements DeactivateStoreUseCase {
+public class ReopenStoreService implements ReopenStoreUseCase {
 
     private final LoadStorePort loadStorePort;
     private final SaveStorePort saveStorePort;
-    private final ApplicationEventPublisher eventPublisher;
 
     @Override
-    public void deactivate(UUID userId) {
+    public void reopen(UUID userId) {
         var store = loadStorePort.loadByUserId(userId)
                 .orElseThrow(() -> new StoreNotFoundException(userId.toString()));
-        store.deactivate();
+
+        store.reopen();
         saveStorePort.save(store);
-        eventPublisher.publishEvent(new StoreDeactivatedEvent(store.getId()));
     }
 }

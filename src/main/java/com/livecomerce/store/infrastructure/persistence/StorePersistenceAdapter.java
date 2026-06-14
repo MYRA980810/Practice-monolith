@@ -35,7 +35,7 @@ class StorePersistenceAdapter implements LoadStorePort, SaveStorePort {
 
     @Override
     public Page<Store> loadAllActive(Pageable pageable) {
-        return repository.findAllByActiveTrue(pageable);
+        return repository.findAllByActiveTrueAndTemporarilyClosedFalse(pageable);
     }
 
     @Override

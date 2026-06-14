@@ -4,12 +4,15 @@ import com.livecomerce.shared.UserPrincipal;
 import com.livecomerce.store.application.SlugAlreadyTakenException;
 import com.livecomerce.store.application.StoreAlreadyExistsException;
 import com.livecomerce.store.application.StoreNotFoundException;
+import com.livecomerce.store.application.StoreCannotBeReopenedException;
 import com.livecomerce.store.application.port.in.ChangePlanUseCase;
+import com.livecomerce.store.application.port.in.CloseStoreTemporarilyUseCase;
 import com.livecomerce.store.application.port.in.CreateStoreUseCase;
 import com.livecomerce.store.application.port.in.DeactivateStoreUseCase;
 import com.livecomerce.store.application.port.in.GetStoreUseCase;
 import com.livecomerce.store.application.port.in.ListStoresUseCase;
 import com.livecomerce.store.application.port.in.ReactivateStoreUseCase;
+import com.livecomerce.store.application.port.in.ReopenStoreUseCase;
 import com.livecomerce.store.application.port.in.UpdateStoreUseCase;
 import com.livecomerce.store.domain.Store;
 import org.junit.jupiter.api.AfterEach;
@@ -37,8 +40,11 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -67,6 +73,8 @@ class StoreControllerTest {
     @MockitoBean ChangePlanUseCase changePlanUseCase;
     @MockitoBean DeactivateStoreUseCase deactivateStoreUseCase;
     @MockitoBean ReactivateStoreUseCase reactivateStoreUseCase;
+    @MockitoBean CloseStoreTemporarilyUseCase closeStoreTemporarilyUseCase;
+    @MockitoBean ReopenStoreUseCase reopenStoreUseCase;
     @MockitoBean ListStoresUseCase listStoresUseCase;
 
     private static final UUID USER_ID = UUID.randomUUID();
@@ -189,5 +197,42 @@ class StoreControllerTest {
 
         mvc.perform(get("/api/stores/no-existe"))
                 .andExpect(status().isNotFound());
+    }
+
+    // --- PATCH /api/stores/me/close ---
+
+    @Test
+    void close_whenSeller_returns204() throws Exception {
+        doNothing().when(closeStoreTemporarilyUseCase).close(USER_ID);
+
+        mvc.perform(patch("/api/stores/me/close"))
+                .andExpect(status().isNoContent());
+    }
+
+    @Test
+    void close_whenStoreNotFound_returns404() throws Exception {
+        doThrow(new StoreNotFoundException(USER_ID.toString())).when(closeStoreTemporarilyUseCase).close(USER_ID);
+
+        mvc.perform(patch("/api/stores/me/close"))
+                .andExpect(status().isNotFound());
+    }
+
+    // --- PATCH /api/stores/me/reopen ---
+
+    @Test
+    void reopen_whenClosed_returns204() throws Exception {
+        doNothing().when(reopenStoreUseCase).reopen(USER_ID);
+
+        mvc.perform(patch("/api/stores/me/reopen"))
+                .andExpect(status().isNoContent());
+    }
+
+    @Test
+    void reopen_whenSuspended_returns409() throws Exception {
+        doThrow(new StoreCannotBeReopenedException()).when(reopenStoreUseCase).reopen(USER_ID);
+
+        mvc.perform(patch("/api/stores/me/reopen"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.type").value("https://livecomerce.com/errors/store-cannot-be-reopened"));
     }
 }

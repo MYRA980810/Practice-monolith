@@ -15,6 +15,7 @@ public record StoreResponse(
         PlanResponse plan,
         boolean active,
         boolean suspended,
+        boolean temporarilyClosed,
         OffsetDateTime createdAt
 ) {
     public static StoreResponse from(Store store) {
@@ -28,6 +29,7 @@ public record StoreResponse(
                 PlanResponse.from(store.getPlan()),
                 store.isActive(),
                 store.isSuspended(),
+                store.isTemporarilyClosed(),
                 store.getCreatedAt()
         );
     }

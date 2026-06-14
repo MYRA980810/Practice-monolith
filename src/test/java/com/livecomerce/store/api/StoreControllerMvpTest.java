@@ -4,11 +4,13 @@ import com.livecomerce.shared.UserPrincipal;
 import com.livecomerce.store.application.StoreCannotBeReactivatedException;
 import com.livecomerce.store.application.StoreNotFoundException;
 import com.livecomerce.store.application.port.in.ChangePlanUseCase;
+import com.livecomerce.store.application.port.in.CloseStoreTemporarilyUseCase;
 import com.livecomerce.store.application.port.in.CreateStoreUseCase;
 import com.livecomerce.store.application.port.in.DeactivateStoreUseCase;
 import com.livecomerce.store.application.port.in.GetStoreUseCase;
 import com.livecomerce.store.application.port.in.ListStoresUseCase;
 import com.livecomerce.store.application.port.in.ReactivateStoreUseCase;
+import com.livecomerce.store.application.port.in.ReopenStoreUseCase;
 import com.livecomerce.store.application.port.in.UpdateStoreUseCase;
 import com.livecomerce.store.domain.Store;
 import org.junit.jupiter.api.AfterEach;
@@ -71,6 +73,8 @@ class StoreControllerMvpTest {
     @MockitoBean ChangePlanUseCase changePlanUseCase;
     @MockitoBean DeactivateStoreUseCase deactivateStoreUseCase;
     @MockitoBean ReactivateStoreUseCase reactivateStoreUseCase;
+    @MockitoBean CloseStoreTemporarilyUseCase closeStoreTemporarilyUseCase;
+    @MockitoBean ReopenStoreUseCase reopenStoreUseCase;
     @MockitoBean ListStoresUseCase listStoresUseCase;
 
     private static final UUID USER_ID = UUID.randomUUID();

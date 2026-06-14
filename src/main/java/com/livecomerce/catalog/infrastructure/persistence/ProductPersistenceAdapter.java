@@ -9,7 +9,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Component;
 
-
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -72,5 +72,10 @@ class ProductPersistenceAdapter implements LoadProductPort, SaveProductPort {
     @SuppressWarnings("null")
     public Product save(Product product) {
         return repository.save(product);
+    }
+
+    @Override
+    public void deactivateAllByStoreId(UUID storeId) {
+        repository.deactivateAllByStoreId(storeId, OffsetDateTime.now());
     }
 }
