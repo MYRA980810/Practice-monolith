@@ -1,11 +1,14 @@
 package com.livecomerce.catalog.api;
 
 import com.livecomerce.catalog.application.port.in.AddProductImageUseCase;
+import com.livecomerce.catalog.application.port.in.AddProductImagesUseCase;
 import com.livecomerce.catalog.application.port.in.AddProductOptionUseCase;
 import com.livecomerce.catalog.application.port.in.AddStockUseCase;
 import com.livecomerce.catalog.application.port.in.CreateProductUseCase;
 import com.livecomerce.catalog.application.port.in.CreateProductVariantUseCase;
 import com.livecomerce.catalog.application.port.in.DeactivateProductUseCase;
+import com.livecomerce.catalog.application.port.in.PauseProductUseCase;
+import com.livecomerce.catalog.application.port.in.ResumeProductUseCase;
 import com.livecomerce.catalog.application.port.in.GetProductUseCase;
 import com.livecomerce.catalog.application.port.in.ListCategoriesUseCase;
 import com.livecomerce.catalog.application.port.in.ProductFilter;
@@ -44,9 +47,12 @@ class ProductController {
     private final UpdateProductImageUseCase updateProductImageUseCase;
     private final RemoveProductImageUseCase removeProductImageUseCase;
     private final DeactivateProductUseCase deactivateProductUseCase;
+    private final PauseProductUseCase pauseProductUseCase;
+    private final ResumeProductUseCase resumeProductUseCase;
     private final GetStoreUseCase getStoreUseCase;
     private final AddProductOptionUseCase addProductOptionUseCase;
     private final CreateProductVariantUseCase createProductVariantUseCase;
+    private final AddProductImagesUseCase addProductImagesUseCase;
 
     private static final String DEFAULT_CURRENCY = "MXN";
 
@@ -57,6 +63,10 @@ class ProductController {
             @AuthenticationPrincipal UserPrincipal principal) {
 
         var storeId = getStoreUseCase.getStoreIdByUserId(principal.getUserId());
+        List<CreateProductUseCase.ImageData> images = request.images() == null ? List.of() :
+                request.images().stream()
+                        .map(img -> new CreateProductUseCase.ImageData(img.url(), img.position(), img.primary()))
+                        .toList();
         var product = createProductUseCase.create(new CreateProductUseCase.CreateProductCommand(
                 storeId,
                 request.name(),
@@ -64,7 +74,8 @@ class ProductController {
                 request.basePrice(),
                 Objects.requireNonNullElse(request.currency(), DEFAULT_CURRENCY),
                 request.sku(),
-                request.categoryId()
+                request.categoryId(),
+                images
         ));
         return ResponseEntity.status(HttpStatus.CREATED).body(getProductUseCase.getById(product.getId()));
     }
@@ -175,6 +186,21 @@ class ProductController {
         return ResponseEntity.ok(getProductUseCase.getById(id));
     }
 
+    @PostMapping("/{id}/images/batch")
+    @PreAuthorize("hasRole('SELLER')")
+    ResponseEntity<ProductView> addImages(
+            @PathVariable UUID id,
+            @Valid @RequestBody BatchAddImagesRequest request,
+            @AuthenticationPrincipal UserPrincipal principal) {
+
+        var storeId = getStoreUseCase.getStoreIdByUserId(principal.getUserId());
+        var images = request.images().stream()
+                .map(img -> new AddProductImagesUseCase.ImageData(img.url(), img.position(), img.primary()))
+                .toList();
+        addProductImagesUseCase.addImages(new AddProductImagesUseCase.AddImagesCommand(id, storeId, images));
+        return ResponseEntity.ok(getProductUseCase.getById(id));
+    }
+
     @PutMapping("/{id}/images/{imageId}")
     @PreAuthorize("hasRole('SELLER')")
     ResponseEntity<ProductView> updateImage(
@@ -209,6 +235,28 @@ class ProductController {
 
         var storeId = getStoreUseCase.getStoreIdByUserId(principal.getUserId());
         deactivateProductUseCase.deactivate(new DeactivateProductUseCase.DeactivateCommand(id, storeId));
+        return ResponseEntity.noContent().build();
+    }
+
+    @PatchMapping("/{id}/pause")
+    @PreAuthorize("hasRole('SELLER')")
+    ResponseEntity<Void> pause(
+            @PathVariable UUID id,
+            @AuthenticationPrincipal UserPrincipal principal) {
+
+        var storeId = getStoreUseCase.getStoreIdByUserId(principal.getUserId());
+        pauseProductUseCase.pause(new PauseProductUseCase.PauseCommand(id, storeId));
+        return ResponseEntity.noContent().build();
+    }
+
+    @PatchMapping("/{id}/resume")
+    @PreAuthorize("hasRole('SELLER')")
+    ResponseEntity<Void> resume(
+            @PathVariable UUID id,
+            @AuthenticationPrincipal UserPrincipal principal) {
+
+        var storeId = getStoreUseCase.getStoreIdByUserId(principal.getUserId());
+        resumeProductUseCase.resume(new ResumeProductUseCase.ResumeCommand(id, storeId));
         return ResponseEntity.noContent().build();
     }
 }

@@ -3,6 +3,7 @@ package com.livecomerce.catalog.api;
 import com.livecomerce.catalog.application.ProductNotFoundException;
 import com.livecomerce.catalog.application.ProductVariantNotFoundException;
 import com.livecomerce.catalog.application.port.in.AddProductImageUseCase;
+import com.livecomerce.catalog.application.port.in.AddProductImagesUseCase;
 import com.livecomerce.catalog.application.port.in.AddProductOptionUseCase;
 import com.livecomerce.catalog.application.port.in.AddStockUseCase;
 import com.livecomerce.catalog.application.port.in.CreateProductUseCase;
@@ -10,7 +11,9 @@ import com.livecomerce.catalog.application.port.in.CreateProductVariantUseCase;
 import com.livecomerce.catalog.application.port.in.DeactivateProductUseCase;
 import com.livecomerce.catalog.application.port.in.GetProductUseCase;
 import com.livecomerce.catalog.application.port.in.ListCategoriesUseCase;
+import com.livecomerce.catalog.application.port.in.PauseProductUseCase;
 import com.livecomerce.catalog.application.port.in.RemoveProductImageUseCase;
+import com.livecomerce.catalog.application.port.in.ResumeProductUseCase;
 import com.livecomerce.catalog.application.port.in.UpdateProductImageUseCase;
 import com.livecomerce.catalog.application.port.in.UpdateProductUseCase;
 import com.livecomerce.catalog.application.query.ProductView;
@@ -45,8 +48,11 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -78,9 +84,12 @@ class ProductControllerTest {
     @MockitoBean UpdateProductImageUseCase updateProductImageUseCase;
     @MockitoBean RemoveProductImageUseCase removeProductImageUseCase;
     @MockitoBean DeactivateProductUseCase deactivateProductUseCase;
+    @MockitoBean PauseProductUseCase pauseProductUseCase;
+    @MockitoBean ResumeProductUseCase resumeProductUseCase;
     @MockitoBean GetStoreUseCase getStoreUseCase;
     @MockitoBean AddProductOptionUseCase addProductOptionUseCase;
     @MockitoBean CreateProductVariantUseCase createProductVariantUseCase;
+    @MockitoBean AddProductImagesUseCase addProductImagesUseCase;
 
     private static final UUID STORE_ID   = UUID.randomUUID();
     private static final UUID PRODUCT_ID = UUID.randomUUID();
@@ -106,7 +115,7 @@ class ProductControllerTest {
         return new ProductView(
                 PRODUCT_ID, STORE_ID, "Remera Básica", "Descripción",
                 new BigDecimal("150.00"), "MXN", "SKU-001",
-                true, null, null,
+                true, false, null, null,
                 stock, List.of(), List.of(), List.of(),
                 OffsetDateTime.now(), OffsetDateTime.now()
         );
@@ -150,6 +159,41 @@ class ProductControllerTest {
                 .andExpect(jsonPath("$.currency").value("MXN"))
                 .andExpect(jsonPath("$.stock.totalQuantity").value(0))
                 .andExpect(jsonPath("$.images").isArray());
+    }
+
+    @Test
+    void create_withImages_returns201AndImagesArray() throws Exception {
+        var imageInfo = new ProductView.ImageInfo(UUID.randomUUID(), "https://cdn.example.com/img.jpg", 0, true);
+        var viewWithImages = new ProductView(
+                PRODUCT_ID, STORE_ID, "Remera Básica", "Descripción",
+                new BigDecimal("150.00"), "MXN", "SKU-001",
+                true, false, null, null,
+                new ProductView.StockInfo(0, 0, 0),
+                List.of(imageInfo), List.of(), List.of(),
+                java.time.OffsetDateTime.now(), java.time.OffsetDateTime.now()
+        );
+        when(createProductUseCase.create(any())).thenReturn(buildProduct());
+        when(getStoreUseCase.getStoreIdByUserId(any())).thenReturn(STORE_ID);
+        when(getProductUseCase.getById(any())).thenReturn(viewWithImages);
+
+        mvc.perform(post("/api/products")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "name": "Remera Básica",
+                                  "description": "Descripción",
+                                  "basePrice": 150.00,
+                                  "currency": "MXN",
+                                  "sku": "SKU-001",
+                                  "categoryId": "%s",
+                                  "images": [
+                                    {"url": "https://cdn.example.com/img.jpg", "position": 0, "primary": true}
+                                  ]
+                                }
+                                """.formatted(UUID.randomUUID())))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.images").isArray())
+                .andExpect(jsonPath("$.images.length()").value(1));
     }
 
     @Test
@@ -286,6 +330,78 @@ class ProductControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"url": "", "position": 0, "primary": false}
+                                """))
+                .andExpect(status().isBadRequest());
+    }
+
+    // --- PATCH /api/products/{id}/pause ---
+
+    @Test
+    void pause_whenSeller_returns204() throws Exception {
+        when(getStoreUseCase.getStoreIdByUserId(any())).thenReturn(STORE_ID);
+        doNothing().when(pauseProductUseCase).pause(any());
+
+        mvc.perform(patch("/api/products/{id}/pause", PRODUCT_ID))
+                .andExpect(status().isNoContent());
+    }
+
+    @Test
+    void pause_whenProductNotFound_returns404() throws Exception {
+        when(getStoreUseCase.getStoreIdByUserId(any())).thenReturn(STORE_ID);
+        doThrow(new ProductNotFoundException(PRODUCT_ID)).when(pauseProductUseCase).pause(any());
+
+        mvc.perform(patch("/api/products/{id}/pause", PRODUCT_ID))
+                .andExpect(status().isNotFound());
+    }
+
+    // --- PATCH /api/products/{id}/resume ---
+
+    @Test
+    void resume_whenSeller_returns204() throws Exception {
+        when(getStoreUseCase.getStoreIdByUserId(any())).thenReturn(STORE_ID);
+        doNothing().when(resumeProductUseCase).resume(any());
+
+        mvc.perform(patch("/api/products/{id}/resume", PRODUCT_ID))
+                .andExpect(status().isNoContent());
+    }
+
+    @Test
+    void resume_whenProductNotFound_returns404() throws Exception {
+        when(getStoreUseCase.getStoreIdByUserId(any())).thenReturn(STORE_ID);
+        doThrow(new ProductNotFoundException(PRODUCT_ID)).when(resumeProductUseCase).resume(any());
+
+        mvc.perform(patch("/api/products/{id}/resume", PRODUCT_ID))
+                .andExpect(status().isNotFound());
+    }
+
+    // --- POST /api/products/{id}/images/batch ---
+
+    @Test
+    void addImagesBatch_withValidBody_returns200WithProductView() throws Exception {
+        when(getStoreUseCase.getStoreIdByUserId(any())).thenReturn(STORE_ID);
+        when(addProductImagesUseCase.addImages(any())).thenReturn(buildProduct());
+        when(getProductUseCase.getById(any())).thenReturn(buildProductView());
+
+        mvc.perform(post("/api/products/{id}/images/batch", PRODUCT_ID)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "images": [
+                                    {"url": "https://cdn.example.com/1.jpg", "position": 0, "primary": true},
+                                    {"url": "https://cdn.example.com/2.jpg", "position": 1, "primary": false}
+                                  ]
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.name").value("Remera Básica"));
+    }
+
+    @Test
+    void addImagesBatch_withEmptyImages_returns400() throws Exception {
+        mvc.perform(post("/api/products/{id}/images/batch", PRODUCT_ID)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"images": []}
                                 """))
                 .andExpect(status().isBadRequest());
     }

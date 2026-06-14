@@ -1,6 +1,7 @@
 package com.livecomerce.catalog.application;
 
 import com.livecomerce.catalog.application.port.in.CreateProductUseCase.CreateProductCommand;
+import com.livecomerce.catalog.application.port.in.CreateProductUseCase.ImageData;
 import com.livecomerce.catalog.application.port.out.SaveProductPort;
 import com.livecomerce.catalog.domain.Product;
 import com.livecomerce.catalog.domain.ProductCreatedEvent;
@@ -13,6 +14,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -31,7 +33,7 @@ class CreateProductServiceTest {
     private static final UUID STORE_ID = UUID.randomUUID();
 
     private static final CreateProductCommand VALID_COMMAND = new CreateProductCommand(
-            STORE_ID, "Remera Básica", "Remera de algodón", new BigDecimal("150.00"), "MXN", "SKU-001", null
+            STORE_ID, "Remera Básica", "Remera de algodón", new BigDecimal("150.00"), "MXN", "SKU-001", null, null
     );
 
     private static Product buildProduct() {
@@ -82,11 +84,55 @@ class CreateProductServiceTest {
 
     @Test
     void create_withNullCurrency_defaultsToMXN() {
-        var command = new CreateProductCommand(STORE_ID, "Producto", null, BigDecimal.TEN, null, null, null);
+        var command = new CreateProductCommand(STORE_ID, "Producto", null, BigDecimal.TEN, null, null, null, null);
         when(saveProductPort.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         var result = service.create(command);
 
         assertThat(result.getCurrency()).isEqualTo("MXN");
+    }
+
+    @Test
+    void create_withThreeImages_savedProductHasThreeImages() {
+        when(saveProductPort.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        var images = List.of(
+                new ImageData("https://cdn.example.com/1.jpg", 0, true),
+                new ImageData("https://cdn.example.com/2.jpg", 1, false),
+                new ImageData("https://cdn.example.com/3.jpg", 2, false)
+        );
+        var command = new CreateProductCommand(
+                STORE_ID, "Remera", null, new BigDecimal("100.00"), "MXN", null, null, images);
+
+        service.create(command);
+
+        var captor = ArgumentCaptor.forClass(Product.class);
+        verify(saveProductPort).save(captor.capture());
+        assertThat(captor.getValue().getImages()).hasSize(3);
+    }
+
+    @Test
+    void create_withNullImages_savedProductHasNoImages() {
+        when(saveProductPort.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        var command = new CreateProductCommand(
+                STORE_ID, "Remera", null, new BigDecimal("100.00"), "MXN", null, null, null);
+
+        service.create(command);
+
+        var captor = ArgumentCaptor.forClass(Product.class);
+        verify(saveProductPort).save(captor.capture());
+        assertThat(captor.getValue().getImages()).isEmpty();
+    }
+
+    @Test
+    void create_withEmptyImages_savedProductHasNoImages() {
+        when(saveProductPort.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        var command = new CreateProductCommand(
+                STORE_ID, "Remera", null, new BigDecimal("100.00"), "MXN", null, null, List.of());
+
+        service.create(command);
+
+        var captor = ArgumentCaptor.forClass(Product.class);
+        verify(saveProductPort).save(captor.capture());
+        assertThat(captor.getValue().getImages()).isEmpty();
     }
 }

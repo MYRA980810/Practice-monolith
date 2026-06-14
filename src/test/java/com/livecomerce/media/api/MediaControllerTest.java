@@ -91,4 +91,33 @@ class MediaControllerTest {
         mvc.perform(multipart("/api/media/images"))
                 .andExpect(status().isBadRequest());
     }
+
+    // --- POST /api/media/images/batch ---
+
+    @Test
+    void uploadImages_withThreeValidFiles_returns200WithThreeUrls() throws Exception {
+        when(uploadImageUseCase.uploadAll(any())).thenReturn(List.of("url1", "url2", "url3"));
+
+        var file1 = new MockMultipartFile("files", "img1.jpg", "image/jpeg", new byte[100]);
+        var file2 = new MockMultipartFile("files", "img2.jpg", "image/jpeg", new byte[100]);
+        var file3 = new MockMultipartFile("files", "img3.jpg", "image/jpeg", new byte[100]);
+
+        mvc.perform(multipart("/api/media/images/batch").file(file1).file(file2).file(file3))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.urls").isArray())
+                .andExpect(jsonPath("$.urls.length()").value(3))
+                .andExpect(jsonPath("$.urls[0]").value("url1"))
+                .andExpect(jsonPath("$.urls[2]").value("url3"));
+    }
+
+    @Test
+    void uploadImages_withInvalidFileType_returns400() throws Exception {
+        when(uploadImageUseCase.uploadAll(any()))
+                .thenThrow(new InvalidImageException("only JPEG, PNG and WebP are allowed"));
+
+        var file = new MockMultipartFile("files", "doc.pdf", "application/pdf", new byte[100]);
+
+        mvc.perform(multipart("/api/media/images/batch").file(file))
+                .andExpect(status().isBadRequest());
+    }
 }

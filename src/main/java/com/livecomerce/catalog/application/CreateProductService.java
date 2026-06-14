@@ -29,6 +29,10 @@ public class CreateProductService implements CreateProductUseCase {
                 command.categoryId()
         );
 
+        if (command.images() != null) {
+            command.images().forEach(img -> product.addImage(img.url(), img.position(), img.primary()));
+        }
+
         var saved = saveProductPort.save(product);
 
         eventPublisher.publishEvent(
