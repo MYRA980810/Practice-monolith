@@ -14,6 +14,7 @@ public record ProductView(
         String currency,
         String sku,
         boolean active,
+        boolean paused,
         UUID categoryId,
         String categoryName,
         StockInfo stock,

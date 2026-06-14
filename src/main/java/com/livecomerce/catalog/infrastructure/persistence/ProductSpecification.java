@@ -25,6 +25,10 @@ final class ProductSpecification {
         return (root, query, cb) -> cb.isTrue(root.get("active"));
     }
 
+    static Specification<Product> isNotPaused() {
+        return (root, query, cb) -> cb.isFalse(root.get("paused"));
+    }
+
     static Specification<Product> hasCategoryId(UUID categoryId) {
         return (root, query, cb) -> cb.equal(root.get("categoryId"), categoryId);
     }

@@ -72,6 +72,7 @@ public class GetProductService implements GetProductUseCase {
                 product.getCurrency(),
                 dv.getSku(),
                 product.isActive(),
+                product.isPaused(),
                 product.getCategoryId(),
                 category != null ? category.getName() : null,
                 new ProductView.StockInfo(stock.getTotalQuantity(), stock.getAvailableQuantity(), stock.getReservedQuantity()),

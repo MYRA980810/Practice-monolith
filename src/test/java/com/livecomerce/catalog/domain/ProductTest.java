@@ -1,6 +1,7 @@
 package com.livecomerce.catalog.domain;
 
 import com.livecomerce.catalog.application.DuplicateVariantException;
+import com.livecomerce.catalog.application.ProductCannotBePausedException;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
@@ -105,5 +106,51 @@ class ProductTest {
 
         assertThat(product.defaultVariant().getSku()).isEqualTo("NEW-SKU");
         assertThat(product.getName()).isEqualTo("Remera 2");
+    }
+
+    // --- pause / resume ---
+
+    @Test
+    void create_isNotPaused_byDefault() {
+        var product = Product.create(STORE_ID, "Remera", null, BigDecimal.TEN, "MXN", null, null);
+        assertThat(product.isPaused()).isFalse();
+    }
+
+    @Test
+    void pause_whenActive_setsPausedTrue() {
+        var product = Product.create(STORE_ID, "Remera", null, BigDecimal.TEN, "MXN", null, null);
+        product.pause();
+        assertThat(product.isPaused()).isTrue();
+    }
+
+    @Test
+    void pause_whenAlreadyPaused_isIdempotent() {
+        var product = Product.create(STORE_ID, "Remera", null, BigDecimal.TEN, "MXN", null, null);
+        product.pause();
+        product.pause();
+        assertThat(product.isPaused()).isTrue();
+    }
+
+    @Test
+    void pause_whenInactive_throwsProductCannotBePausedException() {
+        var product = Product.create(STORE_ID, "Remera", null, BigDecimal.TEN, "MXN", null, null);
+        product.deactivate();
+        assertThatThrownBy(product::pause)
+                .isInstanceOf(ProductCannotBePausedException.class);
+    }
+
+    @Test
+    void resume_whenPaused_setsPausedFalse() {
+        var product = Product.create(STORE_ID, "Remera", null, BigDecimal.TEN, "MXN", null, null);
+        product.pause();
+        product.resume();
+        assertThat(product.isPaused()).isFalse();
+    }
+
+    @Test
+    void resume_whenNotPaused_isIdempotent() {
+        var product = Product.create(STORE_ID, "Remera", null, BigDecimal.TEN, "MXN", null, null);
+        product.resume();
+        assertThat(product.isPaused()).isFalse();
     }
 }

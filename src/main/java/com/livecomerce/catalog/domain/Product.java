@@ -1,6 +1,7 @@
 package com.livecomerce.catalog.domain;
 
 import com.livecomerce.catalog.application.DuplicateVariantException;
+import com.livecomerce.catalog.application.ProductCannotBePausedException;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -38,6 +39,9 @@ public class Product implements Persistable<UUID> {
 
     @Column(name = "is_active", nullable = false)
     private boolean active = true;
+
+    @Column(nullable = false)
+    private boolean paused = false;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private OffsetDateTime createdAt;
@@ -211,6 +215,19 @@ public class Product implements Persistable<UUID> {
             var first = images.getFirst();
             first.update(first.getUrl(), first.getPosition(), true);
         }
+        this.updatedAt = OffsetDateTime.now();
+    }
+
+    public void pause() {
+        if (!this.active) {
+            throw new ProductCannotBePausedException(this.id);
+        }
+        this.paused    = true;
+        this.updatedAt = OffsetDateTime.now();
+    }
+
+    public void resume() {
+        this.paused    = false;
         this.updatedAt = OffsetDateTime.now();
     }
 
