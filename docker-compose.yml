@@ -4,15 +4,15 @@ services:
   postgres:
     image: postgres:16-alpine
     environment:
-      POSTGRES_DB: livecomerce
-      POSTGRES_USER: livecomerce
-      POSTGRES_PASSWORD: livecomerce
+      POSTGRES_DB: ${POSTGRES_DB:-livecomerce}
+      POSTGRES_USER: ${POSTGRES_USER:-livecomerce}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-livecomerce}
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U livecomerce"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-livecomerce}"]
       interval: 10s
       timeout: 5s
       retries: 5
