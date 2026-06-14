@@ -10,4 +10,6 @@ public interface GetProductUseCase {
     ProductView getById(UUID productId);
 
     List<ProductView> getByStoreId(UUID storeId);
+
+    List<ProductView> listWithFilters(ProductFilter filter);
 }

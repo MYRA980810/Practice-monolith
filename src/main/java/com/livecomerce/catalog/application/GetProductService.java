@@ -1,6 +1,7 @@
 package com.livecomerce.catalog.application;
 
 import com.livecomerce.catalog.application.port.in.GetProductUseCase;
+import com.livecomerce.catalog.application.port.in.ProductFilter;
 import com.livecomerce.catalog.application.port.out.LoadCategoryPort;
 import com.livecomerce.catalog.application.port.out.LoadProductPort;
 import com.livecomerce.catalog.application.query.ProductView;
@@ -35,6 +36,13 @@ public class GetProductService implements GetProductUseCase {
     @Override
     public List<ProductView> getByStoreId(UUID storeId) {
         return loadProductPort.loadByStoreId(storeId).stream()
+                .map(this::toView)
+                .toList();
+    }
+
+    @Override
+    public List<ProductView> listWithFilters(ProductFilter filter) {
+        return loadProductPort.loadByFilter(filter).stream()
                 .map(this::toView)
                 .toList();
     }

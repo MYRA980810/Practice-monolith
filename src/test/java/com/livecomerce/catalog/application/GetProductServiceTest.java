@@ -1,5 +1,8 @@
 package com.livecomerce.catalog.application;
 
+import com.livecomerce.catalog.application.port.in.ProductFilter;
+import com.livecomerce.catalog.application.port.in.ProductFilter.SortBy;
+import com.livecomerce.catalog.application.port.in.ProductFilter.StockLevel;
 import com.livecomerce.catalog.application.port.out.LoadCategoryPort;
 import com.livecomerce.catalog.application.port.out.LoadProductPort;
 import com.livecomerce.catalog.domain.Product;
@@ -72,6 +75,41 @@ class GetProductServiceTest {
         when(loadProductPort.loadByStoreId(STORE_ID)).thenReturn(List.of());
 
         var result = service.getByStoreId(STORE_ID);
+
+        assertThat(result).isEmpty();
+    }
+
+    // --- listWithFilters ---
+
+    @Test
+    void listWithFilters_delegatesFilterToPort() {
+        var filter = new ProductFilter(STORE_ID, null, SortBy.PRICE_ASC, StockLevel.ALL);
+        var product = buildProduct();
+        when(loadProductPort.loadByFilter(filter)).thenReturn(List.of(product));
+
+        var result = service.listWithFilters(filter);
+
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).name()).isEqualTo("Remera");
+    }
+
+    @Test
+    void listWithFilters_withCategoryId_passesFilterToPort() {
+        var categoryId = UUID.randomUUID();
+        var filter = new ProductFilter(STORE_ID, categoryId, SortBy.RECENTLY_ADDED, StockLevel.ALL);
+        when(loadProductPort.loadByFilter(filter)).thenReturn(List.of());
+
+        var result = service.listWithFilters(filter);
+
+        assertThat(result).isEmpty();
+    }
+
+    @Test
+    void listWithFilters_whenEmpty_returnsEmptyList() {
+        var filter = new ProductFilter(STORE_ID, null, SortBy.PRICE_DESC, StockLevel.CRITICAL);
+        when(loadProductPort.loadByFilter(filter)).thenReturn(List.of());
+
+        var result = service.listWithFilters(filter);
 
         assertThat(result).isEmpty();
     }

@@ -2,6 +2,7 @@ package com.livecomerce.catalog.infrastructure.persistence;
 
 import com.livecomerce.catalog.domain.Product;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -9,7 +10,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-interface ProductJpaRepository extends JpaRepository<Product, UUID> {
+interface ProductJpaRepository extends JpaRepository<Product, UUID>, JpaSpecificationExecutor<Product> {
 
     @Query("SELECT p FROM Product p LEFT JOIN FETCH p.variants v LEFT JOIN FETCH v.stock LEFT JOIN FETCH v.optionValues WHERE p.id = :id")
     Optional<Product> findByIdWithDetails(@Param("id") UUID id);
@@ -25,4 +26,16 @@ interface ProductJpaRepository extends JpaRepository<Product, UUID> {
 
     @Query("SELECT DISTINCT p FROM Product p LEFT JOIN FETCH p.options o WHERE p.storeId = :storeId AND p.active = true")
     List<Product> findByStoreIdActiveWithOptions(@Param("storeId") UUID storeId);
+
+    @Query("SELECT DISTINCT p FROM Product p LEFT JOIN FETCH p.variants v LEFT JOIN FETCH v.stock WHERE p.id IN :ids")
+    List<Product> findByIdsWithVariantsAndStock(@Param("ids") List<UUID> ids);
+
+    @Query("SELECT DISTINCT p FROM Product p LEFT JOIN FETCH p.variants v LEFT JOIN FETCH v.optionValues WHERE p.id IN :ids")
+    List<Product> findByIdsWithVariantOptionValues(@Param("ids") List<UUID> ids);
+
+    @Query("SELECT DISTINCT p FROM Product p LEFT JOIN FETCH p.images WHERE p.id IN :ids")
+    List<Product> findByIdsWithImages(@Param("ids") List<UUID> ids);
+
+    @Query("SELECT DISTINCT p FROM Product p LEFT JOIN FETCH p.options WHERE p.id IN :ids")
+    List<Product> findByIdsWithOptions(@Param("ids") List<UUID> ids);
 }

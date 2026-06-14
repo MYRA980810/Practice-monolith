@@ -9,6 +9,7 @@ import com.livecomerce.catalog.application.port.in.CreateProductUseCase;
 import com.livecomerce.catalog.application.port.in.CreateProductVariantUseCase;
 import com.livecomerce.catalog.application.port.in.DeactivateProductUseCase;
 import com.livecomerce.catalog.application.port.in.GetProductUseCase;
+import com.livecomerce.catalog.application.port.in.ListCategoriesUseCase;
 import com.livecomerce.catalog.application.port.in.RemoveProductImageUseCase;
 import com.livecomerce.catalog.application.port.in.UpdateProductImageUseCase;
 import com.livecomerce.catalog.application.port.in.UpdateProductUseCase;
@@ -71,6 +72,7 @@ class ProductControllerTest {
     @MockitoBean CreateProductUseCase createProductUseCase;
     @MockitoBean UpdateProductUseCase updateProductUseCase;
     @MockitoBean GetProductUseCase getProductUseCase;
+    @MockitoBean ListCategoriesUseCase listCategoriesUseCase;
     @MockitoBean AddStockUseCase addStockUseCase;
     @MockitoBean AddProductImageUseCase addProductImageUseCase;
     @MockitoBean UpdateProductImageUseCase updateProductImageUseCase;

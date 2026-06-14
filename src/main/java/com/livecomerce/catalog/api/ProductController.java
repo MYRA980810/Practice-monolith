@@ -7,6 +7,10 @@ import com.livecomerce.catalog.application.port.in.CreateProductUseCase;
 import com.livecomerce.catalog.application.port.in.CreateProductVariantUseCase;
 import com.livecomerce.catalog.application.port.in.DeactivateProductUseCase;
 import com.livecomerce.catalog.application.port.in.GetProductUseCase;
+import com.livecomerce.catalog.application.port.in.ListCategoriesUseCase;
+import com.livecomerce.catalog.application.port.in.ProductFilter;
+import com.livecomerce.catalog.application.port.in.ProductFilter.SortBy;
+import com.livecomerce.catalog.application.port.in.ProductFilter.StockLevel;
 import com.livecomerce.catalog.application.port.in.RemoveProductImageUseCase;
 import com.livecomerce.catalog.application.port.in.UpdateProductImageUseCase;
 import com.livecomerce.catalog.application.port.in.UpdateProductUseCase;
@@ -34,6 +38,7 @@ class ProductController {
     private final CreateProductUseCase createProductUseCase;
     private final UpdateProductUseCase updateProductUseCase;
     private final GetProductUseCase getProductUseCase;
+    private final ListCategoriesUseCase listCategoriesUseCase;
     private final AddStockUseCase addStockUseCase;
     private final AddProductImageUseCase addProductImageUseCase;
     private final UpdateProductImageUseCase updateProductImageUseCase;
@@ -97,9 +102,23 @@ class ProductController {
 
     @GetMapping("/me")
     @PreAuthorize("hasRole('SELLER')")
-    ResponseEntity<List<ProductView>> getMyProducts(@AuthenticationPrincipal UserPrincipal principal) {
+    ResponseEntity<List<ProductView>> getMyProducts(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @RequestParam(required = false) UUID categoryId,
+            @RequestParam(required = false, defaultValue = "RECENTLY_ADDED") SortBy sort,
+            @RequestParam(required = false, defaultValue = "ALL") StockLevel stockLevel) {
         var storeId = getStoreUseCase.getStoreIdByUserId(principal.getUserId());
-        return ResponseEntity.ok(getProductUseCase.getByStoreId(storeId));
+        return ResponseEntity.ok(getProductUseCase.listWithFilters(
+                new ProductFilter(storeId, categoryId, sort, stockLevel)));
+    }
+
+    @GetMapping("/me/categories")
+    @PreAuthorize("hasRole('SELLER')")
+    ResponseEntity<List<CategoryResponse>> getMyCategories(@AuthenticationPrincipal UserPrincipal principal) {
+        var storeId = getStoreUseCase.getStoreIdByUserId(principal.getUserId());
+        return ResponseEntity.ok(listCategoriesUseCase.getCategoriesInUse(storeId).stream()
+                .map(CategoryResponse::from)
+                .toList());
     }
 
     @PostMapping("/{id}/options")

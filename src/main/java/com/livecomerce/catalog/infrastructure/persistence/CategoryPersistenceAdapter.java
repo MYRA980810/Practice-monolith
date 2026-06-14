@@ -34,6 +34,11 @@ class CategoryPersistenceAdapter implements LoadCategoryPort, SaveCategoryPort {
     }
 
     @Override
+    public List<Category> loadCategoriesInUseByStore(UUID storeId) {
+        return repository.findCategoriesInUseByStore(storeId);
+    }
+
+    @Override
     @SuppressWarnings("null")
     public Category save(Category category) {
         return repository.save(category);
