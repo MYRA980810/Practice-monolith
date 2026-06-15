@@ -2,6 +2,7 @@ package com.livecomerce.auth.application;
 
 import com.livecomerce.auth.application.port.in.AuthResult;
 import com.livecomerce.auth.application.port.in.VerifyOtpUseCase;
+import com.livecomerce.auth.application.port.out.IssueRefreshTokenPort;
 import com.livecomerce.auth.application.port.out.LoadUserPort;
 import com.livecomerce.auth.application.port.out.SaveUserPort;
 import com.livecomerce.auth.application.port.out.TokenGeneratorPort;
@@ -19,6 +20,7 @@ public class VerifyOtpService implements VerifyOtpUseCase {
     private final SaveUserPort saveUserPort;
     private final TokenGeneratorPort tokenGeneratorPort;
     private final VerifyOtpPort verifyOtpPort;
+    private final IssueRefreshTokenPort issueRefreshTokenPort;
 
     @Override
     public AuthResult verify(VerifyCommand command) {
@@ -38,7 +40,8 @@ public class VerifyOtpService implements VerifyOtpUseCase {
         var saved = saveUserPort.save(user);
 
         var contact = saved.getEmail() != null ? saved.getEmail() : saved.getPhone();
-        return AuthResult.of(tokenGeneratorPort.generate(saved), saved.getId(), contact, saved.getRole(), saved.getAvatarUrl());
+        var rawRefreshToken = issueRefreshTokenPort.issueForUser(saved.getId());
+        return AuthResult.of(tokenGeneratorPort.generate(saved), saved.getId(), contact, saved.getRole(), saved.getAvatarUrl(), rawRefreshToken);
     }
 
     private java.util.UUID extractUserId(String pendingToken) {

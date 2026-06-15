@@ -3,11 +3,15 @@ package com.livecomerce.auth.api;
 import com.livecomerce.auth.application.EmailAlreadyTakenException;
 import com.livecomerce.auth.application.InvalidCredentialsException;
 import com.livecomerce.auth.application.OAuthCodeInvalidException;
+import com.livecomerce.auth.application.RefreshTokenInvalidException;
+import com.livecomerce.auth.application.RefreshTokenReuseException;
 import com.livecomerce.auth.application.port.in.AuthResult;
 import com.livecomerce.auth.application.port.in.AuthenticateUserUseCase;
 import com.livecomerce.auth.application.port.in.ExchangeOAuthCodeUseCase;
 import com.livecomerce.auth.application.port.in.ForgotPasswordUseCase;
+import com.livecomerce.auth.application.port.in.LogoutUseCase;
 import com.livecomerce.auth.application.port.in.PendingVerificationResult;
+import com.livecomerce.auth.application.port.in.RefreshAccessTokenUseCase;
 import com.livecomerce.auth.application.port.in.RegisterUserUseCase;
 import com.livecomerce.auth.application.port.in.CompleteOAuthRegistrationUseCase;
 import com.livecomerce.auth.application.port.in.ResetPasswordUseCase;
@@ -17,6 +21,7 @@ import com.livecomerce.auth.application.port.in.VerifyOtpUseCase;
 import com.livecomerce.auth.application.port.in.VerifyResetCodeUseCase;
 import com.livecomerce.auth.domain.Role;
 import com.livecomerce.auth.domain.VerificationChannel;
+import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration;
@@ -30,10 +35,13 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.UUID;
 
+import static org.hamcrest.Matchers.containsString;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.cookie;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -55,11 +63,13 @@ class AuthControllerTest {
     @MockitoBean ResetPasswordUseCase resetPasswordUseCase;
     @MockitoBean ExchangeOAuthCodeUseCase exchangeOAuthCodeUseCase;
     @MockitoBean com.livecomerce.auth.application.port.in.UpdateUserAvatarUseCase updateUserAvatarUseCase;
+    @MockitoBean RefreshAccessTokenUseCase refreshAccessTokenUseCase;
+    @MockitoBean LogoutUseCase logoutUseCase;
 
     private static final UUID USER_ID = UUID.randomUUID();
 
     private static final AuthResult AUTH_RESULT = AuthResult.of(
-            "jwt-token", USER_ID, "seller@test.com", Role.SELLER, null
+            "jwt-token", USER_ID, "seller@test.com", Role.SELLER, null, "raw-refresh-token"
     );
 
     private static final PendingVerificationResult PENDING_RESULT =
@@ -280,7 +290,7 @@ class AuthControllerTest {
     @Test
     void resetPassword_withMatchingPasswords_returns200WithJwt() throws Exception {
         when(resetPasswordUseCase.reset(any()))
-                .thenReturn(AuthResult.of("access-jwt", USER_ID, "user@test.com", Role.BUYER, null));
+                .thenReturn(AuthResult.of("access-jwt", USER_ID, "user@test.com", Role.BUYER, null, "raw-refresh-token"));
 
         mvc.perform(post("/api/auth/reset-password")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -301,7 +311,7 @@ class AuthControllerTest {
     @Test
     void exchangeOAuthCode_withValidCode_returns200WithAuthResponse() throws Exception {
         when(exchangeOAuthCodeUseCase.exchange(any()))
-                .thenReturn(AuthResult.of("full-jwt", USER_ID, "oauth@test.com", Role.SELLER, null));
+                .thenReturn(AuthResult.of("full-jwt", USER_ID, "oauth@test.com", Role.SELLER, null, "raw-refresh-token"));
 
         mvc.perform(post("/api/auth/oauth2/exchange")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -349,5 +359,99 @@ class AuthControllerTest {
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.status").value(401))
                 .andExpect(jsonPath("$.type").value("https://livecomerce.com/errors/oauth-code-invalid"));
+    }
+
+    // --- LOGIN sets refresh cookie ---
+
+    @Test
+    void login_setsHttpOnlyRefreshCookieAndBodyHasAccessTokenOnly() throws Exception {
+        when(authenticateUseCase.authenticate(any())).thenReturn(AUTH_RESULT);
+
+        mvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"contact":"seller@test.com","password":"secret123"}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.accessToken").value("jwt-token"))
+                .andExpect(jsonPath("$.refreshToken").doesNotExist())
+                .andExpect(header().string("Set-Cookie", containsString("refresh_token=")))
+                .andExpect(header().string("Set-Cookie", containsString("HttpOnly")))
+                .andExpect(header().string("Set-Cookie", containsString("SameSite=None")));
+    }
+
+    // --- /refresh ---
+
+    @Test
+    void refresh_withValidCookieAndCsrfHeader_returns200WithNewTokensAndCookie() throws Exception {
+        when(refreshAccessTokenUseCase.refresh("raw-refresh-token"))
+                .thenReturn(new RefreshAccessTokenUseCase.RefreshResult("new-access", "new-raw-refresh"));
+
+        mvc.perform(post("/api/auth/refresh")
+                        .cookie(new Cookie("refresh_token", "raw-refresh-token"))
+                        .header("X-Requested-With", "XMLHttpRequest"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.accessToken").value("new-access"))
+                .andExpect(header().string("Set-Cookie", containsString("refresh_token=")))
+                .andExpect(header().string("Set-Cookie", containsString("HttpOnly")));
+    }
+
+    @Test
+    void refresh_withoutCookie_returns401() throws Exception {
+        mvc.perform(post("/api/auth/refresh")
+                        .header("X-Requested-With", "XMLHttpRequest"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void refresh_withoutCsrfHeader_returns403() throws Exception {
+        mvc.perform(post("/api/auth/refresh")
+                        .cookie(new Cookie("refresh_token", "raw-refresh-token")))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void refresh_whenTokenInvalid_returns401WithCode() throws Exception {
+        when(refreshAccessTokenUseCase.refresh(any()))
+                .thenThrow(new RefreshTokenInvalidException());
+
+        mvc.perform(post("/api/auth/refresh")
+                        .cookie(new Cookie("refresh_token", "bad-token"))
+                        .header("X-Requested-With", "XMLHttpRequest"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.type").value("https://livecomerce.com/errors/refresh-invalid"));
+    }
+
+    @Test
+    void refresh_whenTokenReused_returns401WithReuseCode() throws Exception {
+        when(refreshAccessTokenUseCase.refresh(any()))
+                .thenThrow(new RefreshTokenReuseException());
+
+        mvc.perform(post("/api/auth/refresh")
+                        .cookie(new Cookie("refresh_token", "reused-token"))
+                        .header("X-Requested-With", "XMLHttpRequest"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.type").value("https://livecomerce.com/errors/refresh-reuse"));
+    }
+
+    // --- /logout ---
+
+    @Test
+    void logout_withValidCookieAndCsrfHeader_returns204AndClearsCookie() throws Exception {
+        doNothing().when(logoutUseCase).logout(any());
+
+        mvc.perform(post("/api/auth/logout")
+                        .cookie(new Cookie("refresh_token", "raw-refresh-token"))
+                        .header("X-Requested-With", "XMLHttpRequest"))
+                .andExpect(status().isNoContent())
+                .andExpect(header().string("Set-Cookie", containsString("refresh_token=")))
+                .andExpect(header().string("Set-Cookie", containsString("Max-Age=0")));
+    }
+
+    @Test
+    void logout_withoutCsrfHeader_returns403() throws Exception {
+        mvc.perform(post("/api/auth/logout")
+                        .cookie(new Cookie("refresh_token", "raw-refresh-token")))
+                .andExpect(status().isForbidden());
     }
 }

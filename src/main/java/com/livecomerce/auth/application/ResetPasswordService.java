@@ -2,6 +2,7 @@ package com.livecomerce.auth.application;
 
 import com.livecomerce.auth.application.port.in.AuthResult;
 import com.livecomerce.auth.application.port.in.ResetPasswordUseCase;
+import com.livecomerce.auth.application.port.out.IssueRefreshTokenPort;
 import com.livecomerce.auth.application.port.out.LoadUserPort;
 import com.livecomerce.auth.application.port.out.SaveUserPort;
 import com.livecomerce.auth.application.port.out.TokenGeneratorPort;
@@ -21,6 +22,7 @@ public class ResetPasswordService implements ResetPasswordUseCase {
     private final SaveUserPort saveUserPort;
     private final TokenGeneratorPort tokenGeneratorPort;
     private final PasswordEncoder passwordEncoder;
+    private final IssueRefreshTokenPort issueRefreshTokenPort;
 
     @Override
     public AuthResult reset(ResetPasswordCommand command) {
@@ -38,6 +40,7 @@ public class ResetPasswordService implements ResetPasswordUseCase {
         user.updatePasswordHash(passwordEncoder.encode(command.newPassword()));
         var saved = saveUserPort.save(user);
         var contact = saved.getEmail() != null ? saved.getEmail() : saved.getPhone();
-        return AuthResult.of(tokenGeneratorPort.generate(saved), saved.getId(), contact, saved.getRole(), saved.getAvatarUrl());
+        var rawRefreshToken = issueRefreshTokenPort.issueForUser(saved.getId());
+        return AuthResult.of(tokenGeneratorPort.generate(saved), saved.getId(), contact, saved.getRole(), saved.getAvatarUrl(), rawRefreshToken);
     }
 }

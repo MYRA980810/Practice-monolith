@@ -4,9 +4,11 @@ import com.livecomerce.auth.application.port.in.AuthenticateUserUseCase;
 import com.livecomerce.auth.application.port.in.CompleteOAuthRegistrationUseCase;
 import com.livecomerce.auth.application.port.in.ExchangeOAuthCodeUseCase;
 import com.livecomerce.auth.application.port.in.ForgotPasswordUseCase;
+import com.livecomerce.auth.application.port.in.LogoutUseCase;
+import com.livecomerce.auth.application.port.in.RefreshAccessTokenUseCase;
 import com.livecomerce.auth.application.port.in.RegisterUserUseCase;
-import com.livecomerce.auth.application.port.in.ResetPasswordUseCase;
 import com.livecomerce.auth.application.port.in.ResendOtpUseCase;
+import com.livecomerce.auth.application.port.in.ResetPasswordUseCase;
 import com.livecomerce.auth.application.port.in.UpdateUserAvatarUseCase;
 import com.livecomerce.auth.application.port.in.UpdateUserAvatarUseCase.UpdateUserAvatarCommand;
 import com.livecomerce.auth.application.port.in.VerifyOtpUseCase;
@@ -14,12 +16,17 @@ import com.livecomerce.auth.application.port.in.VerifyResetCodeUseCase;
 import com.livecomerce.shared.UserPrincipal;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -27,6 +34,9 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
 class AuthController {
+
+    private static final String REFRESH_COOKIE_NAME = "refresh_token";
+    private static final String CSRF_HEADER = "X-Requested-With";
 
     private final RegisterUserUseCase registerUseCase;
     private final AuthenticateUserUseCase authenticateUseCase;
@@ -38,6 +48,17 @@ class AuthController {
     private final ResetPasswordUseCase resetPasswordUseCase;
     private final ExchangeOAuthCodeUseCase exchangeOAuthCodeUseCase;
     private final UpdateUserAvatarUseCase updateUserAvatarUseCase;
+    private final RefreshAccessTokenUseCase refreshAccessTokenUseCase;
+    private final LogoutUseCase logoutUseCase;
+
+    @Value("${jwt.refresh-expiration-ms:2592000000}")
+    private long refreshExpirationMs;
+
+    @Value("${app.cookie.secure:true}")
+    private boolean cookieSecure;
+
+    @Value("${app.cookie.same-site:None}")
+    private String cookieSameSite;
 
     @PostMapping("/register")
     ResponseEntity<VerificationInitiatedResponse> register(@Valid @RequestBody RegisterRequest request) {
@@ -59,7 +80,7 @@ class AuthController {
         var result = verifyOtpUseCase.verify(new VerifyOtpUseCase.VerifyCommand(
                 request.pendingToken(), request.code()
         ));
-        return ResponseEntity.ok(AuthResponse.from(result));
+        return authResponseWithCookie(result);
     }
 
     @PostMapping("/oauth2/complete")
@@ -67,7 +88,7 @@ class AuthController {
         var result = completeOAuthUseCase.complete(new CompleteOAuthRegistrationUseCase.CompleteOAuthCommand(
                 request.pendingToken(), request.role()
         ));
-        return ResponseEntity.ok(AuthResponse.from(result));
+        return authResponseWithCookie(result);
     }
 
     @PostMapping("/login")
@@ -75,7 +96,7 @@ class AuthController {
         var result = authenticateUseCase.authenticate(
                 new AuthenticateUserUseCase.AuthCommand(request.contact(), request.password())
         );
-        return ResponseEntity.ok(AuthResponse.from(result));
+        return authResponseWithCookie(result);
     }
 
     @PostMapping("/forgot-password")
@@ -100,14 +121,14 @@ class AuthController {
         var result = resetPasswordUseCase.reset(
                 new ResetPasswordUseCase.ResetPasswordCommand(
                         request.resetToken(), request.newPassword(), request.confirmPassword()));
-        return ResponseEntity.ok(AuthResponse.from(result));
+        return authResponseWithCookie(result);
     }
 
     @PostMapping("/oauth2/exchange")
     ResponseEntity<AuthResponse> exchangeOAuthCode(@Valid @RequestBody ExchangeCodeRequest request) {
         var result = exchangeOAuthCodeUseCase.exchange(
                 new ExchangeOAuthCodeUseCase.ExchangeCommand(request.code()));
-        return ResponseEntity.ok(AuthResponse.from(result));
+        return authResponseWithCookie(result);
     }
 
     @PatchMapping("/me/avatar")
@@ -117,5 +138,66 @@ class AuthController {
         var avatarUrl = updateUserAvatarUseCase.updateAvatar(
                 new UpdateUserAvatarCommand(principal.getUserId(), request.avatarUrl()));
         return ResponseEntity.ok(new UpdateAvatarResponse(avatarUrl));
+    }
+
+    @PostMapping("/refresh")
+    ResponseEntity<AuthResponse> refresh(
+            @CookieValue(name = REFRESH_COOKIE_NAME, required = false) String refreshCookie,
+            @RequestHeader(value = CSRF_HEADER, required = false) String csrfHeader) {
+
+        if (csrfHeader == null) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+        if (refreshCookie == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+
+        var result = refreshAccessTokenUseCase.refresh(refreshCookie);
+        var cookie = buildRefreshCookie(result.refreshToken());
+        return ResponseEntity.ok()
+                .header(HttpHeaders.SET_COOKIE, cookie.toString())
+                .body(new AuthResponse(result.accessToken(), "Bearer", null, null, null, null));
+    }
+
+    @PostMapping("/logout")
+    ResponseEntity<Void> logout(
+            @CookieValue(name = REFRESH_COOKIE_NAME, required = false) String refreshCookie,
+            @RequestHeader(value = CSRF_HEADER, required = false) String csrfHeader) {
+
+        if (csrfHeader == null) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+
+        logoutUseCase.logout(refreshCookie);
+
+        var clearCookie = buildCookie("", 0);
+        return ResponseEntity.noContent()
+                .header(HttpHeaders.SET_COOKIE, clearCookie.toString())
+                .build();
+    }
+
+    // --- helpers ---
+
+    private ResponseEntity<AuthResponse> authResponseWithCookie(com.livecomerce.auth.application.port.in.AuthResult result) {
+        var body = ResponseEntity.ok();
+        if (result.refreshToken() != null) {
+            var cookie = buildRefreshCookie(result.refreshToken());
+            body = body.header(HttpHeaders.SET_COOKIE, cookie.toString());
+        }
+        return body.body(AuthResponse.from(result));
+    }
+
+    private ResponseCookie buildRefreshCookie(String rawToken) {
+        return buildCookie(rawToken, refreshExpirationMs / 1000);
+    }
+
+    private ResponseCookie buildCookie(String value, long maxAgeSeconds) {
+        return ResponseCookie.from(REFRESH_COOKIE_NAME, value)
+                .httpOnly(true)
+                .secure(cookieSecure)
+                .sameSite(cookieSameSite)
+                .path("/api/auth")
+                .maxAge(maxAgeSeconds)
+                .build();
     }
 }

@@ -1,6 +1,7 @@
 package com.livecomerce.auth.application;
 
 import com.livecomerce.auth.application.port.in.CompleteOAuthRegistrationUseCase.CompleteOAuthCommand;
+import com.livecomerce.auth.application.port.out.IssueRefreshTokenPort;
 import com.livecomerce.auth.application.port.out.LoadUserPort;
 import com.livecomerce.auth.application.port.out.SaveUserPort;
 import com.livecomerce.auth.application.port.out.TokenGeneratorPort;
@@ -27,6 +28,7 @@ class CompleteOAuthRegistrationServiceTest {
     @Mock LoadUserPort loadUserPort;
     @Mock SaveUserPort saveUserPort;
     @Mock TokenGeneratorPort tokenGeneratorPort;
+    @Mock IssueRefreshTokenPort issueRefreshTokenPort;
 
     @InjectMocks CompleteOAuthRegistrationService service;
 
@@ -41,6 +43,7 @@ class CompleteOAuthRegistrationServiceTest {
         when(loadUserPort.loadById(USER_ID)).thenReturn(Optional.of(user));
         when(saveUserPort.save(any())).thenReturn(user);
         when(tokenGeneratorPort.generate(any())).thenReturn("full-jwt");
+        when(issueRefreshTokenPort.issueForUser(any())).thenReturn("raw-refresh");
 
         var result = service.complete(new CompleteOAuthCommand(OAUTH_PENDING_TOKEN, Role.SELLER));
 
@@ -56,6 +59,7 @@ class CompleteOAuthRegistrationServiceTest {
         when(loadUserPort.loadById(USER_ID)).thenReturn(Optional.of(user));
         when(saveUserPort.save(any())).thenReturn(user);
         when(tokenGeneratorPort.generate(any())).thenReturn("full-jwt-buyer");
+        when(issueRefreshTokenPort.issueForUser(any())).thenReturn("raw-refresh");
 
         service.complete(new CompleteOAuthCommand(OAUTH_PENDING_TOKEN, Role.BUYER));
 

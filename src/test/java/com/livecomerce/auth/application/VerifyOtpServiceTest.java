@@ -1,6 +1,7 @@
 package com.livecomerce.auth.application;
 
 import com.livecomerce.auth.application.port.in.VerifyOtpUseCase.VerifyCommand;
+import com.livecomerce.auth.application.port.out.IssueRefreshTokenPort;
 import com.livecomerce.auth.application.port.out.LoadUserPort;
 import com.livecomerce.auth.application.port.out.SaveUserPort;
 import com.livecomerce.auth.application.port.out.TokenGeneratorPort;
@@ -22,6 +23,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class VerifyOtpServiceTest {
@@ -30,6 +32,7 @@ class VerifyOtpServiceTest {
     @Mock SaveUserPort saveUserPort;
     @Mock TokenGeneratorPort tokenGeneratorPort;
     @Mock VerifyOtpPort verifyOtpPort;
+    @Mock IssueRefreshTokenPort issueRefreshTokenPort;
 
     @InjectMocks VerifyOtpService service;
 
@@ -46,6 +49,7 @@ class VerifyOtpServiceTest {
         when(verifyOtpPort.check("+5491111", RAW_CODE, VerificationChannel.SMS)).thenReturn(true);
         when(saveUserPort.save(any())).thenReturn(user);
         when(tokenGeneratorPort.generate(any())).thenReturn("full-jwt");
+        when(issueRefreshTokenPort.issueForUser(any())).thenReturn("raw-refresh");
 
         var result = service.verify(new VerifyCommand(PENDING_TOKEN, RAW_CODE));
 
@@ -99,6 +103,7 @@ class VerifyOtpServiceTest {
         when(verifyOtpPort.check("u@test.com", RAW_CODE, VerificationChannel.EMAIL)).thenReturn(true);
         when(saveUserPort.save(any())).thenReturn(user);
         when(tokenGeneratorPort.generate(any())).thenReturn("jwt");
+        when(issueRefreshTokenPort.issueForUser(any())).thenReturn("raw-refresh");
 
         service.verify(new VerifyCommand(PENDING_TOKEN, RAW_CODE));
 

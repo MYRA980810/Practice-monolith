@@ -2,6 +2,7 @@ package com.livecomerce.auth.application;
 
 import com.livecomerce.auth.application.port.in.AuthResult;
 import com.livecomerce.auth.application.port.in.ExchangeOAuthCodeUseCase;
+import com.livecomerce.auth.application.port.out.IssueRefreshTokenPort;
 import com.livecomerce.auth.application.port.out.LoadUserPort;
 import com.livecomerce.auth.application.port.out.OAuthCodeStorePort;
 import com.livecomerce.auth.application.port.out.OAuthTokenType;
@@ -12,12 +13,13 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
-@Transactional(readOnly = true)
+@Transactional
 public class ExchangeOAuthCodeService implements ExchangeOAuthCodeUseCase {
 
     private final OAuthCodeStorePort codeStorePort;
     private final LoadUserPort loadUserPort;
     private final TokenGeneratorPort tokenGeneratorPort;
+    private final IssueRefreshTokenPort issueRefreshTokenPort;
 
     @Override
     public AuthResult exchange(ExchangeCommand command) {
@@ -32,6 +34,12 @@ public class ExchangeOAuthCodeService implements ExchangeOAuthCodeUseCase {
                 ? tokenGeneratorPort.generate(user)
                 : tokenGeneratorPort.generateOAuthPendingToken(user);
 
-        return AuthResult.of(jwt, user.getId(), user.getEmail(), user.getRole(), user.getAvatarUrl());
+        // Only issue a refresh token for full (authenticated) users
+        String rawRefreshToken = null;
+        if (payload.tokenType() == OAuthTokenType.FULL) {
+            rawRefreshToken = issueRefreshTokenPort.issueForUser(user.getId());
+        }
+
+        return AuthResult.of(jwt, user.getId(), user.getEmail(), user.getRole(), user.getAvatarUrl(), rawRefreshToken);
     }
 }

@@ -1,6 +1,7 @@
 package com.livecomerce.auth.application;
 
 import com.livecomerce.auth.application.port.in.AuthenticateUserUseCase.AuthCommand;
+import com.livecomerce.auth.application.port.out.IssueRefreshTokenPort;
 import com.livecomerce.auth.application.port.out.LoadUserPort;
 import com.livecomerce.auth.application.port.out.TokenGeneratorPort;
 import com.livecomerce.auth.domain.Role;
@@ -13,9 +14,11 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.Optional;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -23,6 +26,7 @@ class AuthenticateUserServiceTest {
 
     @Mock LoadUserPort loadUserPort;
     @Mock TokenGeneratorPort tokenGeneratorPort;
+    @Mock IssueRefreshTokenPort issueRefreshTokenPort;
     @Mock PasswordEncoder passwordEncoder;
 
     @InjectMocks AuthenticateUserService service;
@@ -34,6 +38,7 @@ class AuthenticateUserServiceTest {
         when(loadUserPort.loadByEmail("seller@test.com")).thenReturn(Optional.of(user));
         when(passwordEncoder.matches("secret", "hash")).thenReturn(true);
         when(tokenGeneratorPort.generate(user)).thenReturn("jwt-token");
+        when(issueRefreshTokenPort.issueForUser(any(UUID.class))).thenReturn("raw-refresh");
 
         var result = service.authenticate(new AuthCommand("seller@test.com", "secret"));
 
@@ -50,6 +55,7 @@ class AuthenticateUserServiceTest {
         when(loadUserPort.loadByPhone("+5491112345678")).thenReturn(Optional.of(user));
         when(passwordEncoder.matches("secret", "hash")).thenReturn(true);
         when(tokenGeneratorPort.generate(user)).thenReturn("jwt-token");
+        when(issueRefreshTokenPort.issueForUser(any(UUID.class))).thenReturn("raw-refresh");
 
         var result = service.authenticate(new AuthCommand("+5491112345678", "secret"));
 

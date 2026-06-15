@@ -2,6 +2,7 @@ package com.livecomerce.auth.application;
 
 import com.livecomerce.auth.application.port.in.AuthResult;
 import com.livecomerce.auth.application.port.in.ExchangeOAuthCodeUseCase.ExchangeCommand;
+import com.livecomerce.auth.application.port.out.IssueRefreshTokenPort;
 import com.livecomerce.auth.application.port.out.LoadUserPort;
 import com.livecomerce.auth.application.port.out.OAuthCodePayload;
 import com.livecomerce.auth.application.port.out.OAuthCodeStorePort;
@@ -20,6 +21,7 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
@@ -30,6 +32,7 @@ class ExchangeOAuthCodeServiceTest {
     @Mock OAuthCodeStorePort codeStorePort;
     @Mock LoadUserPort loadUserPort;
     @Mock TokenGeneratorPort tokenGeneratorPort;
+    @Mock IssueRefreshTokenPort issueRefreshTokenPort;
 
     @InjectMocks ExchangeOAuthCodeService service;
 
@@ -49,6 +52,7 @@ class ExchangeOAuthCodeServiceTest {
         when(codeStorePort.exchange(CODE)).thenReturn(Optional.of(payload));
         when(loadUserPort.loadById(USER_ID)).thenReturn(Optional.of(user));
         when(tokenGeneratorPort.generate(user)).thenReturn("full-jwt");
+        when(issueRefreshTokenPort.issueForUser(any())).thenReturn("raw-refresh");
 
         AuthResult result = service.exchange(new ExchangeCommand(CODE));
 
@@ -102,6 +106,7 @@ class ExchangeOAuthCodeServiceTest {
         when(codeStorePort.exchange(CODE)).thenReturn(Optional.of(payload));
         when(loadUserPort.loadById(USER_ID)).thenReturn(Optional.of(user));
         when(tokenGeneratorPort.generate(user)).thenReturn("jwt");
+        when(issueRefreshTokenPort.issueForUser(any())).thenReturn("raw-refresh");
 
         service.exchange(new ExchangeCommand(CODE));
 

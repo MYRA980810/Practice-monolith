@@ -1,6 +1,7 @@
 package com.livecomerce.auth.application;
 
 import com.livecomerce.auth.application.port.in.ResetPasswordUseCase.ResetPasswordCommand;
+import com.livecomerce.auth.application.port.out.IssueRefreshTokenPort;
 import com.livecomerce.auth.application.port.out.LoadUserPort;
 import com.livecomerce.auth.application.port.out.SaveUserPort;
 import com.livecomerce.auth.application.port.out.TokenGeneratorPort;
@@ -29,6 +30,7 @@ class ResetPasswordServiceTest {
     @Mock SaveUserPort saveUserPort;
     @Mock TokenGeneratorPort tokenGeneratorPort;
     @Mock PasswordEncoder passwordEncoder;
+    @Mock IssueRefreshTokenPort issueRefreshTokenPort;
 
     @InjectMocks ResetPasswordService service;
 
@@ -41,6 +43,7 @@ class ResetPasswordServiceTest {
         when(passwordEncoder.encode("newPass123")).thenReturn("new-encoded-hash");
         when(saveUserPort.save(any())).thenReturn(user);
         when(tokenGeneratorPort.generate(any())).thenReturn("access-jwt");
+        when(issueRefreshTokenPort.issueForUser(any())).thenReturn("raw-refresh");
 
         var result = service.reset(new ResetPasswordCommand("valid-reset", "newPass123", "newPass123"));
 

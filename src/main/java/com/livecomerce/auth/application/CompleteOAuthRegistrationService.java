@@ -2,6 +2,7 @@ package com.livecomerce.auth.application;
 
 import com.livecomerce.auth.application.port.in.AuthResult;
 import com.livecomerce.auth.application.port.in.CompleteOAuthRegistrationUseCase;
+import com.livecomerce.auth.application.port.out.IssueRefreshTokenPort;
 import com.livecomerce.auth.application.port.out.LoadUserPort;
 import com.livecomerce.auth.application.port.out.SaveUserPort;
 import com.livecomerce.auth.application.port.out.TokenGeneratorPort;
@@ -18,6 +19,7 @@ public class CompleteOAuthRegistrationService implements CompleteOAuthRegistrati
     private final LoadUserPort loadUserPort;
     private final SaveUserPort saveUserPort;
     private final TokenGeneratorPort tokenGeneratorPort;
+    private final IssueRefreshTokenPort issueRefreshTokenPort;
 
     @Override
     public AuthResult complete(CompleteOAuthCommand command) {
@@ -34,12 +36,14 @@ public class CompleteOAuthRegistrationService implements CompleteOAuthRegistrati
         user.assignRole(command.role());
         var saved = saveUserPort.save(user);
 
+        var rawRefreshToken = issueRefreshTokenPort.issueForUser(saved.getId());
         return AuthResult.of(
                 tokenGeneratorPort.generate(saved),
                 saved.getId(),
                 saved.getEmail(),
                 saved.getRole(),
-                saved.getAvatarUrl()
+                saved.getAvatarUrl(),
+                rawRefreshToken
         );
     }
 }
