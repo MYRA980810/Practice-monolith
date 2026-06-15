@@ -145,6 +145,11 @@ public class Product implements Persistable<UUID> {
         this.updatedAt = OffsetDateTime.now();
     }
 
+    public void correctAvailableStock(int newAvailable) {
+        defaultVariant().correctAvailableStock(newAvailable);
+        this.updatedAt = OffsetDateTime.now();
+    }
+
     public void reserveStock(int qty) {
         defaultVariant().reserveStock(qty);
         this.updatedAt = OffsetDateTime.now();

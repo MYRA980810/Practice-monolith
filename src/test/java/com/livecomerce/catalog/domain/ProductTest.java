@@ -153,4 +153,15 @@ class ProductTest {
         product.resume();
         assertThat(product.isPaused()).isFalse();
     }
+
+    @Test
+    void correctAvailableStock_delegatesToDefaultVariant() {
+        var product = Product.create(STORE_ID, "Remera", null, BigDecimal.TEN, "MXN", null, null);
+        product.addStock(20);
+        product.correctAvailableStock(8);
+
+        var stock = product.defaultVariant().getStock();
+        assertThat(stock.getAvailableQuantity()).isEqualTo(8);
+        assertThat(stock.getTotalQuantity()).isEqualTo(8);
+    }
 }

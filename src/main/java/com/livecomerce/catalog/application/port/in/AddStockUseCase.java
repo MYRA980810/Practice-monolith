@@ -6,7 +6,7 @@ import java.util.UUID;
 
 public interface AddStockUseCase {
 
-    record AddStockCommand(UUID variantId, int quantity) {}
+    record AddStockCommand(UUID variantId, UUID storeId, int quantity) {}
 
     VariantView addStock(AddStockCommand command);
 }

@@ -6,6 +6,7 @@ import com.livecomerce.catalog.application.port.in.AddProductImageUseCase;
 import com.livecomerce.catalog.application.port.in.AddProductImagesUseCase;
 import com.livecomerce.catalog.application.port.in.AddProductOptionUseCase;
 import com.livecomerce.catalog.application.port.in.AddStockUseCase;
+import com.livecomerce.catalog.application.port.in.CorrectStockUseCase;
 import com.livecomerce.catalog.application.port.in.CreateProductUseCase;
 import com.livecomerce.catalog.application.port.in.CreateProductVariantUseCase;
 import com.livecomerce.catalog.application.port.in.DeactivateProductUseCase;
@@ -42,14 +43,18 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.method.support.HandlerMethodArgumentResolver;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
+import org.mockito.ArgumentCaptor;
+
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
@@ -80,6 +85,7 @@ class ProductControllerTest {
     @MockitoBean GetProductUseCase getProductUseCase;
     @MockitoBean ListCategoriesUseCase listCategoriesUseCase;
     @MockitoBean AddStockUseCase addStockUseCase;
+    @MockitoBean CorrectStockUseCase correctStockUseCase;
     @MockitoBean AddProductImageUseCase addProductImageUseCase;
     @MockitoBean UpdateProductImageUseCase updateProductImageUseCase;
     @MockitoBean RemoveProductImageUseCase removeProductImageUseCase;
@@ -275,6 +281,7 @@ class ProductControllerTest {
 
     @Test
     void addVariantStock_withValidQty_returns200() throws Exception {
+        when(getStoreUseCase.getStoreIdByUserId(any())).thenReturn(STORE_ID);
         when(addStockUseCase.addStock(any())).thenReturn(buildVariantView());
 
         mvc.perform(post("/api/products/{id}/variants/{variantId}/stock", PRODUCT_ID, VARIANT_ID)
@@ -299,6 +306,7 @@ class ProductControllerTest {
 
     @Test
     void addVariantStock_whenVariantNotFound_returns404() throws Exception {
+        when(getStoreUseCase.getStoreIdByUserId(any())).thenReturn(STORE_ID);
         when(addStockUseCase.addStock(any())).thenThrow(new ProductVariantNotFoundException(VARIANT_ID));
 
         mvc.perform(post("/api/products/{id}/variants/{variantId}/stock", PRODUCT_ID, VARIANT_ID)
@@ -307,6 +315,20 @@ class ProductControllerTest {
                                 {"quantity": 10}
                                 """))
                 .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void addVariantStock_whenAccessDenied_returns403() throws Exception {
+        when(getStoreUseCase.getStoreIdByUserId(any())).thenReturn(STORE_ID);
+        when(addStockUseCase.addStock(any()))
+                .thenThrow(new org.springframework.security.access.AccessDeniedException("not your product"));
+
+        mvc.perform(post("/api/products/{id}/variants/{variantId}/stock", PRODUCT_ID, VARIANT_ID)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"quantity": 10}
+                                """))
+                .andExpect(status().isForbidden());
     }
 
     // --- POST /api/products/{id}/images ---
@@ -404,5 +426,50 @@ class ProductControllerTest {
                                 {"images": []}
                                 """))
                 .andExpect(status().isBadRequest());
+    }
+
+    // --- PATCH /api/products/{id}/variants/{variantId}/stock ---
+
+    @Test
+    void correctVariantStock_withValidQty_returns200AndForwardsAvailableQuantity() throws Exception {
+        when(getStoreUseCase.getStoreIdByUserId(any())).thenReturn(STORE_ID);
+        when(correctStockUseCase.correctStock(any())).thenReturn(buildVariantView());
+
+        mvc.perform(patch("/api/products/{id}/variants/{variantId}/stock", PRODUCT_ID, VARIANT_ID)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"availableQuantity": 8}
+                                """))
+                .andExpect(status().isOk());
+
+        var commandCaptor = ArgumentCaptor.forClass(CorrectStockUseCase.CorrectStockCommand.class);
+        verify(correctStockUseCase).correctStock(commandCaptor.capture());
+        assertThat(commandCaptor.getValue().variantId()).isEqualTo(VARIANT_ID);
+        assertThat(commandCaptor.getValue().storeId()).isEqualTo(STORE_ID);
+        assertThat(commandCaptor.getValue().availableQuantity()).isEqualTo(8);
+    }
+
+    @Test
+    void correctVariantStock_withNegativeValue_returns400() throws Exception {
+        mvc.perform(patch("/api/products/{id}/variants/{variantId}/stock", PRODUCT_ID, VARIANT_ID)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"availableQuantity": -1}
+                                """))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void correctVariantStock_whenAccessDenied_returns403() throws Exception {
+        when(getStoreUseCase.getStoreIdByUserId(any())).thenReturn(STORE_ID);
+        when(correctStockUseCase.correctStock(any()))
+                .thenThrow(new org.springframework.security.access.AccessDeniedException("not your product"));
+
+        mvc.perform(patch("/api/products/{id}/variants/{variantId}/stock", PRODUCT_ID, VARIANT_ID)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"availableQuantity": 8}
+                                """))
+                .andExpect(status().isForbidden());
     }
 }

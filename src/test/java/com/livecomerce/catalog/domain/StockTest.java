@@ -117,4 +117,53 @@ class StockTest {
     void sell_withNonPositiveQty_throwsIllegalArgument() {
         assertThatThrownBy(() -> stock.sell(0)).isInstanceOf(IllegalArgumentException.class);
     }
+
+    // --- correctAvailable ---
+
+    @Test
+    void correctAvailable_toHigherValue_setsAvailableAndRecomputesTotal() {
+        stock.add(10);
+        stock.correctAvailable(20);
+
+        assertThat(stock.getAvailableQuantity()).isEqualTo(20);
+        assertThat(stock.getTotalQuantity()).isEqualTo(20);
+        assertThat(stock.getReservedQuantity()).isEqualTo(0);
+    }
+
+    @Test
+    void correctAvailable_toLowerValue_setsAvailableAndRecomputesTotal() {
+        stock.add(20);
+        stock.correctAvailable(8);
+
+        assertThat(stock.getAvailableQuantity()).isEqualTo(8);
+        assertThat(stock.getTotalQuantity()).isEqualTo(8);
+        assertThat(stock.getReservedQuantity()).isEqualTo(0);
+    }
+
+    @Test
+    void correctAvailable_toZero_setsAvailableToZeroAndTotalToReserved() {
+        stock.add(10);
+        stock.correctAvailable(0);
+
+        assertThat(stock.getAvailableQuantity()).isEqualTo(0);
+        assertThat(stock.getTotalQuantity()).isEqualTo(0);
+    }
+
+    @Test
+    void correctAvailable_withReserved_recomputesTotalAndLeavesReservedUntouched() {
+        stock.add(20);
+        stock.reserve(10);
+        stock.correctAvailable(8);
+
+        assertThat(stock.getAvailableQuantity()).isEqualTo(8);
+        assertThat(stock.getReservedQuantity()).isEqualTo(10);
+        assertThat(stock.getTotalQuantity()).isEqualTo(18);
+    }
+
+    @Test
+    void correctAvailable_withNegativeValue_throwsIllegalArgument() {
+        assertThatThrownBy(() -> stock.correctAvailable(-1))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("negative");
+    }
 }

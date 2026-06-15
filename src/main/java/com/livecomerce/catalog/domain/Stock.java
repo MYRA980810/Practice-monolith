@@ -81,4 +81,11 @@ public class Stock {
         this.totalQuantity    -= qty;
         this.updatedAt         = OffsetDateTime.now();
     }
+
+    public void correctAvailable(int newAvailable) {
+        if (newAvailable < 0) throw new IllegalArgumentException("Available quantity cannot be negative");
+        this.availableQuantity = newAvailable;
+        this.totalQuantity     = newAvailable + this.reservedQuantity;
+        this.updatedAt         = OffsetDateTime.now();
+    }
 }

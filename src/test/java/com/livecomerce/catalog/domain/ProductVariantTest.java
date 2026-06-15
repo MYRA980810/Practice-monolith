@@ -112,4 +112,28 @@ class ProductVariantTest {
         assertThat(variant.getSku()).isEqualTo("NEW-SKU");
         assertThat(variant.getUpdatedAt()).isNotNull();
     }
+
+    @Test
+    void correctAvailableStock_setsAvailableAndRecomputesTotal() {
+        var product = buildProduct();
+        var variant = ProductVariant.createDefault(product, null);
+        variant.addStock(20);
+        variant.correctAvailableStock(8);
+
+        assertThat(variant.getStock().getAvailableQuantity()).isEqualTo(8);
+        assertThat(variant.getStock().getTotalQuantity()).isEqualTo(8);
+    }
+
+    @Test
+    void correctAvailableStock_withReserved_leavesReservedUntouched() {
+        var product = buildProduct();
+        var variant = ProductVariant.createDefault(product, null);
+        variant.addStock(20);
+        variant.reserveStock(10);
+        variant.correctAvailableStock(5);
+
+        assertThat(variant.getStock().getAvailableQuantity()).isEqualTo(5);
+        assertThat(variant.getStock().getReservedQuantity()).isEqualTo(10);
+        assertThat(variant.getStock().getTotalQuantity()).isEqualTo(15);
+    }
 }

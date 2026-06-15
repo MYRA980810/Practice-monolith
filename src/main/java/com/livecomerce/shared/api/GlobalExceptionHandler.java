@@ -5,6 +5,7 @@ import com.livecomerce.shared.DomainException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -47,6 +48,11 @@ public class GlobalExceptionHandler {
             );
         }
         return "Request body is missing or malformed";
+    }
+
+    @ExceptionHandler(AccessDeniedException.class)
+    ProblemDetail handleAccessDenied(AccessDeniedException e) {
+        return ProblemDetail.forStatusAndDetail(HttpStatus.FORBIDDEN, e.getMessage());
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

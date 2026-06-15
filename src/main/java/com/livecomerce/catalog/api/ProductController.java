@@ -4,6 +4,7 @@ import com.livecomerce.catalog.application.port.in.AddProductImageUseCase;
 import com.livecomerce.catalog.application.port.in.AddProductImagesUseCase;
 import com.livecomerce.catalog.application.port.in.AddProductOptionUseCase;
 import com.livecomerce.catalog.application.port.in.AddStockUseCase;
+import com.livecomerce.catalog.application.port.in.CorrectStockUseCase;
 import com.livecomerce.catalog.application.port.in.CreateProductUseCase;
 import com.livecomerce.catalog.application.port.in.CreateProductVariantUseCase;
 import com.livecomerce.catalog.application.port.in.DeactivateProductUseCase;
@@ -43,6 +44,7 @@ class ProductController {
     private final GetProductUseCase getProductUseCase;
     private final ListCategoriesUseCase listCategoriesUseCase;
     private final AddStockUseCase addStockUseCase;
+    private final CorrectStockUseCase correctStockUseCase;
     private final AddProductImageUseCase addProductImageUseCase;
     private final UpdateProductImageUseCase updateProductImageUseCase;
     private final RemoveProductImageUseCase removeProductImageUseCase;
@@ -170,9 +172,24 @@ class ProductController {
     ResponseEntity<VariantView> addVariantStock(
             @PathVariable UUID id,
             @PathVariable UUID variantId,
-            @Valid @RequestBody AddStockRequest request) {
+            @Valid @RequestBody AddStockRequest request,
+            @AuthenticationPrincipal UserPrincipal principal) {
 
-        return ResponseEntity.ok(addStockUseCase.addStock(new AddStockUseCase.AddStockCommand(variantId, request.quantity())));
+        var storeId = getStoreUseCase.getStoreIdByUserId(principal.getUserId());
+        return ResponseEntity.ok(addStockUseCase.addStock(new AddStockUseCase.AddStockCommand(variantId, storeId, request.quantity())));
+    }
+
+    @PatchMapping("/{id}/variants/{variantId}/stock")
+    @PreAuthorize("hasRole('SELLER')")
+    ResponseEntity<VariantView> correctVariantStock(
+            @PathVariable UUID id,
+            @PathVariable UUID variantId,
+            @Valid @RequestBody CorrectStockRequest request,
+            @AuthenticationPrincipal UserPrincipal principal) {
+
+        var storeId = getStoreUseCase.getStoreIdByUserId(principal.getUserId());
+        return ResponseEntity.ok(correctStockUseCase.correctStock(
+                new CorrectStockUseCase.CorrectStockCommand(variantId, storeId, request.availableQuantity())));
     }
 
     @PostMapping("/{id}/images")
