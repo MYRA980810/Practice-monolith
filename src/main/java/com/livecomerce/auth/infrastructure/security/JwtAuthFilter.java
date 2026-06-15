@@ -1,5 +1,6 @@
 package com.livecomerce.auth.infrastructure.security;
 
+import io.jsonwebtoken.ExpiredJwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -52,8 +53,12 @@ class JwtAuthFilter extends OncePerRequestFilter {
                 SecurityContextHolder.getContext().setAuthentication(auth);
                 log.info("Authenticated user '{}' with authorities: {}", userId, userDetails.getAuthorities());
             }
+        } catch (ExpiredJwtException e) {
+            log.warn("JWT expired: {}", e.getMessage());
+            request.setAttribute("auth_error", "TOKEN_EXPIRED");
         } catch (Exception e) {
             log.warn("JWT validation failed: {}", e.getMessage());
+            request.setAttribute("auth_error", "INVALID_TOKEN");
         }
 
         chain.doFilter(request, response);

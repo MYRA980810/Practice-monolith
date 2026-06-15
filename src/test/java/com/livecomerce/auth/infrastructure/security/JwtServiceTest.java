@@ -18,7 +18,7 @@ class JwtServiceTest {
 
     @BeforeEach
     void setUp() {
-        jwtService = new JwtService(new JwtProperties(SECRET, 3_600_000L));
+        jwtService = new JwtService(new JwtProperties(SECRET, 3_600_000L, 2_592_000_000L));
     }
 
     @Test
@@ -41,7 +41,7 @@ class JwtServiceTest {
 
     @Test
     void validateAndExtract_withExpiredToken_throwsExpiredJwtException() {
-        var expiredService = new JwtService(new JwtProperties(SECRET, -1000L));
+        var expiredService = new JwtService(new JwtProperties(SECRET, -1000L, 2_592_000_000L));
         var user = User.create("x@x.com", "hash", "X", "X", null, Role.BUYER);
         var token = expiredService.generate(user);
 
@@ -61,7 +61,7 @@ class JwtServiceTest {
     @Test
     void validateAndExtract_withTokenSignedByDifferentSecret_throwsException() {
         var otherService = new JwtService(new JwtProperties(
-                "other-secret-key-must-be-at-least-64-characters-long-for-hmacsha512", 3_600_000L
+                "other-secret-key-must-be-at-least-64-characters-long-for-hmacsha512", 3_600_000L, 2_592_000_000L
         ));
         var user = User.create("x@x.com", "hash", "X", "X", null, Role.BUYER);
         var token = otherService.generate(user);

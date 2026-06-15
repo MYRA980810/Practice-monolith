@@ -6,8 +6,6 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
@@ -18,8 +16,6 @@ import java.util.UUID;
 
 @Component
 class JwtService implements TokenGeneratorPort {
-
-    private static final Logger log = LoggerFactory.getLogger(JwtService.class);
 
     private static final String TYPE_OTP_PENDING    = "otp-pending";
     private static final String TYPE_OAUTH_PENDING  = "oauth-pending";
@@ -42,7 +38,7 @@ class JwtService implements TokenGeneratorPort {
         var now = new Date();
         var contact = user.getEmail() != null ? user.getEmail() : user.getPhone();
 
-        var token = Jwts.builder()
+        return Jwts.builder()
                 .subject(user.getId().toString())
                 .claims(Map.of(
                         "contact", contact,
@@ -52,10 +48,6 @@ class JwtService implements TokenGeneratorPort {
                 .expiration(new Date(now.getTime() + properties.expirationMs()))
                 .signWith(key)
                 .compact();
-
-        log.info("Generated token (last 20 chars): ...{}", token.substring(token.length() - 20));
-        log.info("Secret length used for signing: {} bytes", properties.secret().getBytes(StandardCharsets.UTF_8).length);
-        return token;
     }
 
     @Override
@@ -99,8 +91,6 @@ class JwtService implements TokenGeneratorPort {
     }
 
     Claims validateAndExtract(String token) {
-        log.info("Validating token (last 20 chars): ...{}", token.substring(Math.max(0, token.length() - 20)));
-        log.info("Secret length used for validation: {} bytes", properties.secret().getBytes(StandardCharsets.UTF_8).length);
         return Jwts.parser()
                 .verifyWith(key)
                 .build()
