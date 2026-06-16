@@ -1,9 +1,9 @@
 package com.livecomerce.order.application;
 
-import com.livecomerce.catalog.application.port.in.ReserveStockUseCase;
 import com.livecomerce.order.application.port.in.PlaceOrderItemUseCase;
 import com.livecomerce.order.application.port.out.LoadOrderPort;
 import com.livecomerce.order.application.port.out.SaveOrderPort;
+import com.livecomerce.order.StockReservationPort;
 import com.livecomerce.order.domain.Order;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -17,14 +17,14 @@ public class PlaceOrderItemService implements PlaceOrderItemUseCase {
 
     private final LoadOrderPort loadOrderPort;
     private final SaveOrderPort saveOrderPort;
-    private final ReserveStockUseCase reserveStockUseCase;
+    private final StockReservationPort stockReservationPort;
 
     @Value("${order.reservation.ttl-minutes:10}")
     private int ttlMinutes;
 
     @Override
     public Order placeItem(PlaceOrderItemCommand command) {
-        reserveStockUseCase.reserve(new ReserveStockUseCase.ReserveStockCommand(
+        stockReservationPort.reserve(new StockReservationPort.ReserveStockCommand(
                 command.variantId(), command.quantity()));
 
         var order = loadOrderPort

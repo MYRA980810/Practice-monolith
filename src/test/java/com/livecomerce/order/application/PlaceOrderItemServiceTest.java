@@ -1,9 +1,9 @@
 package com.livecomerce.order.application;
 
-import com.livecomerce.catalog.application.port.in.ReserveStockUseCase;
 import com.livecomerce.order.application.port.in.PlaceOrderItemUseCase.PlaceOrderItemCommand;
 import com.livecomerce.order.application.port.out.LoadOrderPort;
 import com.livecomerce.order.application.port.out.SaveOrderPort;
+import com.livecomerce.order.StockReservationPort;
 import com.livecomerce.order.domain.Order;
 import com.livecomerce.order.domain.OrderItemStatus;
 import org.junit.jupiter.api.BeforeEach;
@@ -29,7 +29,7 @@ class PlaceOrderItemServiceTest {
 
     @Mock LoadOrderPort loadOrderPort;
     @Mock SaveOrderPort saveOrderPort;
-    @Mock ReserveStockUseCase reserveStockUseCase;
+    @Mock StockReservationPort stockReservationPort;
 
     @InjectMocks PlaceOrderItemService service;
 
