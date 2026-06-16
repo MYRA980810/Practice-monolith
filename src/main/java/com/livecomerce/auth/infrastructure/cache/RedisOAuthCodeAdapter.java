@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.livecomerce.auth.application.port.out.OAuthCodePayload;
 import com.livecomerce.auth.application.port.out.OAuthCodeStorePort;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.annotation.Profile;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 
@@ -12,6 +13,7 @@ import java.time.Duration;
 import java.util.Optional;
 
 @Component
+@Profile("!local")
 @RequiredArgsConstructor
 public class RedisOAuthCodeAdapter implements OAuthCodeStorePort {
 
