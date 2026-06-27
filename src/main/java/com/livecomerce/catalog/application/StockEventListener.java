@@ -17,6 +17,7 @@ public class StockEventListener {
 
     @ApplicationModuleListener
     void on(OrderItemPaidEvent event) {
+        if (event.variantId() == null) return;
         var variant = loadProductVariantPort.loadById(event.variantId())
                 .orElseThrow(() -> new ProductVariantNotFoundException(event.variantId()));
         variant.sellStock(event.quantity());
@@ -25,6 +26,7 @@ public class StockEventListener {
 
     @ApplicationModuleListener
     void on(OrderItemReleasedEvent event) {
+        if (event.variantId() == null) return;
         var variant = loadProductVariantPort.loadById(event.variantId())
                 .orElseThrow(() -> new ProductVariantNotFoundException(event.variantId()));
         variant.releaseStock(event.quantity());

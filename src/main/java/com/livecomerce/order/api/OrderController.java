@@ -1,6 +1,7 @@
 package com.livecomerce.order.api;
 
 import com.livecomerce.order.application.port.in.*;
+import com.livecomerce.order.domain.OrderItemType;
 import com.livecomerce.shared.UserPrincipal;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -38,7 +39,8 @@ class OrderController {
                 request.productName(),
                 request.unitPrice(),
                 request.currency(),
-                request.quantity()
+                request.quantity(),
+                OrderItemType.PRODUCT
         ));
         return ResponseEntity.status(HttpStatus.CREATED).body(OrderResponse.from(order));
     }

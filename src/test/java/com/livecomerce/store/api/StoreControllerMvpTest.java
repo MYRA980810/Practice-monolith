@@ -11,7 +11,10 @@ import com.livecomerce.store.application.port.in.GetStoreUseCase;
 import com.livecomerce.store.application.port.in.ListStoresUseCase;
 import com.livecomerce.store.application.port.in.ReactivateStoreUseCase;
 import com.livecomerce.store.application.port.in.ReopenStoreUseCase;
+import com.livecomerce.store.application.port.in.UnfollowStoreUseCase;
 import com.livecomerce.store.application.port.in.UpdateStoreUseCase;
+import com.livecomerce.store.application.port.in.FollowStoreUseCase;
+import com.livecomerce.store.application.port.in.GetStoreFollowersUseCase;
 import com.livecomerce.store.domain.Store;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -76,6 +79,9 @@ class StoreControllerMvpTest {
     @MockitoBean CloseStoreTemporarilyUseCase closeStoreTemporarilyUseCase;
     @MockitoBean ReopenStoreUseCase reopenStoreUseCase;
     @MockitoBean ListStoresUseCase listStoresUseCase;
+    @MockitoBean FollowStoreUseCase followStoreUseCase;
+    @MockitoBean UnfollowStoreUseCase unfollowStoreUseCase;
+    @MockitoBean GetStoreFollowersUseCase getStoreFollowersUseCase;
 
     private static final UUID USER_ID = UUID.randomUUID();
 

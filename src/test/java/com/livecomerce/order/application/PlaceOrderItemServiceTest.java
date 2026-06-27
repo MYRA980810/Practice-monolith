@@ -6,6 +6,7 @@ import com.livecomerce.order.application.port.out.SaveOrderPort;
 import com.livecomerce.order.StockReservationPort;
 import com.livecomerce.order.domain.Order;
 import com.livecomerce.order.domain.OrderItemStatus;
+import com.livecomerce.order.domain.OrderItemType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -21,8 +22,7 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class PlaceOrderItemServiceTest {
@@ -41,7 +41,7 @@ class PlaceOrderItemServiceTest {
 
     private static final PlaceOrderItemCommand VALID_COMMAND = new PlaceOrderItemCommand(
             BUYER_ID, STORE_ID, LIVE_ID, PRODUCT_ID, VARIANT_ID,
-            "Playera Roja", new BigDecimal("199.00"), "MXN", 1
+            "Playera Roja", new BigDecimal("199.00"), "MXN", 1, OrderItemType.PRODUCT
     );
 
     @BeforeEach
@@ -91,5 +91,46 @@ class PlaceOrderItemServiceTest {
         var item = captor.getValue().getItems().getFirst();
         assertThat(item.getStatus()).isEqualTo(OrderItemStatus.RESERVED);
         assertThat(item.getReservedUntil()).isNotNull();
+    }
+
+    @Test
+    void placeItem_withProductTypeAndVariantId_callsStockReservation() {
+        var existing = Order.open(BUYER_ID, STORE_ID, LIVE_ID, "MXN");
+        when(loadOrderPort.loadActiveByBuyerAndLive(BUYER_ID, LIVE_ID)).thenReturn(Optional.of(existing));
+        when(saveOrderPort.save(any())).thenReturn(existing);
+
+        service.placeItem(VALID_COMMAND);
+
+        verify(stockReservationPort).reserve(any());
+    }
+
+    @Test
+    void placeItem_withHotProductTypeAndNullVariantId_doesNotCallStockReservation() {
+        var hotProductCommand = new PlaceOrderItemCommand(
+                BUYER_ID, STORE_ID, LIVE_ID, null, null,
+                "Producto caliente", new BigDecimal("300.00"), "MXN", 1, OrderItemType.HOT_PRODUCT
+        );
+        var existing = Order.open(BUYER_ID, STORE_ID, LIVE_ID, "MXN");
+        when(loadOrderPort.loadActiveByBuyerAndLive(BUYER_ID, LIVE_ID)).thenReturn(Optional.of(existing));
+        when(saveOrderPort.save(any())).thenReturn(existing);
+
+        service.placeItem(hotProductCommand);
+
+        verify(stockReservationPort, never()).reserve(any());
+    }
+
+    @Test
+    void placeItem_withShippingTypeAndNullVariantId_doesNotCallStockReservation() {
+        var shippingCommand = new PlaceOrderItemCommand(
+                BUYER_ID, STORE_ID, LIVE_ID, null, null,
+                "Envio express", new BigDecimal("99.00"), "MXN", 1, OrderItemType.SHIPPING
+        );
+        var existing = Order.open(BUYER_ID, STORE_ID, LIVE_ID, "MXN");
+        when(loadOrderPort.loadActiveByBuyerAndLive(BUYER_ID, LIVE_ID)).thenReturn(Optional.of(existing));
+        when(saveOrderPort.save(any())).thenReturn(existing);
+
+        service.placeItem(shippingCommand);
+
+        verify(stockReservationPort, never()).reserve(any());
     }
 }

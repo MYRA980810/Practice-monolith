@@ -16,7 +16,15 @@ public record StoreResponse(
         boolean active,
         boolean suspended,
         boolean temporarilyClosed,
-        OffsetDateTime createdAt
+        OffsetDateTime createdAt,
+        String shippingStreet,
+        String shippingExtNumber,
+        String shippingIntNumber,
+        String shippingNeighborhood,
+        String shippingCity,
+        String shippingState,
+        String shippingZipCode,
+        String shippingCountry
 ) {
     public static StoreResponse from(Store store) {
         return new StoreResponse(
@@ -30,7 +38,15 @@ public record StoreResponse(
                 store.isActive(),
                 store.isSuspended(),
                 store.isTemporarilyClosed(),
-                store.getCreatedAt()
+                store.getCreatedAt(),
+                store.getShippingStreet(),
+                store.getShippingExtNumber(),
+                store.getShippingIntNumber(),
+                store.getShippingNeighborhood(),
+                store.getShippingCity(),
+                store.getShippingState(),
+                store.getShippingZipCode(),
+                store.getShippingCountry()
         );
     }
 }

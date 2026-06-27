@@ -23,6 +23,14 @@ public class UpdateStoreService implements UpdateStoreUseCase {
 
         store.updateProfile(command.name(), command.description(), command.logoUrl());
 
+        var s = command.shippingAddress();
+        if (s != null) {
+            store.updateShippingAddress(
+                    s.street(), s.extNumber(), s.intNumber(),
+                    s.neighborhood(), s.city(), s.state(), s.zipCode(), s.country()
+            );
+        }
+
         return saveStorePort.save(store);
     }
 }

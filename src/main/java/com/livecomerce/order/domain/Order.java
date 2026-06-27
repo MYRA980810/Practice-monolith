@@ -24,7 +24,7 @@ public class Order implements Persistable<UUID> {
     @Column(name = "buyer_id", nullable = false)
     private UUID buyerId;
 
-    @Column(name = "store_id", nullable = false)
+    @Column(name = "store_id")
     private UUID storeId;
 
     @Column(name = "live_id")
@@ -80,8 +80,8 @@ public class Order implements Persistable<UUID> {
 
     public OrderItem addItem(UUID productId, UUID variantId, String productName,
                              java.math.BigDecimal unitPrice, String currency,
-                             int qty, int ttlMinutes) {
-        var item = OrderItem.reserve(this, productId, variantId, productName, unitPrice, currency, qty, ttlMinutes);
+                             int qty, int ttlMinutes, OrderItemType itemType) {
+        var item = OrderItem.reserve(this, productId, variantId, productName, unitPrice, currency, qty, ttlMinutes, itemType);
         this.items.add(item);
         this.updatedAt = OffsetDateTime.now();
         return item;

@@ -4,6 +4,7 @@ import com.livecomerce.order.application.port.in.ConfirmItemPaymentUseCase.Confi
 import com.livecomerce.order.application.port.out.LoadOrderPort;
 import com.livecomerce.order.application.port.out.SaveOrderPort;
 import com.livecomerce.order.domain.Order;
+import com.livecomerce.order.domain.OrderItemType;
 import com.livecomerce.order.OrderItemPaidEvent;
 import com.livecomerce.order.domain.OrderItemStatus;
 import org.junit.jupiter.api.Test;
@@ -38,7 +39,7 @@ class ConfirmItemPaymentServiceTest {
 
     private Order buildOrderWithReservedItem() {
         var order = Order.open(BUYER_ID, STORE_ID, null, "MXN");
-        order.addItem(UUID.randomUUID(), UUID.randomUUID(), "Playera", new BigDecimal("199"), "MXN", 2, 10);
+        order.addItem(UUID.randomUUID(), UUID.randomUUID(), "Playera", new BigDecimal("199"), "MXN", 2, 10, OrderItemType.PRODUCT);
         return order;
     }
 
@@ -58,6 +59,7 @@ class ConfirmItemPaymentServiceTest {
     }
 
     @Test
+    @SuppressWarnings("null") // Mockito capture() is @Nullable; publishEvent takes @NonNull — false positive
     void confirmPayment_publishesOrderItemPaidEvent() {
         var order = buildOrderWithReservedItem();
         var itemId = order.getItems().getFirst().getId();
@@ -67,7 +69,6 @@ class ConfirmItemPaymentServiceTest {
 
         service.confirmPayment(new ConfirmItemPaymentCommand(ORDER_ID, itemId));
 
-        @SuppressWarnings("null")
         var captor = ArgumentCaptor.forClass(OrderItemPaidEvent.class);
         verify(eventPublisher).publishEvent(captor.capture());
         assertThat(captor.getValue().itemId()).isEqualTo(itemId);

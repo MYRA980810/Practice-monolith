@@ -24,8 +24,10 @@ public class PlaceOrderItemService implements PlaceOrderItemUseCase {
 
     @Override
     public Order placeItem(PlaceOrderItemCommand command) {
-        stockReservationPort.reserve(new StockReservationPort.ReserveStockCommand(
-                command.variantId(), command.quantity()));
+        if (command.variantId() != null) {
+            stockReservationPort.reserve(new StockReservationPort.ReserveStockCommand(
+                    command.variantId(), command.quantity()));
+        }
 
         var order = loadOrderPort
                 .loadActiveByBuyerAndLive(command.buyerId(), command.liveSessionId())
@@ -42,7 +44,8 @@ public class PlaceOrderItemService implements PlaceOrderItemUseCase {
                 command.unitPrice(),
                 command.currency(),
                 command.quantity(),
-                ttlMinutes);
+                ttlMinutes,
+                command.itemType());
 
         return saveOrderPort.save(order);
     }

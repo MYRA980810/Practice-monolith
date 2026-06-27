@@ -4,6 +4,7 @@ import com.livecomerce.order.application.InvalidOrderStateException;
 import com.livecomerce.order.application.OrderNotFoundException;
 import com.livecomerce.order.application.port.in.*;
 import com.livecomerce.order.domain.Order;
+import com.livecomerce.order.domain.OrderItemType;
 import com.livecomerce.order.domain.OrderStatus;
 import com.livecomerce.shared.UserPrincipal;
 import org.junit.jupiter.api.AfterEach;
@@ -88,7 +89,7 @@ class OrderControllerTest {
 
     private static Order buildOrder() {
         var order = Order.open(BUYER_ID, STORE_ID, LIVE_ID, "MXN");
-        order.addItem(UUID.randomUUID(), UUID.randomUUID(), "Playera Roja", new BigDecimal("199.00"), "MXN", 1, 10);
+        order.addItem(UUID.randomUUID(), UUID.randomUUID(), "Playera Roja", new BigDecimal("199.00"), "MXN", 1, 10, OrderItemType.PRODUCT);
         return order;
     }
 

@@ -94,6 +94,11 @@ app:
         PRO: ${STRIPE_PRICE_PRO:price_placeholder}
         AGENCY: ${STRIPE_PRICE_AGENCY:/v1/prices/price_1TRlgz7T0J4CsjNYiKNJXV4I}
 
+agora:
+  app-id: ${AGORA_APP_ID}
+  app-certificate: ${AGORA_APP_CERTIFICATE}
+  webhook-secret: ${AGORA_WEBHOOK_SECRET}
+
 cloudinary:
   cloud-name: ${CLOUDINARY_CLOUD_NAME:placeholder}
   api-key: ${CLOUDINARY_API_KEY:placeholder}

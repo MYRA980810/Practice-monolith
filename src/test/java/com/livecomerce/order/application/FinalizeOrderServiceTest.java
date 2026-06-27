@@ -5,6 +5,7 @@ import com.livecomerce.order.application.port.out.LoadOrderPort;
 import com.livecomerce.order.application.port.out.SaveOrderPort;
 import com.livecomerce.order.domain.Order;
 import com.livecomerce.order.domain.OrderFinalizedEvent;
+import com.livecomerce.order.domain.OrderItemType;
 import com.livecomerce.order.domain.OrderStatus;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -39,14 +40,14 @@ class FinalizeOrderServiceTest {
 
     private Order buildOpenOrderWithPaidItem() {
         var order = Order.open(BUYER_ID, STORE_ID, LIVE_ID, "MXN");
-        order.addItem(UUID.randomUUID(), UUID.randomUUID(), "Producto", new BigDecimal("100"), "MXN", 1, 10);
+        order.addItem(UUID.randomUUID(), UUID.randomUUID(), "Producto", new BigDecimal("100"), "MXN", 1, 10, OrderItemType.PRODUCT);
         order.confirmItemPayment(order.getItems().getFirst().getId());
         return order;
     }
 
     private Order buildOpenOrderWithOnlyReservedItems() {
         var order = Order.open(BUYER_ID, STORE_ID, LIVE_ID, "MXN");
-        order.addItem(UUID.randomUUID(), UUID.randomUUID(), "Producto", new BigDecimal("100"), "MXN", 1, 10);
+        order.addItem(UUID.randomUUID(), UUID.randomUUID(), "Producto", new BigDecimal("100"), "MXN", 1, 10, OrderItemType.PRODUCT);
         return order;
     }
 
@@ -75,6 +76,7 @@ class FinalizeOrderServiceTest {
     }
 
     @Test
+    @SuppressWarnings("null") // Mockito capture() is @Nullable; publishEvent takes @NonNull — false positive
     void finalize_publishesOrderFinalizedEvent() {
         var order = buildOpenOrderWithPaidItem();
         when(loadOrderPort.loadById(ORDER_ID)).thenReturn(Optional.of(order));
@@ -82,7 +84,6 @@ class FinalizeOrderServiceTest {
 
         service.finalizeOrder(new FinalizeOrderCommand(ORDER_ID, BUYER_ID, "Calle 123"));
 
-        @SuppressWarnings("null")
         var captor = ArgumentCaptor.forClass(OrderFinalizedEvent.class);
         verify(eventPublisher).publishEvent(captor.capture());
         assertThat(captor.getValue().buyerId()).isEqualTo(BUYER_ID);

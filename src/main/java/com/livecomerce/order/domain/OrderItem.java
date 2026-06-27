@@ -22,11 +22,14 @@ public class OrderItem {
     @JoinColumn(name = "order_id", nullable = false)
     Order order;
 
-    @Column(name = "product_id", nullable = false)
+    @Column(name = "product_id")
     private UUID productId;
 
-    @Column(name = "variant_id", nullable = false)
+    @Column(name = "variant_id")
     private UUID variantId;
+
+    @Column(name = "item_type", nullable = false, length = 20)
+    private OrderItemType itemType;
 
     @Column(name = "product_name", nullable = false)
     private String productName;
@@ -56,12 +59,14 @@ public class OrderItem {
     private OffsetDateTime createdAt;
 
     static OrderItem reserve(Order order, UUID productId, UUID variantId, String productName,
-                             BigDecimal unitPrice, String currency, int qty, int ttlMinutes) {
+                             BigDecimal unitPrice, String currency, int qty, int ttlMinutes,
+                             OrderItemType itemType) {
         var item = new OrderItem();
         item.id            = UUID.randomUUID();
         item.order         = order;
         item.productId     = productId;
         item.variantId     = variantId;
+        item.itemType      = itemType;
         item.productName   = productName;
         item.unitPrice     = unitPrice;
         item.currency      = currency;

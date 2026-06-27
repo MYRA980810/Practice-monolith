@@ -1,6 +1,7 @@
 package com.livecomerce.order.application.port.in;
 
 import com.livecomerce.order.domain.Order;
+import com.livecomerce.order.domain.OrderItemType;
 
 import java.math.BigDecimal;
 import java.util.UUID;
@@ -18,6 +19,7 @@ public interface PlaceOrderItemUseCase {
             String productName,
             BigDecimal unitPrice,
             String currency,
-            int quantity
+            int quantity,
+            OrderItemType itemType
     ) {}
 }

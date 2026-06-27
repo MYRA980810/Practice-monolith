@@ -180,6 +180,7 @@
 			<version>10.6.1</version>
 		</dependency>
 
+
 		<!-- Cloudinary -->
 		<dependency>
 			<groupId>com.cloudinary</groupId>

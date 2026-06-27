@@ -62,6 +62,30 @@ public class Store implements Persistable<UUID> {
     @Column(name = "updated_at", nullable = false)
     private OffsetDateTime updatedAt;
 
+    @Column(name = "shipping_street", length = 255)
+    private String shippingStreet;
+
+    @Column(name = "shipping_ext_number", length = 20)
+    private String shippingExtNumber;
+
+    @Column(name = "shipping_int_number", length = 20)
+    private String shippingIntNumber;
+
+    @Column(name = "shipping_neighborhood", length = 100)
+    private String shippingNeighborhood;
+
+    @Column(name = "shipping_city", length = 100)
+    private String shippingCity;
+
+    @Column(name = "shipping_state", length = 100)
+    private String shippingState;
+
+    @Column(name = "shipping_zip_code", length = 10)
+    private String shippingZipCode;
+
+    @Column(name = "shipping_country", length = 3)
+    private String shippingCountry;
+
     @Transient
     private boolean isNew = false;
 
@@ -98,6 +122,19 @@ public class Store implements Persistable<UUID> {
         this.description = description;
         this.logoUrl     = logoUrl;
         this.updatedAt   = OffsetDateTime.now();
+    }
+
+    public void updateShippingAddress(String street, String extNumber, String intNumber,
+            String neighborhood, String city, String state, String zipCode, String country) {
+        this.shippingStreet       = street;
+        this.shippingExtNumber    = extNumber;
+        this.shippingIntNumber    = intNumber;
+        this.shippingNeighborhood = neighborhood;
+        this.shippingCity         = city;
+        this.shippingState        = state;
+        this.shippingZipCode      = zipCode;
+        this.shippingCountry      = country;
+        this.updatedAt            = OffsetDateTime.now();
     }
 
     public void changePlan(Plan newPlan) {

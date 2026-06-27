@@ -5,10 +5,13 @@ import com.livecomerce.store.application.port.in.ChangePlanUseCase;
 import com.livecomerce.store.application.port.in.CloseStoreTemporarilyUseCase;
 import com.livecomerce.store.application.port.in.CreateStoreUseCase;
 import com.livecomerce.store.application.port.in.DeactivateStoreUseCase;
+import com.livecomerce.store.application.port.in.FollowStoreUseCase;
+import com.livecomerce.store.application.port.in.GetStoreFollowersUseCase;
 import com.livecomerce.store.application.port.in.GetStoreUseCase;
 import com.livecomerce.store.application.port.in.ListStoresUseCase;
 import com.livecomerce.store.application.port.in.ReactivateStoreUseCase;
 import com.livecomerce.store.application.port.in.ReopenStoreUseCase;
+import com.livecomerce.store.application.port.in.UnfollowStoreUseCase;
 import com.livecomerce.store.application.port.in.UpdateStoreUseCase;
 import com.livecomerce.shared.Plan;
 import jakarta.validation.Valid;
@@ -25,6 +28,7 @@ import org.springframework.data.web.PageableDefault;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/stores")
@@ -40,6 +44,9 @@ class StoreController {
     private final CloseStoreTemporarilyUseCase closeStoreTemporarilyUseCase;
     private final ReopenStoreUseCase reopenStoreUseCase;
     private final ListStoresUseCase listStoresUseCase;
+    private final FollowStoreUseCase followStoreUseCase;
+    private final UnfollowStoreUseCase unfollowStoreUseCase;
+    private final GetStoreFollowersUseCase getStoreFollowersUseCase;
 
     @GetMapping
     ResponseEntity<Page<StoreCardResponse>> listStores(
@@ -83,11 +90,18 @@ class StoreController {
             @Valid @RequestBody UpdateStoreRequest request,
             @AuthenticationPrincipal UserPrincipal principal) {
 
+        var shippingAddress = request.shippingStreet() != null
+                ? new UpdateStoreUseCase.ShippingAddressData(
+                        request.shippingStreet(), request.shippingExtNumber(), request.shippingIntNumber(),
+                        request.shippingNeighborhood(), request.shippingCity(), request.shippingState(),
+                        request.shippingZipCode(), request.shippingCountry())
+                : null;
         var store = updateStoreUseCase.update(new UpdateStoreUseCase.UpdateStoreCommand(
                 principal.getUserId(),
                 request.name(),
                 request.description(),
-                request.logoUrl()
+                request.logoUrl(),
+                shippingAddress
         ));
         return ResponseEntity.ok(StoreResponse.from(store));
     }
@@ -140,5 +154,38 @@ class StoreController {
                 request.plan()
         ));
         return ResponseEntity.ok(StoreResponse.from(store));
+    }
+
+    @PostMapping("/{storeId}/follow")
+    @PreAuthorize("hasRole('BUYER')")
+    ResponseEntity<Void> followStore(
+            @PathVariable UUID storeId,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        followStoreUseCase.follow(storeId, principal.getUserId());
+        return ResponseEntity.noContent().build();
+    }
+
+    @DeleteMapping("/{storeId}/follow")
+    @PreAuthorize("hasRole('BUYER')")
+    ResponseEntity<Void> unfollowStore(
+            @PathVariable UUID storeId,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        unfollowStoreUseCase.unfollow(storeId, principal.getUserId());
+        return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/{storeId}/followers/count")
+    ResponseEntity<FollowerCountResponse> getFollowerCount(@PathVariable UUID storeId) {
+        long count = getStoreFollowersUseCase.getFollowerCount(storeId);
+        return ResponseEntity.ok(new FollowerCountResponse(count));
+    }
+
+    @GetMapping("/{storeId}/following")
+    @PreAuthorize("isAuthenticated()")
+    ResponseEntity<FollowingStatusResponse> isFollowing(
+            @PathVariable UUID storeId,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        boolean following = getStoreFollowersUseCase.isFollowing(storeId, principal.getUserId());
+        return ResponseEntity.ok(new FollowingStatusResponse(following));
     }
 }
