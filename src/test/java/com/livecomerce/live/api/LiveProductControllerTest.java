@@ -104,7 +104,7 @@ class LiveProductControllerTest {
 
     private static LiveProduct buildHotProduct() {
         return LiveProduct.forHotProduct(
-                buildLive(), "Hot Deal", new BigDecimal("49.00"), "MXN", 5
+                buildLive(), "Hot Deal", new BigDecimal("49.00"), "MXN", 5, null
         );
     }
 

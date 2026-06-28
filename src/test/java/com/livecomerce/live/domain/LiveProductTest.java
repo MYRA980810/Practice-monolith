@@ -44,7 +44,7 @@ class LiveProductTest {
     @Test
     void forHotProduct_createsWithNullProductAndVariant() {
         var live = buildLive();
-        var lp = LiveProduct.forHotProduct(live, "Mystery Box", PRICE, "MXN", 10);
+        var lp = LiveProduct.forHotProduct(live, "Mystery Box", PRICE, "MXN", 10, null);
 
         assertThat(lp.isHot()).isTrue();
         assertThat(lp.getProductId()).isNull();
@@ -58,7 +58,7 @@ class LiveProductTest {
         var live = buildLive();
 
         assertThatThrownBy(() ->
-                LiveProduct.forHotProduct(live, "Mystery Box", PRICE, "MXN", 0))
+                LiveProduct.forHotProduct(live, "Mystery Box", PRICE, "MXN", 0, null))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
@@ -67,7 +67,7 @@ class LiveProductTest {
         var live = buildLive();
 
         assertThatThrownBy(() ->
-                LiveProduct.forHotProduct(live, "Mystery Box", PRICE, "MXN", -1))
+                LiveProduct.forHotProduct(live, "Mystery Box", PRICE, "MXN", -1, null))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
@@ -118,7 +118,7 @@ class LiveProductTest {
     void tryAtomicStockReserve_hotProduct_neverThrowsRegardlessOfStock() {
         var live = buildLive();
         // Hot product has stock allocated, but domain check skips for hot
-        var lp = LiveProduct.forHotProduct(live, "Mystery Box", PRICE, "MXN", 1);
+        var lp = LiveProduct.forHotProduct(live, "Mystery Box", PRICE, "MXN", 1, null);
         lp.incrementStockSold(); // sold 1
         lp.incrementStockSold(); // sold 2 — beyond allocated
 

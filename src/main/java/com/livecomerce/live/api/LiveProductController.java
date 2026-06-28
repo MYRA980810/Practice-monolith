@@ -63,7 +63,8 @@ class LiveProductController {
                 request.name(),
                 request.price(),
                 request.currency(),
-                request.stockAllocated()
+                request.stockAllocated(),
+                request.imageUrl()
         ));
         return ResponseEntity.status(HttpStatus.CREATED).body(LiveProductResponse.from(product));
     }

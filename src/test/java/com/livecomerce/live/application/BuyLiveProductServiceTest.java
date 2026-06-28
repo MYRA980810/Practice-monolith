@@ -71,7 +71,7 @@ class BuyLiveProductServiceTest {
     @Test
     void buyLiveProduct_hotProduct_callsPlaceItemWithHotProductType() {
         var live = startedLive();
-        var lp = LiveProduct.forHotProduct(live, "Mystery Box", new BigDecimal("50"), "MXN", 5);
+        var lp = LiveProduct.forHotProduct(live, "Mystery Box", new BigDecimal("50"), "MXN", 5, null);
         var mockOrder = mock(Order.class);
 
         when(loadLiveProductPort.loadById(lp.getId())).thenReturn(Optional.of(lp));

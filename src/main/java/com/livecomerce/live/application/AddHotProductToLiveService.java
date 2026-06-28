@@ -28,7 +28,7 @@ public class AddHotProductToLiveService implements AddHotProductUseCase {
 
         var lp = LiveProduct.forHotProduct(
                 live, command.name(), command.price(), command.currency(),
-                command.stockAllocated());
+                command.stockAllocated(), command.imageUrl());
 
         return saveLiveProductPort.save(lp);
     }

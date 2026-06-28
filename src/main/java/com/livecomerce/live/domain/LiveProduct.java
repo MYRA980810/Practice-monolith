@@ -43,6 +43,9 @@ public class LiveProduct {
     @Column(name = "stock_sold", nullable = false)
     private int stockSold = 0;
 
+    @Column(name = "image_url")
+    private String imageUrl;
+
     @Column(name = "is_hot", nullable = false)
     private boolean isHot = false;
 
@@ -79,7 +82,7 @@ public class LiveProduct {
     }
 
     public static LiveProduct forHotProduct(Live live, String name, BigDecimal price,
-                                            String currency, int stockAllocated) {
+                                            String currency, int stockAllocated, String imageUrl) {
         if (stockAllocated <= 0) {
             throw new IllegalArgumentException("Hot product must have stockAllocated > 0, got: " + stockAllocated);
         }
@@ -93,6 +96,7 @@ public class LiveProduct {
         lp.currencySnapshot    = currency;
         lp.stockAllocated      = stockAllocated;
         lp.stockSold           = 0;
+        lp.imageUrl            = imageUrl;
         lp.isHot               = true;
         lp.isPinned            = false;
         lp.createdAt           = OffsetDateTime.now();

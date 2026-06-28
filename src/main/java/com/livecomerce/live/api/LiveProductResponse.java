@@ -18,7 +18,8 @@ public record LiveProductResponse(
         int stockSold,
         boolean isHot,
         boolean isPinned,
-        int position
+        int position,
+        @Nullable String imageUrl
 ) {
     public static LiveProductResponse from(LiveProduct lp) {
         return new LiveProductResponse(
@@ -33,7 +34,8 @@ public record LiveProductResponse(
                 lp.getStockSold(),
                 lp.isHot(),
                 lp.isPinned(),
-                lp.getPosition()
+                lp.getPosition(),
+                lp.getImageUrl()
         );
     }
 }

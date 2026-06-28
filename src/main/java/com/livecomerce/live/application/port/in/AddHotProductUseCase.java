@@ -15,6 +15,7 @@ public interface AddHotProductUseCase {
             String name,
             BigDecimal price,
             String currency,
-            int stockAllocated
+            int stockAllocated,
+            String imageUrl
     ) {}
 }

@@ -80,12 +80,14 @@ class LivePortsTest {
     void addHotProductCommand_hasCorrectFields() {
         var liveId   = UUID.randomUUID();
         var sellerId = UUID.randomUUID();
+        var imageUrl = "https://example.com/image.jpg";
         var cmd = new AddHotProductUseCase.AddHotProductCommand(
-                liveId, sellerId, "Mystery Box", new BigDecimal("99.00"), "MXN", 50);
+                liveId, sellerId, "Mystery Box", new BigDecimal("99.00"), "MXN", 50,imageUrl);
 
         assertThat(cmd.liveId()).isEqualTo(liveId);
         assertThat(cmd.name()).isEqualTo("Mystery Box");
         assertThat(cmd.stockAllocated()).isEqualTo(50);
+        assertThat(cmd.imageUrl()).isEqualTo(imageUrl);
     }
 
     @Test

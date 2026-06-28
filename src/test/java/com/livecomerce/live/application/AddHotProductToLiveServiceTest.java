@@ -35,7 +35,7 @@ class AddHotProductToLiveServiceTest {
         when(saveLiveProductPort.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         var cmd = new AddHotProductCommand(
-                live.getId(), SELLER_ID, "Mystery Box", new BigDecimal("99.00"), "MXN", 20);
+                live.getId(), SELLER_ID, "Mystery Box", new BigDecimal("99.00"), "MXN", 20, "https://example.com/image.jpg");
         var result = sut.addHotProduct(cmd);
 
         assertThat(result.isHot()).isTrue();
@@ -50,7 +50,7 @@ class AddHotProductToLiveServiceTest {
         when(loadLivePort.loadById(live.getId())).thenReturn(Optional.of(live));
 
         var cmd = new AddHotProductCommand(
-                live.getId(), SELLER_ID, "Mystery Box", new BigDecimal("99.00"), "MXN", 0);
+                live.getId(), SELLER_ID, "Mystery Box", new BigDecimal("99.00"), "MXN", 0, "https://example.com/image.jpg");
 
         assertThatThrownBy(() -> sut.addHotProduct(cmd))
                 .isInstanceOf(IllegalArgumentException.class);
