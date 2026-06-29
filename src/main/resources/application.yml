@@ -98,6 +98,8 @@ agora:
   app-id: ${AGORA_APP_ID}
   app-certificate: ${AGORA_APP_CERTIFICATE}
   webhook-secret: ${AGORA_WEBHOOK_SECRET}
+  customer-id: ${AGORA_CUSTOMER_ID}          
+  customer-secret: ${AGORA_CUSTOMER_SECRET}
 
 cloudinary:
   cloud-name: ${CLOUDINARY_CLOUD_NAME:placeholder}

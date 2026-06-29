@@ -1,6 +1,8 @@
 package com.livecomerce.live.application;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.livecomerce.live.application.port.in.BuyLiveProductUseCase.BuyLiveProductCommand;
+import com.livecomerce.live.application.port.out.AgoraRtmMessagePort;
 import com.livecomerce.live.application.port.out.AtomicLiveProductStockPort;
 import com.livecomerce.live.application.port.out.LoadLivePort;
 import com.livecomerce.live.application.port.out.LoadLiveProductPort;
@@ -14,6 +16,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
@@ -22,6 +25,8 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.contains;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -31,7 +36,8 @@ class BuyLiveProductServiceTest {
     @Mock LoadLivePort               loadLivePort;
     @Mock LivePurchasePort           livePurchasePort;
     @Mock AtomicLiveProductStockPort atomicStockPort;
-    @Mock LiveBroadcastService       broadcastService;
+    @Mock AgoraRtmMessagePort        agoraRtmMessagePort;
+    @Spy  ObjectMapper               objectMapper = new ObjectMapper();
     @InjectMocks BuyLiveProductService sut;
 
     private static final UUID SELLER_ID  = UUID.randomUUID();
@@ -66,6 +72,10 @@ class BuyLiveProductServiceTest {
         assertThat(captor.getValue().itemType()).isEqualTo(OrderItemType.PRODUCT);
         assertThat(captor.getValue().quantity()).isEqualTo(2);
         assertThat(captor.getValue().buyerId()).isEqualTo(BUYER_ID);
+        verify(agoraRtmMessagePort).sendChannelMessage(
+                eq("live-chat:" + live.getId()), contains("\"type\":\"stock-update\""));
+        verify(agoraRtmMessagePort).sendPeerMessage(
+                eq(live.getSellerId().toString()), contains("\"type\":\"order-confirmed\""));
     }
 
     @Test
@@ -131,5 +141,23 @@ class BuyLiveProductServiceTest {
         assertThatThrownBy(() -> sut.buyLiveProduct(cmd))
                 .isInstanceOf(RuntimeException.class);
         verify(atomicStockPort).decrementStockSold(lp.getId(), 1);
+    }
+
+    @Test
+    void buyLiveProduct_rtmChannelMessageThrows_purchaseStillSucceeds() {
+        var live = startedLive();
+        var lp = LiveProduct.forCatalogProduct(live, PRODUCT_ID, VARIANT_ID, "Shirt", new BigDecimal("99"), "MXN", 10);
+        var mockOrder = mock(Order.class);
+
+        when(loadLiveProductPort.loadById(lp.getId())).thenReturn(Optional.of(lp));
+        when(loadLivePort.loadById(live.getId())).thenReturn(Optional.of(live));
+        when(atomicStockPort.atomicIncrementStockSold(lp.getId(), 1)).thenReturn(Optional.of(lp.getId()));
+        when(livePurchasePort.placeItem(any())).thenReturn(mockOrder);
+        doThrow(new RuntimeException("RTM error")).when(agoraRtmMessagePort).sendChannelMessage(any(), any());
+
+        var cmd = new BuyLiveProductCommand(live.getId(), lp.getId(), BUYER_ID, 1);
+        var result = sut.buyLiveProduct(cmd);
+
+        assertThat(result).isEqualTo(mockOrder);
     }
 }

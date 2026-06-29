@@ -1,5 +1,6 @@
 package com.livecomerce.live.api;
 
+import com.livecomerce.live.application.TrackViewerPresenceService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.security.oauth2.client.OAuth2ClientAutoConfiguration;
@@ -39,7 +40,8 @@ class AgoraWebhookControllerTest {
 
     @Autowired MockMvc mvc;
 
-    @MockitoBean AgoraSignatureValidator signatureValidator;
+    @MockitoBean AgoraSignatureValidator    signatureValidator;
+    @MockitoBean TrackViewerPresenceService trackViewerPresenceService;
 
     private static final String VALID_BODY = """
             {"noticeId":"abc-123","productId":1,"eventType":1}

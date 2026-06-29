@@ -1,10 +1,11 @@
 package com.livecomerce.live.api;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.annotation.Nullable;
 
 public record AgoraWebhookEvent(
         String noticeId,
-        int productId,
+        @JsonProperty("productId") int productCategory,
         int eventType,
         @Nullable String clientSeq,
         @Nullable AgoraPayload payload

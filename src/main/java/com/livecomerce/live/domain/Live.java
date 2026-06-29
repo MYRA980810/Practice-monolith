@@ -133,4 +133,11 @@ public class Live implements Persistable<UUID> {
         this.streamToken = token;
         this.updatedAt   = OffsetDateTime.now();
     }
+
+    public void updatePeakViewers(int currentCount) {
+        if (currentCount > this.peakViewers) {
+            this.peakViewers = currentCount;
+            this.updatedAt   = OffsetDateTime.now();
+        }
+    }
 }

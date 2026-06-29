@@ -142,4 +142,35 @@ class LiveTest {
 
         assertThat(live.getStreamToken()).isEqualTo("agora-rtc-token-xyz");
     }
+
+    // ── Peak Viewers ──────────────────────────────────────────────────────────
+
+    @Test
+    void updatePeakViewers_whenCurrentExceedsPeak_updatesPeak() {
+        var live = Live.create(SELLER_ID, STORE_ID, LiveContext.STORE, "My Live", null, null, 60);
+
+        live.updatePeakViewers(50);
+
+        assertThat(live.getPeakViewers()).isEqualTo(50);
+    }
+
+    @Test
+    void updatePeakViewers_whenCurrentLessThanPeak_doesNotDecrease() {
+        var live = Live.create(SELLER_ID, STORE_ID, LiveContext.STORE, "My Live", null, null, 60);
+        live.updatePeakViewers(50);
+
+        live.updatePeakViewers(30);
+
+        assertThat(live.getPeakViewers()).isEqualTo(50);
+    }
+
+    @Test
+    void updatePeakViewers_whenCurrentExceedsExistingPeak_updatesToPeak() {
+        var live = Live.create(SELLER_ID, STORE_ID, LiveContext.STORE, "My Live", null, null, 60);
+        live.updatePeakViewers(50);
+
+        live.updatePeakViewers(60);
+
+        assertThat(live.getPeakViewers()).isEqualTo(60);
+    }
 }

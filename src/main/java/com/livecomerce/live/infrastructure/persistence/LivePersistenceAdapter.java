@@ -30,6 +30,11 @@ class LivePersistenceAdapter implements SaveLivePort, LoadLivePort {
     }
 
     @Override
+    public Optional<Live> loadByAgoraChannelId(String agoraChannelId) {
+        return repository.findByAgoraChannelId(agoraChannelId);
+    }
+
+    @Override
     public List<Live> loadBySellerId(UUID sellerId) {
         return repository.findBySellerId(sellerId);
     }

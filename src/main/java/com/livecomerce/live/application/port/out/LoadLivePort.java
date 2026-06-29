@@ -11,6 +11,8 @@ public interface LoadLivePort {
 
     Optional<Live> loadById(UUID id);
 
+    Optional<Live> loadByAgoraChannelId(String agoraChannelId);
+
     List<Live> loadBySellerId(UUID sellerId);
 
     List<Live> loadBySellerIdAndStatus(UUID sellerId, LiveStatus status);

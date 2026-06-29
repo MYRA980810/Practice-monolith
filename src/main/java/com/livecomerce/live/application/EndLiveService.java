@@ -1,15 +1,20 @@
 package com.livecomerce.live.application;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.livecomerce.live.application.port.in.EndLiveUseCase;
+import com.livecomerce.live.application.port.out.AgoraRtmMessagePort;
 import com.livecomerce.live.application.port.out.LoadLivePort;
 import com.livecomerce.live.application.port.out.SaveLivePort;
 import com.livecomerce.live.domain.Live;
 import com.livecomerce.live.domain.LiveNotFoundException;
 import com.livecomerce.live.domain.LiveNotOwnedBySellerException;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -17,9 +22,12 @@ import java.util.UUID;
 @Transactional
 public class EndLiveService implements EndLiveUseCase {
 
+    private static final Logger log = LoggerFactory.getLogger(EndLiveService.class);
+
     private final LoadLivePort        loadLivePort;
     private final SaveLivePort        saveLivePort;
-    private final LiveBroadcastService broadcastService;
+    private final AgoraRtmMessagePort agoraRtmMessagePort;
+    private final ObjectMapper        objectMapper;
 
     @Override
     public Live endLive(EndLiveCommand command) {
@@ -30,7 +38,17 @@ public class EndLiveService implements EndLiveUseCase {
         live.end();
 
         var saved = saveLivePort.save(live);
-        broadcastService.broadcastLiveEnded(saved.getId());
+
+        try {
+            String payload = objectMapper.writeValueAsString(Map.of(
+                    "type",   "live-ended",
+                    "liveId", saved.getId()
+            ));
+            agoraRtmMessagePort.sendChannelMessage("live-chat:" + saved.getId(), payload);
+        } catch (Exception e) {
+            log.warn("Agora RTM live-ended failed: {}", e.getMessage());
+        }
+
         return saved;
     }
 
