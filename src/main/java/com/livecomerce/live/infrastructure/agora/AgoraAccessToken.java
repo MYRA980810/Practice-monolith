@@ -28,8 +28,16 @@ class AgoraAccessToken {
         PrivilegeRtc(int value) { intValue = (short) value; }
     }
 
+    public enum PrivilegeRtm {
+        PRIVILEGE_LOGIN(1);
+
+        public final short intValue;
+        PrivilegeRtm(int value) { intValue = (short) value; }
+    }
+
     private static final String VERSION = "007";
     public static final short SERVICE_TYPE_RTC = 1;
+    public static final short SERVICE_TYPE_RTM = 2;
 
     String appCert = "";
     String appId = "";
@@ -175,6 +183,32 @@ class AgoraAccessToken {
             super.unpack(buf);
             this.channelName = buf.readString();
             this.uid         = buf.readString();
+        }
+    }
+
+    static class ServiceRtm extends Service {
+        String userId;
+
+        ServiceRtm() { this.type = SERVICE_TYPE_RTM; }
+
+        ServiceRtm(String userId) {
+            this.type   = SERVICE_TYPE_RTM;
+            this.userId = userId;
+        }
+
+        void addPrivilege(PrivilegeRtm privilege, int expire) {
+            this.privileges.put(privilege.intValue, expire);
+        }
+
+        @Override
+        AgoraByteBuf pack(AgoraByteBuf buf) {
+            return super.pack(buf).put(this.userId);
+        }
+
+        @Override
+        void unpack(AgoraByteBuf buf) {
+            super.unpack(buf);
+            this.userId = buf.readString();
         }
     }
 }

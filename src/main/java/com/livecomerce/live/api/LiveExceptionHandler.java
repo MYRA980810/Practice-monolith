@@ -2,6 +2,7 @@ package com.livecomerce.live.api;
 
 import com.livecomerce.live.domain.InvalidLiveStateException;
 import com.livecomerce.live.domain.LiveNotFoundException;
+import com.livecomerce.live.domain.LiveNotLiveException;
 import com.livecomerce.live.domain.LiveNotOwnedBySellerException;
 import com.livecomerce.live.domain.LiveProductNotFoundException;
 import com.livecomerce.live.domain.LiveProductOutOfStockException;
@@ -48,6 +49,13 @@ class LiveExceptionHandler {
     ProblemDetail handleProductNotFound(LiveProductNotFoundException e) {
         var detail = ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, e.getMessage());
         detail.setType(URI.create("https://livecomerce.com/errors/live-product-not-found"));
+        return detail;
+    }
+
+    @ExceptionHandler(LiveNotLiveException.class)
+    ProblemDetail handleNotLive(LiveNotLiveException e) {
+        var detail = ProblemDetail.forStatusAndDetail(HttpStatus.FORBIDDEN, e.getMessage());
+        detail.setType(URI.create("https://livecomerce.com/errors/live-not-active"));
         return detail;
     }
 }

@@ -19,4 +19,14 @@ public class AgoraTokenAdapter implements AgoraTokenPort {
     public String generateRtcToken(String channelName, String uid, int expiresInSeconds) {
         return AgoraRtcTokenBuilder.buildToken(appId, appCertificate, channelName, uid, expiresInSeconds);
     }
+
+    @Override
+    public String generateRtmToken(String userId, int expiresInSeconds) {
+        return AgoraRtmTokenBuilder.buildTokenWithUserAccount(appId, appCertificate, userId, expiresInSeconds);
+    }
+
+    @Override
+    public String getAppId() {
+        return appId;
+    }
 }
