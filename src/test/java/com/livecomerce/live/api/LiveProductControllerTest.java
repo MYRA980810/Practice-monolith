@@ -4,7 +4,10 @@ import com.livecomerce.live.application.port.in.*;
 import com.livecomerce.live.application.port.out.LoadLiveProductPort;
 import com.livecomerce.live.domain.Live;
 import com.livecomerce.live.domain.LiveContext;
+import com.livecomerce.live.domain.LiveNotFoundException;
+import com.livecomerce.live.domain.LiveNotOwnedBySellerException;
 import com.livecomerce.live.domain.LiveProduct;
+import com.livecomerce.live.domain.LiveProductNotFoundException;
 import com.livecomerce.shared.UserPrincipal;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -64,6 +67,7 @@ class LiveProductControllerTest {
     @MockitoBean PinProductUseCase pinProductUseCase;
     @MockitoBean UnpinProductUseCase unpinProductUseCase;
     @MockitoBean ReorderProductsUseCase reorderProductsUseCase;
+    @MockitoBean ExpirePinUseCase expirePinUseCase;
     @MockitoBean LoadLiveProductPort loadLiveProductPort;
 
     private static final UUID SELLER_ID = UUID.randomUUID();
@@ -219,5 +223,70 @@ class LiveProductControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$").isArray())
                 .andExpect(jsonPath("$[0].productNameSnapshot").exists());
+    }
+
+    // --- POST /api/lives/{liveId}/products/{id}/expire-pin ---
+
+    @Test
+    void expirePin_stockExhausted_returns200WithSoldStatus() throws Exception {
+        var product = buildCatalogProduct();
+        product.pin();
+        product.incrementStockSold(); // sold = 10 out of 10, but we need to exhaust
+        // Use a product that when expired becomes SOLD
+        when(expirePinUseCase.expirePin(any())).thenAnswer(inv -> {
+            var lp = buildCatalogProduct();
+            lp.pin();
+            lp.markAsSold();
+            return lp;
+        });
+
+        mvc.perform(post("/api/lives/{liveId}/products/{id}/expire-pin", LIVE_ID, PRODUCT_ID))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("SOLD"));
+    }
+
+    @Test
+    void expirePin_stockRemaining_returns200WithAvailableStatus() throws Exception {
+        when(expirePinUseCase.expirePin(any())).thenReturn(buildCatalogProduct());
+
+        mvc.perform(post("/api/lives/{liveId}/products/{id}/expire-pin", LIVE_ID, PRODUCT_ID))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("AVAILABLE"));
+    }
+
+    @Test
+    void expirePin_alreadyAvailable_returns200Idempotent() throws Exception {
+        when(expirePinUseCase.expirePin(any())).thenReturn(buildCatalogProduct());
+
+        mvc.perform(post("/api/lives/{liveId}/products/{id}/expire-pin", LIVE_ID, PRODUCT_ID))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("AVAILABLE"));
+    }
+
+    @Test
+    void expirePin_nonOwnerSeller_returns403() throws Exception {
+        when(expirePinUseCase.expirePin(any()))
+                .thenThrow(new LiveNotOwnedBySellerException(LIVE_ID, UUID.randomUUID()));
+
+        mvc.perform(post("/api/lives/{liveId}/products/{id}/expire-pin", LIVE_ID, PRODUCT_ID))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void expirePin_liveNotFound_returns404() throws Exception {
+        when(expirePinUseCase.expirePin(any()))
+                .thenThrow(new LiveNotFoundException(LIVE_ID));
+
+        mvc.perform(post("/api/lives/{liveId}/products/{id}/expire-pin", LIVE_ID, PRODUCT_ID))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void expirePin_productNotFound_returns404() throws Exception {
+        when(expirePinUseCase.expirePin(any()))
+                .thenThrow(new LiveProductNotFoundException(PRODUCT_ID));
+
+        mvc.perform(post("/api/lives/{liveId}/products/{id}/expire-pin", LIVE_ID, PRODUCT_ID))
+                .andExpect(status().isNotFound());
     }
 }

@@ -43,7 +43,7 @@ class LiveProductPersistenceAdapter
 
     @Override
     public Optional<LiveProduct> loadPinnedByLiveId(UUID liveId) {
-        return repository.findByLiveIdAndIsPinnedTrue(liveId);
+        return repository.findPinnedByLiveId(liveId);
     }
 
     @Override

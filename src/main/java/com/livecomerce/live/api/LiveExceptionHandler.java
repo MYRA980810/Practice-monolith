@@ -4,6 +4,7 @@ import com.livecomerce.live.domain.InvalidLiveStateException;
 import com.livecomerce.live.domain.LiveNotFoundException;
 import com.livecomerce.live.domain.LiveNotLiveException;
 import com.livecomerce.live.domain.LiveNotOwnedBySellerException;
+import com.livecomerce.live.domain.LiveProductAlreadySoldException;
 import com.livecomerce.live.domain.LiveProductNotFoundException;
 import com.livecomerce.live.domain.LiveProductOutOfStockException;
 import org.springframework.http.HttpStatus;
@@ -56,6 +57,13 @@ class LiveExceptionHandler {
     ProblemDetail handleNotLive(LiveNotLiveException e) {
         var detail = ProblemDetail.forStatusAndDetail(HttpStatus.FORBIDDEN, e.getMessage());
         detail.setType(URI.create("https://livecomerce.com/errors/live-not-active"));
+        return detail;
+    }
+
+    @ExceptionHandler(LiveProductAlreadySoldException.class)
+    ProblemDetail handleAlreadySold(LiveProductAlreadySoldException e) {
+        var detail = ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, e.getMessage());
+        detail.setType(URI.create("https://livecomerce.com/errors/live-product-already-sold"));
         return detail;
     }
 }

@@ -1,6 +1,7 @@
 package com.livecomerce.live.api;
 
 import com.livecomerce.live.domain.LiveProduct;
+import com.livecomerce.live.domain.LiveProductStatus;
 import jakarta.annotation.Nullable;
 
 import java.math.BigDecimal;
@@ -18,6 +19,7 @@ public record LiveProductResponse(
         int stockSold,
         boolean isHot,
         boolean isPinned,
+        LiveProductStatus status,
         int position,
         @Nullable String imageUrl
 ) {
@@ -34,6 +36,7 @@ public record LiveProductResponse(
                 lp.getStockSold(),
                 lp.isHot(),
                 lp.isPinned(),
+                lp.getStatus(),
                 lp.getPosition(),
                 lp.getImageUrl()
         );

@@ -6,6 +6,7 @@ import java.math.BigDecimal;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.*;
+import static com.livecomerce.live.domain.LiveProductStatus.*;
 
 class LiveProductTest {
 
@@ -35,7 +36,7 @@ class LiveProductTest {
         assertThat(lp.getCurrencySnapshot()).isEqualTo("MXN");
         assertThat(lp.getStockAllocated()).isEqualTo(50);
         assertThat(lp.isHot()).isFalse();
-        assertThat(lp.isPinned()).isFalse();
+        assertThat(lp.getStatus()).isEqualTo(AVAILABLE);
         assertThat(lp.getStockSold()).isZero();
     }
 
@@ -74,24 +75,64 @@ class LiveProductTest {
     // ── pin / unpin ───────────────────────────────────────────────────────────
 
     @Test
-    void pin_setsIsPinnedTrue() {
+    void pin_setsStatusPinned() {
         var live = buildLive();
         var lp = LiveProduct.forCatalogProduct(live, PRODUCT_ID, VARIANT_ID, "Shirt", PRICE, "MXN", 50);
 
         lp.pin();
 
-        assertThat(lp.isPinned()).isTrue();
+        assertThat(lp.getStatus()).isEqualTo(PINNED);
     }
 
     @Test
-    void unpin_setsIsPinnedFalse() {
+    void unpin_setsStatusAvailable() {
         var live = buildLive();
         var lp = LiveProduct.forCatalogProduct(live, PRODUCT_ID, VARIANT_ID, "Shirt", PRICE, "MXN", 50);
         lp.pin();
 
         lp.unpin();
 
-        assertThat(lp.isPinned()).isFalse();
+        assertThat(lp.getStatus()).isEqualTo(AVAILABLE);
+    }
+
+    @Test
+    void markAsSold_setsStatusSold() {
+        var live = buildLive();
+        var lp = LiveProduct.forCatalogProduct(live, PRODUCT_ID, VARIANT_ID, "Shirt", PRICE, "MXN", 1);
+        lp.pin();
+
+        lp.markAsSold();
+
+        assertThat(lp.getStatus()).isEqualTo(SOLD);
+    }
+
+    @Test
+    void isStockExhausted_whenSoldEqualsAllocated_returnsTrue() {
+        var live = buildLive();
+        var lp = LiveProduct.forCatalogProduct(live, PRODUCT_ID, VARIANT_ID, "Shirt", PRICE, "MXN", 1);
+        lp.incrementStockSold();
+
+        assertThat(lp.isStockExhausted()).isTrue();
+    }
+
+    @Test
+    void isStockExhausted_whenStockRemaining_returnsFalse() {
+        var live = buildLive();
+        var lp = LiveProduct.forCatalogProduct(live, PRODUCT_ID, VARIANT_ID, "Shirt", PRICE, "MXN", 5);
+        lp.incrementStockSold();
+
+        assertThat(lp.isStockExhausted()).isFalse();
+    }
+
+    @Test
+    void pin_whenAlreadySold_throwsAlreadySoldException() {
+        var live = buildLive();
+        var lp = LiveProduct.forCatalogProduct(live, PRODUCT_ID, VARIANT_ID, "Shirt", PRICE, "MXN", 1);
+        lp.pin();
+        lp.markAsSold();
+
+        assertThatThrownBy(lp::pin)
+                .isInstanceOf(LiveProductAlreadySoldException.class);
     }
 
     // ── tryAtomicStockReserve ─────────────────────────────────────────────────

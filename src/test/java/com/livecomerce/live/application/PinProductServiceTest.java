@@ -4,6 +4,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.livecomerce.live.application.port.in.PinProductUseCase.PinProductCommand;
 import com.livecomerce.live.application.port.out.*;
 import com.livecomerce.live.domain.*;
+
+import static com.livecomerce.live.domain.LiveProductStatus.*;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -57,7 +59,7 @@ class PinProductServiceTest {
 
         var result = sut.pinProduct(new PinProductCommand(live.getId(), lp.getId(), SELLER_ID));
 
-        assertThat(result.isPinned()).isTrue();
+        assertThat(result.getStatus()).isEqualTo(PINNED);
         verify(eventPublisher).publishEvent(any(com.livecomerce.live.LiveProductPinnedEvent.class));
         verify(agoraRtmMessagePort).sendChannelMessage(
                 eq("live-chat:" + live.getId()),
@@ -78,8 +80,8 @@ class PinProductServiceTest {
 
         sut.pinProduct(new PinProductCommand(live.getId(), newPinned.getId(), SELLER_ID));
 
-        assertThat(oldPinned.isPinned()).isFalse();
-        assertThat(newPinned.isPinned()).isTrue();
+        assertThat(oldPinned.getStatus()).isEqualTo(AVAILABLE);
+        assertThat(newPinned.getStatus()).isEqualTo(PINNED);
         verify(saveLiveProductPort, times(2)).save(any());
     }
 
@@ -91,5 +93,20 @@ class PinProductServiceTest {
         assertThatThrownBy(() -> sut.pinProduct(
                 new PinProductCommand(live.getId(), UUID.randomUUID(), UUID.randomUUID())))
                 .isInstanceOf(LiveNotOwnedBySellerException.class);
+    }
+
+    @Test
+    void pinProduct_onSoldProduct_throwsAlreadySoldException() {
+        var live = liveLive();
+        var lp = LiveProduct.forCatalogProduct(live, PRODUCT_ID, VARIANT_ID, "Shirt", new BigDecimal("99"), "MXN", 1);
+        lp.pin();
+        lp.markAsSold();
+
+        when(loadLivePort.loadById(live.getId())).thenReturn(Optional.of(live));
+        when(loadLiveProductPort.loadById(lp.getId())).thenReturn(Optional.of(lp));
+        when(loadLiveProductPort.loadPinnedByLiveId(live.getId())).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> sut.pinProduct(new PinProductCommand(live.getId(), lp.getId(), SELLER_ID)))
+                .isInstanceOf(LiveProductAlreadySoldException.class);
     }
 }

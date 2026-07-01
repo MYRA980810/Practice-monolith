@@ -2,6 +2,7 @@ package com.livecomerce.live.api;
 
 import com.livecomerce.live.application.port.in.AddCatalogProductUseCase;
 import com.livecomerce.live.application.port.in.AddHotProductUseCase;
+import com.livecomerce.live.application.port.in.ExpirePinUseCase;
 import com.livecomerce.live.application.port.in.PinProductUseCase;
 import com.livecomerce.live.application.port.in.ReorderProductsUseCase;
 import com.livecomerce.live.application.port.in.UnpinProductUseCase;
@@ -27,6 +28,7 @@ class LiveProductController {
     private final AddHotProductUseCase addHotProductUseCase;
     private final PinProductUseCase pinProductUseCase;
     private final UnpinProductUseCase unpinProductUseCase;
+    private final ExpirePinUseCase expirePinUseCase;
     private final ReorderProductsUseCase reorderProductsUseCase;
     private final LoadLiveProductPort loadLiveProductPort;
 
@@ -78,6 +80,19 @@ class LiveProductController {
 
         var product = pinProductUseCase.pinProduct(
                 new PinProductUseCase.PinProductCommand(liveId, id, principal.getUserId())
+        );
+        return ResponseEntity.ok(LiveProductResponse.from(product));
+    }
+
+    @PostMapping("/{id}/expire-pin")
+    @PreAuthorize("hasRole('SELLER')")
+    ResponseEntity<LiveProductResponse> expirePin(
+            @PathVariable UUID liveId,
+            @PathVariable UUID id,
+            @AuthenticationPrincipal UserPrincipal principal) {
+
+        var product = expirePinUseCase.expirePin(
+                new ExpirePinUseCase.ExpirePinCommand(liveId, id, principal.getUserId())
         );
         return ResponseEntity.ok(LiveProductResponse.from(product));
     }

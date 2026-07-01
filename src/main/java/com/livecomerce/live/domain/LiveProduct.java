@@ -49,8 +49,9 @@ public class LiveProduct {
     @Column(name = "is_hot", nullable = false)
     private boolean isHot = false;
 
-    @Column(name = "is_pinned", nullable = false)
-    private boolean isPinned = false;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", nullable = false, length = 20)
+    private LiveProductStatus status = LiveProductStatus.AVAILABLE;
 
     @Column(name = "position", nullable = false)
     private int position = 0;
@@ -75,7 +76,7 @@ public class LiveProduct {
         lp.stockAllocated      = stockAllocated;
         lp.stockSold           = 0;
         lp.isHot               = false;
-        lp.isPinned            = false;
+        lp.status              = LiveProductStatus.AVAILABLE;
         lp.createdAt           = OffsetDateTime.now();
         lp.updatedAt           = OffsetDateTime.now();
         return lp;
@@ -98,20 +99,37 @@ public class LiveProduct {
         lp.stockSold           = 0;
         lp.imageUrl            = imageUrl;
         lp.isHot               = true;
-        lp.isPinned            = false;
+        lp.status              = LiveProductStatus.AVAILABLE;
         lp.createdAt           = OffsetDateTime.now();
         lp.updatedAt           = OffsetDateTime.now();
         return lp;
     }
 
     public void pin() {
-        this.isPinned  = true;
+        if (this.status == LiveProductStatus.SOLD) {
+            throw new LiveProductAlreadySoldException(this.id);
+        }
+        this.status    = LiveProductStatus.PINNED;
         this.updatedAt = OffsetDateTime.now();
     }
 
     public void unpin() {
-        this.isPinned  = false;
+        this.status    = LiveProductStatus.AVAILABLE;
         this.updatedAt = OffsetDateTime.now();
+    }
+
+    public void markAsSold() {
+        this.status    = LiveProductStatus.SOLD;
+        this.updatedAt = OffsetDateTime.now();
+    }
+
+    public boolean isStockExhausted() {
+        return stockSold >= stockAllocated;
+    }
+
+    /** Backward-compatible getter — true when status is PINNED. */
+    public boolean isPinned() {
+        return status == LiveProductStatus.PINNED;
     }
 
     /**

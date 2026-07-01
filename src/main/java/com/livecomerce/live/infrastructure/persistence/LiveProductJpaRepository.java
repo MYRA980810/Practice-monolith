@@ -14,7 +14,8 @@ interface LiveProductJpaRepository extends JpaRepository<LiveProduct, UUID> {
 
     List<LiveProduct> findByLiveId(UUID liveId);
 
-    Optional<LiveProduct> findByLiveIdAndIsPinnedTrue(UUID liveId);
+    @Query("SELECT lp FROM LiveProduct lp WHERE lp.live.id = :liveId AND lp.status = com.livecomerce.live.domain.LiveProductStatus.PINNED")
+    Optional<LiveProduct> findPinnedByLiveId(@Param("liveId") UUID liveId);
 
     /**
      * Atomically increments stock_sold only if there is available stock.
