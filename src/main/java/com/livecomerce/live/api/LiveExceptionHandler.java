@@ -4,9 +4,11 @@ import com.livecomerce.live.domain.InvalidLiveStateException;
 import com.livecomerce.live.domain.LiveNotFoundException;
 import com.livecomerce.live.domain.LiveNotLiveException;
 import com.livecomerce.live.domain.LiveNotOwnedBySellerException;
+import com.livecomerce.live.domain.LiveNotScheduledException;
 import com.livecomerce.live.domain.LiveProductAlreadySoldException;
 import com.livecomerce.live.domain.LiveProductNotFoundException;
 import com.livecomerce.live.domain.LiveProductOutOfStockException;
+import com.livecomerce.live.domain.LiveSubscriptionNotForSellerException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -64,6 +66,20 @@ class LiveExceptionHandler {
     ProblemDetail handleAlreadySold(LiveProductAlreadySoldException e) {
         var detail = ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, e.getMessage());
         detail.setType(URI.create("https://livecomerce.com/errors/live-product-already-sold"));
+        return detail;
+    }
+
+    @ExceptionHandler(LiveNotScheduledException.class)
+    ProblemDetail handleNotScheduled(LiveNotScheduledException e) {
+        var detail = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, e.getMessage());
+        detail.setType(URI.create("https://livecomerce.com/errors/live-not-scheduled"));
+        return detail;
+    }
+
+    @ExceptionHandler(LiveSubscriptionNotForSellerException.class)
+    ProblemDetail handleSubscriptionNotForSeller(LiveSubscriptionNotForSellerException e) {
+        var detail = ProblemDetail.forStatusAndDetail(HttpStatus.FORBIDDEN, e.getMessage());
+        detail.setType(URI.create("https://livecomerce.com/errors/live-subscription-buyers-only"));
         return detail;
     }
 }
