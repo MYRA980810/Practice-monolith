@@ -68,6 +68,7 @@ class LiveControllerTest {
 
     private static final UUID SELLER_ID = UUID.randomUUID();
     private static final UUID LIVE_ID   = UUID.randomUUID();
+    private static final UUID STORE_ID  = UUID.randomUUID();
 
     @BeforeEach
     void setUpPrincipal() {
@@ -90,6 +91,10 @@ class LiveControllerTest {
 
     private static Live buildLive() {
         return Live.create(SELLER_ID, null, LiveContext.SELLER_PROFILE, "Test Live", null, null, 60);
+    }
+
+    private static Live buildLiveWithStore(UUID storeId) {
+        return Live.create(SELLER_ID, storeId, LiveContext.SELLER_PROFILE, "Store Live", null, null, 60);
     }
 
     // --- POST /api/lives ---
@@ -217,5 +222,70 @@ class LiveControllerTest {
         mvc.perform(get("/api/lives").param("sellerId", SELLER_ID.toString()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$").isArray());
+    }
+
+    // --- GET /api/stores/{storeId}/lives ---
+
+    @Test
+    void listByStore_withScheduledStatus_returns200WithList() throws Exception {
+        when(loadLivePort.loadByStoreIdAndStatus(eq(STORE_ID), eq(LiveStatus.SCHEDULED)))
+                .thenReturn(List.of(buildLiveWithStore(STORE_ID)));
+
+        mvc.perform(get("/api/stores/{storeId}/lives", STORE_ID)
+                        .param("status", "SCHEDULED"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isArray())
+                .andExpect(jsonPath("$[0].status").value("SCHEDULED"));
+    }
+
+    @Test
+    void listByStore_withLiveStatus_returns200() throws Exception {
+        mvc.perform(get("/api/stores/{storeId}/lives", STORE_ID)
+                        .param("status", "LIVE"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isArray());
+    }
+
+    @Test
+    void listByStore_unknownStore_returns200EmptyList() throws Exception {
+        UUID unknownId = UUID.randomUUID();
+        when(loadLivePort.loadByStoreId(eq(unknownId))).thenReturn(List.of());
+
+        mvc.perform(get("/api/stores/{storeId}/lives", unknownId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isArray())
+                .andExpect(jsonPath("$").isEmpty());
+    }
+
+    @Test
+    void listByStore_withoutStatusFilter_returns200WithAllLives() throws Exception {
+        when(loadLivePort.loadByStoreId(eq(STORE_ID)))
+                .thenReturn(List.of(buildLiveWithStore(STORE_ID)));
+
+        mvc.perform(get("/api/stores/{storeId}/lives", STORE_ID))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isArray())
+                .andExpect(jsonPath("$[0].storeId").value(STORE_ID.toString()));
+    }
+
+    @Test
+    void listByStore_withEndedStatus_returnsOnlyEndedLives() throws Exception {
+        when(loadLivePort.loadByStoreIdAndStatus(eq(STORE_ID), eq(LiveStatus.ENDED)))
+                .thenReturn(List.of());
+
+        mvc.perform(get("/api/stores/{storeId}/lives", STORE_ID)
+                        .param("status", "ENDED"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isArray());
+    }
+
+    @Test
+    void listByStore_storeWithNoLives_returns200EmptyArray() throws Exception {
+        when(loadLivePort.loadByStoreId(eq(STORE_ID))).thenReturn(List.of());
+
+        mvc.perform(get("/api/stores/{storeId}/lives", STORE_ID))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isArray())
+                .andExpect(jsonPath("$").isEmpty());
     }
 }

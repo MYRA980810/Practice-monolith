@@ -43,4 +43,14 @@ class LivePersistenceAdapter implements SaveLivePort, LoadLivePort {
     public List<Live> loadBySellerIdAndStatus(UUID sellerId, LiveStatus status) {
         return repository.findBySellerIdAndStatus(sellerId, status);
     }
+
+    @Override
+    public List<Live> loadByStoreId(UUID storeId) {
+        return repository.findByStoreId(storeId);
+    }
+
+    @Override
+    public List<Live> loadByStoreIdAndStatus(UUID storeId, LiveStatus status) {
+        return repository.findByStoreIdAndStatus(storeId, status);
+    }
 }

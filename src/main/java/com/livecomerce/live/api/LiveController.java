@@ -21,7 +21,6 @@ import java.util.Objects;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/lives")
 @RequiredArgsConstructor
 class LiveController {
 
@@ -31,7 +30,7 @@ class LiveController {
     private final CancelLiveUseCase cancelLiveUseCase;
     private final LoadLivePort loadLivePort;
 
-    @PostMapping
+    @PostMapping("/api/lives")
     @PreAuthorize("hasRole('SELLER')")
     ResponseEntity<LiveResponse> createLive(
             @Valid @RequestBody CreateLiveRequest request,
@@ -49,7 +48,7 @@ class LiveController {
         return ResponseEntity.status(HttpStatus.CREATED).body(LiveResponse.from(live));
     }
 
-    @PostMapping("/{id}/start")
+    @PostMapping("/api/lives/{id}/start")
     @PreAuthorize("hasRole('SELLER')")
     ResponseEntity<LiveResponse> startLive(
             @PathVariable UUID id,
@@ -62,7 +61,7 @@ class LiveController {
         return ResponseEntity.ok(LiveResponse.from(live));
     }
 
-    @PostMapping("/{id}/end")
+    @PostMapping("/api/lives/{id}/end")
     @PreAuthorize("hasRole('SELLER')")
     ResponseEntity<LiveResponse> endLive(
             @PathVariable UUID id,
@@ -72,7 +71,7 @@ class LiveController {
         return ResponseEntity.ok(LiveResponse.from(live));
     }
 
-    @PostMapping("/{id}/cancel")
+    @PostMapping("/api/lives/{id}/cancel")
     @PreAuthorize("hasRole('SELLER')")
     ResponseEntity<LiveResponse> cancelLive(
             @PathVariable UUID id,
@@ -82,7 +81,7 @@ class LiveController {
         return ResponseEntity.ok(LiveResponse.from(live));
     }
 
-    @GetMapping("/{id}")
+    @GetMapping("/api/lives/{id}")
     ResponseEntity<LiveResponse> getLive(@PathVariable UUID id) {
         return loadLivePort.loadById(id)
                 .map(LiveResponse::from)
@@ -90,7 +89,7 @@ class LiveController {
                 .orElseThrow(() -> new LiveNotFoundException(id));
     }
 
-    @GetMapping
+    @GetMapping("/api/lives")
     ResponseEntity<List<LiveResponse>> listBySeller(
             @RequestParam UUID sellerId,
             @RequestParam(required = false) String status) {
@@ -98,6 +97,18 @@ class LiveController {
         var lives = status != null
                 ? loadLivePort.loadBySellerIdAndStatus(sellerId, LiveStatus.fromCode(status))
                 : loadLivePort.loadBySellerId(sellerId);
+
+        return ResponseEntity.ok(lives.stream().map(LiveResponse::from).toList());
+    }
+
+    @GetMapping("/api/stores/{storeId}/lives")
+    ResponseEntity<List<LiveResponse>> listByStore(
+            @PathVariable UUID storeId,
+            @RequestParam(required = false) String status) {
+
+        var lives = status != null
+                ? loadLivePort.loadByStoreIdAndStatus(storeId, LiveStatus.fromCode(status))
+                : loadLivePort.loadByStoreId(storeId);
 
         return ResponseEntity.ok(lives.stream().map(LiveResponse::from).toList());
     }
