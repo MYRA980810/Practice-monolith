@@ -38,13 +38,28 @@ class AddCatalogProductToLiveServiceTest {
 
         var cmd = new AddCatalogProductCommand(
                 live.getId(), SELLER_ID, PRODUCT_ID, VARIANT_ID,
-                "T-Shirt", new BigDecimal("199.00"), "MXN", 50);
+                "T-Shirt", new BigDecimal("199.00"), "MXN", 50, "https://cdn.test/shirt.jpg");
         var result = sut.addCatalogProduct(cmd);
 
         assertThat(result.isHot()).isFalse();
         assertThat(result.getProductId()).isEqualTo(PRODUCT_ID);
         assertThat(result.getProductNameSnapshot()).isEqualTo("T-Shirt");
         assertThat(result.getStockAllocated()).isEqualTo(50);
+        assertThat(result.getImageUrl()).isEqualTo("https://cdn.test/shirt.jpg");
+    }
+
+    @Test
+    void addCatalogProduct_withoutImage_savesNullImageUrl() {
+        var live = Live.create(SELLER_ID, STORE_ID, LiveContext.STORE, "Live", null, null, 60);
+        when(loadLivePort.loadById(live.getId())).thenReturn(Optional.of(live));
+        when(saveLiveProductPort.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        var cmd = new AddCatalogProductCommand(
+                live.getId(), SELLER_ID, PRODUCT_ID, VARIANT_ID,
+                "T-Shirt", new BigDecimal("199.00"), "MXN", 50, null);
+        var result = sut.addCatalogProduct(cmd);
+
+        assertThat(result.getImageUrl()).isNull();
     }
 
     @Test
@@ -56,7 +71,7 @@ class AddCatalogProductToLiveServiceTest {
 
         var cmd = new AddCatalogProductCommand(
                 live.getId(), SELLER_ID, PRODUCT_ID, VARIANT_ID,
-                "Jeans", new BigDecimal("499.00"), "MXN", 20);
+                "Jeans", new BigDecimal("499.00"), "MXN", 20, null);
         var result = sut.addCatalogProduct(cmd);
 
         assertThat(result.getProductNameSnapshot()).isEqualTo("Jeans");
@@ -69,7 +84,7 @@ class AddCatalogProductToLiveServiceTest {
 
         var cmd = new AddCatalogProductCommand(
                 live.getId(), UUID.randomUUID(), PRODUCT_ID, VARIANT_ID,
-                "T-Shirt", new BigDecimal("199.00"), "MXN", 50);
+                "T-Shirt", new BigDecimal("199.00"), "MXN", 50, null);
 
         assertThatThrownBy(() -> sut.addCatalogProduct(cmd))
                 .isInstanceOf(LiveNotOwnedBySellerException.class);
@@ -84,7 +99,7 @@ class AddCatalogProductToLiveServiceTest {
 
         var cmd = new AddCatalogProductCommand(
                 live.getId(), SELLER_ID, PRODUCT_ID, VARIANT_ID,
-                "T-Shirt", new BigDecimal("199.00"), "MXN", 50);
+                "T-Shirt", new BigDecimal("199.00"), "MXN", 50, null);
 
         assertThatThrownBy(() -> sut.addCatalogProduct(cmd))
                 .isInstanceOf(IllegalStateException.class);

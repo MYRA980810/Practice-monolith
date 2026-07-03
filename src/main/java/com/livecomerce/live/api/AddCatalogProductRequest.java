@@ -13,5 +13,6 @@ public record AddCatalogProductRequest(
         @NotBlank String nameSnapshot,
         @NotNull BigDecimal priceSnapshot,
         @NotBlank String currency,
-        @Min(1) int stockAllocated
+        @Min(1) int stockAllocated,
+        String imageUrl
 ) {}

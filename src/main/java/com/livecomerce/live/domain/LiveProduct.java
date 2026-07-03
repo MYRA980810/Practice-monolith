@@ -65,6 +65,13 @@ public class LiveProduct {
     public static LiveProduct forCatalogProduct(Live live, UUID productId, UUID variantId,
                                                 String nameSnapshot, BigDecimal priceSnapshot,
                                                 String currency, int stockAllocated) {
+        return forCatalogProduct(live, productId, variantId, nameSnapshot, priceSnapshot,
+                currency, stockAllocated, null);
+    }
+
+    public static LiveProduct forCatalogProduct(Live live, UUID productId, UUID variantId,
+                                                String nameSnapshot, BigDecimal priceSnapshot,
+                                                String currency, int stockAllocated, String imageUrl) {
         var lp = new LiveProduct();
         lp.id                  = UUID.randomUUID();
         lp.live                = live;
@@ -75,6 +82,7 @@ public class LiveProduct {
         lp.currencySnapshot    = currency;
         lp.stockAllocated      = stockAllocated;
         lp.stockSold           = 0;
+        lp.imageUrl            = imageUrl;
         lp.isHot               = false;
         lp.status              = LiveProductStatus.AVAILABLE;
         lp.createdAt           = OffsetDateTime.now();

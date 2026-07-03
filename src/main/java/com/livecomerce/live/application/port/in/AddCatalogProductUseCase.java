@@ -17,6 +17,7 @@ public interface AddCatalogProductUseCase {
             String nameSnapshot,
             BigDecimal priceSnapshot,
             String currency,
-            int stockAllocated
+            int stockAllocated,
+            String imageUrl
     ) {}
 }

@@ -69,11 +69,12 @@ class LivePortsTest {
         var variantId = UUID.randomUUID();
         var cmd = new AddCatalogProductUseCase.AddCatalogProductCommand(
                 liveId, sellerId, productId, variantId, "T-Shirt",
-                new BigDecimal("299.00"), "MXN", 100);
+                new BigDecimal("299.00"), "MXN", 100, "https://cdn.test/shirt.jpg");
 
         assertThat(cmd.liveId()).isEqualTo(liveId);
         assertThat(cmd.nameSnapshot()).isEqualTo("T-Shirt");
         assertThat(cmd.stockAllocated()).isEqualTo(100);
+        assertThat(cmd.imageUrl()).isEqualTo("https://cdn.test/shirt.jpg");
     }
 
     @Test

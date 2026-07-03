@@ -38,6 +38,16 @@ class LiveProductTest {
         assertThat(lp.isHot()).isFalse();
         assertThat(lp.getStatus()).isEqualTo(AVAILABLE);
         assertThat(lp.getStockSold()).isZero();
+        assertThat(lp.getImageUrl()).isNull();
+    }
+
+    @Test
+    void forCatalogProduct_withImageUrl_capturesImageUrl() {
+        var live = buildLive();
+        var lp = LiveProduct.forCatalogProduct(
+                live, PRODUCT_ID, VARIANT_ID, "Shirt", PRICE, "MXN", 50, "https://cdn.test/shirt.jpg");
+
+        assertThat(lp.getImageUrl()).isEqualTo("https://cdn.test/shirt.jpg");
     }
 
     // ── forHotProduct ─────────────────────────────────────────────────────────

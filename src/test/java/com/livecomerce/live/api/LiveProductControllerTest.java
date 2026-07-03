@@ -34,7 +34,9 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -102,7 +104,7 @@ class LiveProductControllerTest {
                 buildLive(),
                 UUID.randomUUID(), UUID.randomUUID(),
                 "Test Product", new BigDecimal("99.00"), "MXN",
-                10
+                10, "https://cdn.test/product.jpg"
         );
     }
 
@@ -127,12 +129,18 @@ class LiveProductControllerTest {
                                   "nameSnapshot": "Test Product",
                                   "priceSnapshot": 99.00,
                                   "currency": "MXN",
-                                  "stockAllocated": 10
+                                  "stockAllocated": 10,
+                                  "imageUrl": "https://cdn.test/product.jpg"
                                 }
                                 """.formatted(UUID.randomUUID(), UUID.randomUUID())))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.productNameSnapshot").value("Test Product"))
-                .andExpect(jsonPath("$.isHot").value(false));
+                .andExpect(jsonPath("$.isHot").value(false))
+                .andExpect(jsonPath("$.imageUrl").value("https://cdn.test/product.jpg"));
+
+        var captor = org.mockito.ArgumentCaptor.forClass(AddCatalogProductUseCase.AddCatalogProductCommand.class);
+        verify(addCatalogProductUseCase).addCatalogProduct(captor.capture());
+        assertThat(captor.getValue().imageUrl()).isEqualTo("https://cdn.test/product.jpg");
     }
 
     @Test

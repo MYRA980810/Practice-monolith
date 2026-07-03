@@ -29,7 +29,7 @@ public class AddCatalogProductToLiveService implements AddCatalogProductUseCase 
         var lp = LiveProduct.forCatalogProduct(
                 live, command.productId(), command.variantId(),
                 command.nameSnapshot(), command.priceSnapshot(), command.currency(),
-                command.stockAllocated());
+                command.stockAllocated(), command.imageUrl());
 
         return saveLiveProductPort.save(lp);
     }
