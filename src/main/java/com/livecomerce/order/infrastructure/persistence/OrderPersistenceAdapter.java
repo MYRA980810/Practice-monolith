@@ -29,8 +29,8 @@ class OrderPersistenceAdapter implements LoadOrderPort, SaveOrderPort {
     }
 
     @Override
-    public List<Order> loadByStoreId(UUID storeId) {
-        return repository.findByStoreId(storeId);
+    public List<Order> loadReadyToShipByLive(UUID storeId, UUID liveId) {
+        return repository.findReadyToShipByLive(storeId, liveId, OrderStatus.PAID);
     }
 
     @Override

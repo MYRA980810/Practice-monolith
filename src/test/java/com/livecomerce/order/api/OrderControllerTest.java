@@ -3,6 +3,7 @@ package com.livecomerce.order.api;
 import com.livecomerce.order.application.InvalidOrderStateException;
 import com.livecomerce.order.application.OrderNotFoundException;
 import com.livecomerce.order.application.port.in.*;
+import com.livecomerce.order.application.port.in.GetOrderUseCase.ReadyToShipResult;
 import com.livecomerce.order.domain.Order;
 import com.livecomerce.order.domain.OrderItemType;
 import com.livecomerce.order.domain.OrderStatus;
@@ -34,6 +35,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -195,17 +197,64 @@ class OrderControllerTest {
                 .andExpect(jsonPath("$.type").value("https://livecomerce.com/errors/order-not-found"));
     }
 
-    // --- GET /api/orders?storeId= (SELLER) ---
+    // --- GET /api/orders?liveSessionId= (SELLER, JWT-scoped storeId) ---
 
     @Test
-    void getByStore_asSeller_returns200WithList() throws Exception {
-        setPrincipal(UUID.randomUUID(), "ROLE_SELLER");
-        when(getOrderUseCase.getByStore(STORE_ID)).thenReturn(List.of(buildOrder()));
+    void getByLive_asSeller_returns200WithListAndImageUrls() throws Exception {
+        var sellerId = UUID.randomUUID();
+        setPrincipal(sellerId, "ROLE_SELLER");
+        var order = buildOrder();
+        var productId = order.getItems().get(0).getProductId();
+        when(getOrderUseCase.getReadyToShipByLive(sellerId, LIVE_ID))
+                .thenReturn(new ReadyToShipResult(List.of(order), java.util.Map.of(productId, "https://cdn.test/img.jpg")));
 
-        mvc.perform(get("/api/orders").param("storeId", STORE_ID.toString()))
+        mvc.perform(get("/api/orders").param("liveSessionId", LIVE_ID.toString()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$").isArray())
-                .andExpect(jsonPath("$[0].storeId").value(STORE_ID.toString()));
+                .andExpect(jsonPath("$[0].storeId").value(STORE_ID.toString()))
+                .andExpect(jsonPath("$[0].items[0].imageUrl").value("https://cdn.test/img.jpg"));
+    }
+
+    @Test
+    void getByLive_foreignLive_returns200WithEmptyList() throws Exception {
+        var sellerId = UUID.randomUUID();
+        setPrincipal(sellerId, "ROLE_SELLER");
+        var foreignLiveId = UUID.randomUUID();
+        when(getOrderUseCase.getReadyToShipByLive(sellerId, foreignLiveId))
+                .thenReturn(new ReadyToShipResult(List.of(), java.util.Map.of()));
+
+        mvc.perform(get("/api/orders").param("liveSessionId", foreignLiveId.toString()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isArray())
+                .andExpect(jsonPath("$").isEmpty());
+    }
+
+    @Test
+    void getByLive_clientSuppliedStoreIdIgnored_storeIdAlwaysResolvedFromJwt() throws Exception {
+        var sellerId = UUID.randomUUID();
+        setPrincipal(sellerId, "ROLE_SELLER");
+        when(getOrderUseCase.getReadyToShipByLive(sellerId, LIVE_ID))
+                .thenReturn(new ReadyToShipResult(List.of(), java.util.Map.of()));
+
+        mvc.perform(get("/api/orders")
+                        .param("storeId", UUID.randomUUID().toString())
+                        .param("liveSessionId", LIVE_ID.toString()))
+                .andExpect(status().isOk());
+
+        verify(getOrderUseCase).getReadyToShipByLive(sellerId, LIVE_ID);
+    }
+
+    @Test
+    void getByLive_missingImageUrl_returnsNullImageUrl() throws Exception {
+        var sellerId = UUID.randomUUID();
+        setPrincipal(sellerId, "ROLE_SELLER");
+        var order = buildOrder();
+        when(getOrderUseCase.getReadyToShipByLive(sellerId, LIVE_ID))
+                .thenReturn(new ReadyToShipResult(List.of(order), java.util.Map.of()));
+
+        mvc.perform(get("/api/orders").param("liveSessionId", LIVE_ID.toString()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].items[0].imageUrl").doesNotExist());
     }
 
     // --- POST /api/orders/{id}/ship (SELLER) ---

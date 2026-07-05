@@ -12,7 +12,7 @@ public interface LoadOrderPort {
 
     Optional<Order> loadActiveByBuyerAndLive(UUID buyerId, UUID liveSessionId);
 
-    List<Order> loadByStoreId(UUID storeId);
+    List<Order> loadReadyToShipByLive(UUID storeId, UUID liveId);
 
     List<Order> loadOrdersWithExpiredReservations();
 }

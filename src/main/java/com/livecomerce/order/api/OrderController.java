@@ -76,10 +76,13 @@ class OrderController {
 
     @GetMapping
     @PreAuthorize("hasRole('SELLER')")
-    ResponseEntity<List<OrderResponse>> getByStore(@RequestParam UUID storeId) {
-        var orders = getOrderUseCase.getByStore(storeId)
-                .stream()
-                .map(OrderResponse::from)
+    ResponseEntity<List<OrderResponse>> getByLive(
+            @RequestParam UUID liveSessionId,
+            @AuthenticationPrincipal UserPrincipal principal) {
+
+        var result = getOrderUseCase.getReadyToShipByLive(principal.getUserId(), liveSessionId);
+        var orders = result.orders().stream()
+                .map(order -> OrderResponse.from(order, result.imageUrlByProductId()))
                 .toList();
         return ResponseEntity.ok(orders);
     }

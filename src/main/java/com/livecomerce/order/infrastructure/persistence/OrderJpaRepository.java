@@ -27,8 +27,16 @@ interface OrderJpaRepository extends JpaRepository<Order, UUID> {
             @Param("liveSessionId") UUID liveSessionId,
             @Param("status") OrderStatus status);
 
-    @Query("SELECT o FROM Order o LEFT JOIN FETCH o.items WHERE o.storeId = :storeId")
-    List<Order> findByStoreId(@Param("storeId") UUID storeId);
+    @Query("""
+            SELECT o FROM Order o LEFT JOIN FETCH o.items
+            WHERE o.storeId = :storeId
+              AND o.liveSessionId = :liveId
+              AND o.status = :status
+            """)
+    List<Order> findReadyToShipByLive(
+            @Param("storeId") UUID storeId,
+            @Param("liveId") UUID liveId,
+            @Param("status") OrderStatus status);
 
     @Query("""
             SELECT DISTINCT o FROM Order o JOIN FETCH o.items i

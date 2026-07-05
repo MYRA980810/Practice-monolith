@@ -17,9 +17,14 @@ public record OrderItemResponse(
         BigDecimal subtotal,
         OrderItemStatus status,
         OffsetDateTime reservedUntil,
-        OffsetDateTime paidAt
+        OffsetDateTime paidAt,
+        String imageUrl
 ) {
     public static OrderItemResponse from(OrderItem item) {
+        return from(item, null);
+    }
+
+    public static OrderItemResponse from(OrderItem item, String imageUrl) {
         return new OrderItemResponse(
                 item.getId(),
                 item.getProductId(),
@@ -30,7 +35,8 @@ public record OrderItemResponse(
                 item.getSubtotal(),
                 item.getStatus(),
                 item.getReservedUntil(),
-                item.getPaidAt()
+                item.getPaidAt(),
+                imageUrl
         );
     }
 }

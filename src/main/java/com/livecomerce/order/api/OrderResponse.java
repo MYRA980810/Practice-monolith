@@ -5,6 +5,7 @@ import com.livecomerce.order.domain.OrderStatus;
 
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 public record OrderResponse(
@@ -21,6 +22,10 @@ public record OrderResponse(
         OffsetDateTime updatedAt
 ) {
     public static OrderResponse from(Order order) {
+        return from(order, Map.of());
+    }
+
+    public static OrderResponse from(Order order, Map<UUID, String> imageUrlByProductId) {
         return new OrderResponse(
                 order.getId(),
                 order.getBuyerId(),
@@ -30,7 +35,9 @@ public record OrderResponse(
                 order.getCurrency(),
                 order.getShippingAddress(),
                 order.getTrackingNumber(),
-                order.getItems().stream().map(OrderItemResponse::from).toList(),
+                order.getItems().stream()
+                        .map(item -> OrderItemResponse.from(item, imageUrlByProductId.get(item.getProductId())))
+                        .toList(),
                 order.getCreatedAt(),
                 order.getUpdatedAt()
         );
