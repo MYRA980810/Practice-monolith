@@ -5,6 +5,7 @@ import com.livecomerce.analytics.application.LiveSummaryNotOwnedException;
 import com.livecomerce.analytics.application.port.in.GetChannelMetricsUseCase;
 import com.livecomerce.analytics.application.port.in.GetDeadStockUseCase;
 import com.livecomerce.analytics.application.port.in.GetLiveSummaryUseCase;
+import com.livecomerce.analytics.application.port.in.GetLiveSummaryUseCase.LiveSummaryResult;
 import com.livecomerce.analytics.application.port.in.GetProductRotationUseCase;
 import com.livecomerce.analytics.application.port.in.GetSalesMetricsUseCase;
 import com.livecomerce.analytics.domain.LiveSummary;
@@ -92,13 +93,16 @@ class AnalyticsControllerTest {
         SecurityContextHolder.clearContext();
     }
 
+    private static UUID orderIdHolder;
+
     private static LiveSummary buildSummary() {
         var summary = LiveSummary.create(
                 LIVE_ID, SELLER_ID, STORE_ID,
                 OffsetDateTime.now().minusHours(1), OffsetDateTime.now(),
                 3600, 42);
-        summary.addOrder(UUID.randomUUID(), BUYER_ID, "Product A, Product B", new BigDecimal("150.00"));
-        summary.finalizeTotals(new BigDecimal("150.00"), 1);
+        orderIdHolder = UUID.randomUUID();
+        summary.addOrder(orderIdHolder, BUYER_ID, "Product A, Product B", new BigDecimal("150.00"));
+        summary.finalizeTotals(new BigDecimal("150.00"), 1, "MXN", 15, 50L);
         return summary;
     }
 
@@ -106,7 +110,9 @@ class AnalyticsControllerTest {
 
     @Test
     void getLiveSummary_owner_returns200WithSummary() throws Exception {
-        when(getLiveSummaryUseCase.getSummary(LIVE_ID, STORE_ID)).thenReturn(buildSummary());
+        var summary = buildSummary();
+        when(getLiveSummaryUseCase.getSummary(LIVE_ID, STORE_ID))
+                .thenReturn(new LiveSummaryResult(summary, java.util.Map.of(BUYER_ID, "Jane Doe")));
 
         mvc.perform(get("/api/analytics/lives/{liveId}/summary", LIVE_ID))
                 .andExpect(status().isOk())
@@ -115,9 +121,31 @@ class AnalyticsControllerTest {
                 .andExpect(jsonPath("$.peakViewers").value(42))
                 .andExpect(jsonPath("$.totalSales").value(150.00))
                 .andExpect(jsonPath("$.orderCount").value(1))
+                .andExpect(jsonPath("$.currency").value("MXN"))
+                .andExpect(jsonPath("$.conversionRate").value(0.30))
+                .andExpect(jsonPath("$.orders[0].orderId").value(orderIdHolder.toString()))
                 .andExpect(jsonPath("$.orders[0].buyerId").value(BUYER_ID.toString()))
+                .andExpect(jsonPath("$.orders[0].customerName").value("Jane Doe"))
                 .andExpect(jsonPath("$.orders[0].itemNames").value("Product A, Product B"))
                 .andExpect(jsonPath("$.orders[0].orderTotal").value(150.00));
+    }
+
+    @Test
+    void getLiveSummary_historicalSummaryPredatingEnrichment_returnsNullCurrencyAndConversionRate() throws Exception {
+        // Historical row: never enriched via finalizeTotals' new params, so
+        // currency/unitsSold/totalAllocated stay at their post-create nulls.
+        var summary = LiveSummary.create(
+                LIVE_ID, SELLER_ID, STORE_ID,
+                OffsetDateTime.now().minusHours(1), OffsetDateTime.now(),
+                3600, 42);
+        summary.addOrder(UUID.randomUUID(), BUYER_ID, "Product A", new BigDecimal("50.00"));
+        when(getLiveSummaryUseCase.getSummary(LIVE_ID, STORE_ID))
+                .thenReturn(new LiveSummaryResult(summary, java.util.Map.of()));
+
+        mvc.perform(get("/api/analytics/lives/{liveId}/summary", LIVE_ID))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.currency").doesNotExist())
+                .andExpect(jsonPath("$.conversionRate").doesNotExist());
     }
 
     @Test

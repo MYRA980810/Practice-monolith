@@ -26,6 +26,14 @@ public class LiveEndedSummaryListener {
 
     private static final Logger log = LoggerFactory.getLogger(LiveEndedSummaryListener.class);
 
+    /**
+     * Frozen snapshot default when a source order carries no currency.
+     * Module-local (not extracted from order.domain.Order) to avoid an
+     * analytics -> order dependency that would break the hexagonal boundary
+     * kept by native/read-only cross-module access elsewhere in this module.
+     */
+    private static final String DEFAULT_CURRENCY = "MXN";
+
     private final SaveLiveSummaryPort saveLiveSummaryPort;
     private final LoadLiveSummarySourcePort loadLiveSummarySourcePort;
 
@@ -54,11 +62,14 @@ public class LiveEndedSummaryListener {
         var qualifyingOrders = loadLiveSummarySourcePort.findQualifyingOrders(event.liveId());
 
         var totalSales = BigDecimal.ZERO;
+        var totalUnits = 0;
         for (var order : qualifyingOrders) {
             summary.addOrder(order.orderId(), order.buyerId(), order.itemNames(), order.orderTotal());
             totalSales = totalSales.add(order.orderTotal());
+            totalUnits += order.unitsSold();
         }
-        summary.finalizeTotals(totalSales, qualifyingOrders.size());
+        var totalAllocated = loadLiveSummarySourcePort.findTotalAllocated(event.liveId());
+        summary.finalizeTotals(totalSales, qualifyingOrders.size(), DEFAULT_CURRENCY, totalUnits, totalAllocated);
 
         saveLiveSummaryPort.save(summary);
     }

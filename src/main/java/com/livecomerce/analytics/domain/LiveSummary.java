@@ -56,6 +56,15 @@ public class LiveSummary {
     @Column(name = "order_count", nullable = false)
     private int orderCount;
 
+    @Column(name = "currency")
+    private String currency;
+
+    @Column(name = "units_sold")
+    private Integer unitsSold;
+
+    @Column(name = "total_allocated")
+    private Integer totalAllocated;
+
     @Column(name = "created_at", nullable = false)
     private OffsetDateTime createdAt;
 
@@ -83,9 +92,13 @@ public class LiveSummary {
         this.orders.add(LiveSummaryOrder.create(this, orderId, buyerId, itemNames, orderTotal));
     }
 
-    public void finalizeTotals(BigDecimal totalSales, int orderCount) {
+    public void finalizeTotals(BigDecimal totalSales, int orderCount, String currency,
+                                int unitsSold, long totalAllocated) {
         this.totalSales = totalSales;
         this.orderCount = orderCount;
+        this.currency = currency;
+        this.unitsSold = unitsSold;
+        this.totalAllocated = (int) totalAllocated;
     }
 
     public List<LiveSummaryOrder> getOrders() {

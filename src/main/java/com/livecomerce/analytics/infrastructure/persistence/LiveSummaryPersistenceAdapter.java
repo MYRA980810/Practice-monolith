@@ -8,7 +8,10 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
+import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -19,6 +22,8 @@ class LiveSummaryPersistenceAdapter implements SaveLiveSummaryPort, LoadLiveSumm
     private final LiveSummaryRepository liveSummaryRepository;
     private final LiveSummaryReadRepository liveSummaryReadRepository;
     private final LiveSummaryOrderDetailRepository liveSummaryOrderDetailRepository;
+    private final LiveProductReadRepository liveProductReadRepository;
+    private final BuyerNameRepository buyerNameRepository;
 
     @Override
     public LiveSummary save(LiveSummary summary) {
@@ -52,8 +57,28 @@ class LiveSummaryPersistenceAdapter implements SaveLiveSummaryPort, LoadLiveSumm
                         (UUID) row[0],
                         (UUID) row[1],
                         (String) row[3],
-                        toBigDecimal(row[2])))
+                        toBigDecimal(row[2]),
+                        ((Number) row[4]).intValue()))
                 .toList();
+    }
+
+    @Override
+    public long findTotalAllocated(UUID liveId) {
+        return liveProductReadRepository.sumStockAllocatedByLiveId(liveId);
+    }
+
+    @Override
+    public Map<UUID, String> findBuyerNames(Collection<UUID> buyerIds) {
+        if (buyerIds.isEmpty()) {
+            return Map.of();
+        }
+        Map<UUID, String> names = new HashMap<>();
+        for (Object[] row : buyerNameRepository.findNamesByIds(buyerIds)) {
+            var buyerId = (UUID) row[0];
+            var fullName = row[1] + " " + row[2];
+            names.put(buyerId, fullName);
+        }
+        return names;
     }
 
     private static BigDecimal toBigDecimal(Object value) {

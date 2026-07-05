@@ -51,13 +51,26 @@ class LiveSummaryTest {
     }
 
     @Test
-    void finalizeTotals_overwritesTotalSalesAndOrderCount() {
+    void finalizeTotals_overwritesTotalSalesOrderCountCurrencyUnitsSoldAndTotalAllocated() {
         var summary = LiveSummary.create(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(),
                 OffsetDateTime.now().minusHours(1), OffsetDateTime.now(), 3600L, 10);
 
-        summary.finalizeTotals(new BigDecimal("250.00"), 2);
+        summary.finalizeTotals(new BigDecimal("250.00"), 2, "MXN", 15, 50L);
 
         assertThat(summary.getTotalSales()).isEqualByComparingTo(new BigDecimal("250.00"));
         assertThat(summary.getOrderCount()).isEqualTo(2);
+        assertThat(summary.getCurrency()).isEqualTo("MXN");
+        assertThat(summary.getUnitsSold()).isEqualTo(15);
+        assertThat(summary.getTotalAllocated()).isEqualTo(50);
+    }
+
+    @Test
+    void create_leavesEnrichmentFieldsNullUntilFinalized() {
+        var summary = LiveSummary.create(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(),
+                OffsetDateTime.now().minusHours(1), OffsetDateTime.now(), 3600L, 10);
+
+        assertThat(summary.getCurrency()).isNull();
+        assertThat(summary.getUnitsSold()).isNull();
+        assertThat(summary.getTotalAllocated()).isNull();
     }
 }

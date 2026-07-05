@@ -14,7 +14,9 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -33,6 +35,8 @@ class LiveSummaryPersistenceAdapterTest {
     @Mock LiveSummaryRepository liveSummaryRepository;
     @Mock LiveSummaryReadRepository liveSummaryReadRepository;
     @Mock LiveSummaryOrderDetailRepository liveSummaryOrderDetailRepository;
+    @Mock LiveProductReadRepository liveProductReadRepository;
+    @Mock BuyerNameRepository buyerNameRepository;
 
     @InjectMocks LiveSummaryPersistenceAdapter adapter;
 
@@ -100,7 +104,7 @@ class LiveSummaryPersistenceAdapterTest {
         var liveId = UUID.randomUUID();
         var orderId = UUID.randomUUID();
         var buyerId = UUID.randomUUID();
-        Object[] row = { orderId, buyerId, new BigDecimal("150.00"), "T-Shirt, Mug" };
+        Object[] row = { orderId, buyerId, new BigDecimal("150.00"), "T-Shirt, Mug", 3 };
         when(liveSummaryOrderDetailRepository.findQualifyingOrderDetails(liveId))
                 .thenReturn(List.<Object[]>of(row));
 
@@ -112,6 +116,7 @@ class LiveSummaryPersistenceAdapterTest {
         assertThat(qualifyingOrder.buyerId()).isEqualTo(buyerId);
         assertThat(qualifyingOrder.orderTotal()).isEqualByComparingTo(new BigDecimal("150.00"));
         assertThat(qualifyingOrder.itemNames()).isEqualTo("T-Shirt, Mug");
+        assertThat(qualifyingOrder.unitsSold()).isEqualTo(3);
     }
 
     @Test
@@ -123,6 +128,39 @@ class LiveSummaryPersistenceAdapterTest {
         var result = ((LoadLiveSummarySourcePort) adapter).findQualifyingOrders(liveId);
 
         assertThat(result).isEmpty();
+    }
+
+    @Test
+    void findTotalAllocated_delegatesToLiveProductReadRepository() {
+        var liveId = UUID.randomUUID();
+        when(liveProductReadRepository.sumStockAllocatedByLiveId(liveId)).thenReturn(35L);
+
+        var result = ((LoadLiveSummarySourcePort) adapter).findTotalAllocated(liveId);
+
+        assertThat(result).isEqualTo(35L);
+    }
+
+    @Test
+    void findBuyerNames_mapsNativeQueryRowsByBuyerId() {
+        var buyer1 = UUID.randomUUID();
+        var buyer2 = UUID.randomUUID();
+        Object[] row1 = { buyer1, "Jane", "Doe" };
+        Object[] row2 = { buyer2, "John", "Smith" };
+        when(buyerNameRepository.findNamesByIds(Set.of(buyer1, buyer2)))
+                .thenReturn(List.<Object[]>of(row1, row2));
+
+        var result = ((LoadLiveSummarySourcePort) adapter).findBuyerNames(Set.of(buyer1, buyer2));
+
+        assertThat(result).containsEntry(buyer1, "Jane Doe");
+        assertThat(result).containsEntry(buyer2, "John Smith");
+    }
+
+    @Test
+    void findBuyerNames_emptyInput_skipsQueryAndReturnsEmptyMap() {
+        var result = ((LoadLiveSummarySourcePort) adapter).findBuyerNames(Set.of());
+
+        assertThat(result).isEmpty();
+        verify(buyerNameRepository, org.mockito.Mockito.never()).findNamesByIds(org.mockito.ArgumentMatchers.any());
     }
 
     private LiveReadEntity buildLiveReadEntity(UUID id, UUID storeId, OffsetDateTime startedAt,

@@ -50,9 +50,10 @@ class LiveEndedSummaryListenerTest {
         var order2Id = UUID.randomUUID();
         var buyer2Id = UUID.randomUUID();
         when(loadLiveSummarySourcePort.findQualifyingOrders(LIVE_ID)).thenReturn(List.of(
-                new QualifyingOrder(order1Id, buyer1Id, "T-Shirt", new BigDecimal("100.00")),
-                new QualifyingOrder(order2Id, buyer2Id, "Mug, Cap", new BigDecimal("50.00"))
+                new QualifyingOrder(order1Id, buyer1Id, "T-Shirt", new BigDecimal("100.00"), 5),
+                new QualifyingOrder(order2Id, buyer2Id, "Mug, Cap", new BigDecimal("50.00"), 3)
         ));
+        when(loadLiveSummarySourcePort.findTotalAllocated(LIVE_ID)).thenReturn(50L);
         when(saveLiveSummaryPort.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         sut.on(new LiveEndedEvent(LIVE_ID, SELLER_ID));
@@ -71,6 +72,9 @@ class LiveEndedSummaryListenerTest {
         assertThat(summary.getOrders()).hasSize(2);
         assertThat(summary.getOrders()).extracting("orderId").containsExactlyInAnyOrder(order1Id, order2Id);
         assertThat(summary.getOrders()).extracting("buyerId").containsExactlyInAnyOrder(buyer1Id, buyer2Id);
+        assertThat(summary.getCurrency()).isEqualTo("MXN");
+        assertThat(summary.getUnitsSold()).isEqualTo(8);
+        assertThat(summary.getTotalAllocated()).isEqualTo(50);
     }
 
     @Test
@@ -81,6 +85,7 @@ class LiveEndedSummaryListenerTest {
         when(loadLiveSummarySourcePort.findLiveSnapshot(LIVE_ID))
                 .thenReturn(Optional.of(new LiveSnapshot(STORE_ID, startedAt, endedAt, 5)));
         when(loadLiveSummarySourcePort.findQualifyingOrders(LIVE_ID)).thenReturn(List.of());
+        when(loadLiveSummarySourcePort.findTotalAllocated(LIVE_ID)).thenReturn(0L);
         when(saveLiveSummaryPort.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         sut.on(new LiveEndedEvent(LIVE_ID, SELLER_ID));
@@ -93,6 +98,29 @@ class LiveEndedSummaryListenerTest {
         assertThat(summary.getOrderCount()).isZero();
         assertThat(summary.getOrders()).isEmpty();
         assertThat(summary.getDurationSeconds()).isEqualTo(1800L);
+        assertThat(summary.getCurrency()).isEqualTo("MXN");
+        assertThat(summary.getUnitsSold()).isZero();
+        assertThat(summary.getTotalAllocated()).isZero();
+    }
+
+    @Test
+    void on_ordersWithNullCurrencySource_stillDefaultsToMxn() {
+        var startedAt = OffsetDateTime.parse("2026-07-01T10:00:00Z");
+        var endedAt   = OffsetDateTime.parse("2026-07-01T11:00:00Z");
+        when(saveLiveSummaryPort.existsByLiveId(LIVE_ID)).thenReturn(false);
+        when(loadLiveSummarySourcePort.findLiveSnapshot(LIVE_ID))
+                .thenReturn(Optional.of(new LiveSnapshot(STORE_ID, startedAt, endedAt, 42)));
+        when(loadLiveSummarySourcePort.findQualifyingOrders(LIVE_ID)).thenReturn(List.of(
+                new QualifyingOrder(UUID.randomUUID(), UUID.randomUUID(), "T-Shirt", new BigDecimal("10.00"), 1)
+        ));
+        when(loadLiveSummarySourcePort.findTotalAllocated(LIVE_ID)).thenReturn(5L);
+        when(saveLiveSummaryPort.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        sut.on(new LiveEndedEvent(LIVE_ID, SELLER_ID));
+
+        var captor = ArgumentCaptor.forClass(LiveSummary.class);
+        verify(saveLiveSummaryPort).save(captor.capture());
+        assertThat(captor.getValue().getCurrency()).isEqualTo("MXN");
     }
 
     @Test
