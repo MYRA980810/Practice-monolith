@@ -5,6 +5,7 @@ import com.livecomerce.analytics.application.port.out.LoadProductMetricsPort;
 import com.livecomerce.analytics.application.port.out.LoadSalesMetricsPort;
 import com.livecomerce.analytics.application.port.out.LoadStockMetricsPort;
 import com.livecomerce.analytics.domain.ChannelComparison;
+import com.livecomerce.analytics.domain.ConversionRate;
 import com.livecomerce.analytics.domain.DeadStockItem;
 import com.livecomerce.analytics.domain.LivePerformance;
 import com.livecomerce.analytics.domain.PaymentMethodBreakdown;
@@ -136,9 +137,7 @@ class AnalyticsPersistenceAdapter implements LoadSalesMetricsPort, LoadChannelMe
                     var revenuePerViewer = peakViewers > 0
                             ? revenue.divide(BigDecimal.valueOf(peakViewers), 2, RoundingMode.HALF_UP)
                             : BigDecimal.ZERO;
-                    double conversionRate = totalAllocated > 0
-                            ? (double) unitsSold / totalAllocated
-                            : 0.0;
+                    double conversionRate = ConversionRate.compute(unitsSold, totalAllocated);
 
                     return new LivePerformance(liveId, title, revenue, unitsSold,
                             peakViewers, revenuePerViewer, conversionRate);
