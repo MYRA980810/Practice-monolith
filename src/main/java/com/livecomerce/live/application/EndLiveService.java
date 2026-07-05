@@ -1,6 +1,7 @@
 package com.livecomerce.live.application;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.livecomerce.live.LiveEndedEvent;
 import com.livecomerce.live.application.port.in.EndLiveUseCase;
 import com.livecomerce.live.application.port.out.AgoraRtmMessagePort;
 import com.livecomerce.live.application.port.out.LoadLivePort;
@@ -11,6 +12,7 @@ import com.livecomerce.live.domain.LiveNotOwnedBySellerException;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,10 +26,11 @@ public class EndLiveService implements EndLiveUseCase {
 
     private static final Logger log = LoggerFactory.getLogger(EndLiveService.class);
 
-    private final LoadLivePort        loadLivePort;
-    private final SaveLivePort        saveLivePort;
-    private final AgoraRtmMessagePort agoraRtmMessagePort;
-    private final ObjectMapper        objectMapper;
+    private final LoadLivePort              loadLivePort;
+    private final SaveLivePort              saveLivePort;
+    private final AgoraRtmMessagePort       agoraRtmMessagePort;
+    private final ObjectMapper              objectMapper;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Override
     public Live endLive(EndLiveCommand command) {
@@ -38,6 +41,8 @@ public class EndLiveService implements EndLiveUseCase {
         live.end();
 
         var saved = saveLivePort.save(live);
+
+        eventPublisher.publishEvent(new LiveEndedEvent(saved.getId(), saved.getSellerId()));
 
         try {
             String payload = objectMapper.writeValueAsString(Map.of(
