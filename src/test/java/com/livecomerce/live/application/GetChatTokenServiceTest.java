@@ -1,7 +1,7 @@
 package com.livecomerce.live.application;
 
 import com.livecomerce.live.application.port.in.GetChatTokenUseCase.GetChatTokenCommand;
-import com.livecomerce.live.application.port.out.AgoraTokenPort;
+import com.livecomerce.live.application.port.out.AgoraChatTokenPort;
 import com.livecomerce.live.application.port.out.LoadLivePort;
 import com.livecomerce.live.domain.*;
 import org.junit.jupiter.api.Test;
@@ -19,8 +19,8 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class GetChatTokenServiceTest {
 
-    @Mock LoadLivePort     loadLivePort;
-    @Mock AgoraTokenPort   agoraTokenPort;
+    @Mock LoadLivePort       loadLivePort;
+    @Mock AgoraChatTokenPort agoraTokenPort;
     @InjectMocks GetChatTokenService sut;
 
     private static final UUID SELLER_ID = UUID.randomUUID();

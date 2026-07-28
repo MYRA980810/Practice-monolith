@@ -1,7 +1,7 @@
 package com.livecomerce.live.application;
 
 import com.livecomerce.live.application.port.in.GetChatTokenUseCase;
-import com.livecomerce.live.application.port.out.AgoraTokenPort;
+import com.livecomerce.live.application.port.out.AgoraChatTokenPort;
 import com.livecomerce.live.application.port.out.LoadLivePort;
 import com.livecomerce.live.domain.LiveNotFoundException;
 import com.livecomerce.live.domain.LiveNotLiveException;
@@ -17,8 +17,8 @@ public class GetChatTokenService implements GetChatTokenUseCase {
 
     private static final int TOKEN_TTL_SECONDS = 3600;
 
-    private final LoadLivePort   loadLivePort;
-    private final AgoraTokenPort agoraTokenPort;
+    private final LoadLivePort       loadLivePort;
+    private final AgoraChatTokenPort agoraTokenPort;
 
     @Override
     public ChatTokenResult getChatToken(GetChatTokenCommand command) {

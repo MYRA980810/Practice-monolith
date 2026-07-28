@@ -1,19 +1,19 @@
 package com.livecomerce.live.infrastructure.agora;
 
-import com.livecomerce.live.application.port.out.AgoraTokenPort;
+import com.livecomerce.live.application.port.out.AgoraChatTokenPort;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-class AgoraTokenAdapterRtmTest {
+class AgoraChatTokenAdapterTest {
 
     private static final String APP_ID   = "970ca35de60c44645bbb8c4b22f1d6b9";
     private static final String APP_CERT = "5cfd2fd1755d40ecb72977518be15d3b";
     private static final String USER_ID  = "550e8400e29b41d4a716446655440000";
 
-    private AgoraTokenPort buildAdapter() {
-        var adapter = new AgoraTokenAdapter();
+    private AgoraChatTokenPort buildAdapter() {
+        var adapter = new AgoraChatTokenAdapter();
         ReflectionTestUtils.setField(adapter, "appId", APP_ID);
         ReflectionTestUtils.setField(adapter, "appCertificate", APP_CERT);
         return adapter;
