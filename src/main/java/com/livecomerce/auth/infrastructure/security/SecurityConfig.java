@@ -57,6 +57,7 @@ class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/categories").permitAll()
                         .requestMatchers("/api/billing/webhook/**").permitAll()
                         .requestMatchers("/api/webhooks/agora/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/lives/*/heartbeat").permitAll()
                         .anyRequest().authenticated()
                 )
                 .oauth2Login(oauth2 -> oauth2

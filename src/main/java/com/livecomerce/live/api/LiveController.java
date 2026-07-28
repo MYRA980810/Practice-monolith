@@ -3,6 +3,7 @@ package com.livecomerce.live.api;
 import com.livecomerce.live.application.port.in.CancelLiveUseCase;
 import com.livecomerce.live.application.port.in.CreateLiveUseCase;
 import com.livecomerce.live.application.port.in.EndLiveUseCase;
+import com.livecomerce.live.application.port.in.RecordViewerHeartbeatUseCase;
 import com.livecomerce.live.application.port.in.StartLiveUseCase;
 import com.livecomerce.live.application.port.out.LoadLivePort;
 import com.livecomerce.live.domain.LiveNotFoundException;
@@ -28,6 +29,7 @@ class LiveController {
     private final StartLiveUseCase startLiveUseCase;
     private final EndLiveUseCase endLiveUseCase;
     private final CancelLiveUseCase cancelLiveUseCase;
+    private final RecordViewerHeartbeatUseCase recordViewerHeartbeatUseCase;
     private final LoadLivePort loadLivePort;
 
     @PostMapping("/api/lives")
@@ -79,6 +81,16 @@ class LiveController {
 
         var live = cancelLiveUseCase.cancelLive(new CancelLiveUseCase.CancelLiveCommand(id, principal.getUserId()));
         return ResponseEntity.ok(LiveResponse.from(live));
+    }
+
+    @PostMapping("/api/lives/{id}/heartbeat")
+    ResponseEntity<HeartbeatResponse> heartbeat(
+            @PathVariable UUID id,
+            @Valid @RequestBody HeartbeatRequest request) {
+
+        long count = recordViewerHeartbeatUseCase.recordHeartbeat(
+                new RecordViewerHeartbeatUseCase.RecordHeartbeatCommand(id, request.viewerId()));
+        return ResponseEntity.ok(new HeartbeatResponse(count));
     }
 
     @GetMapping("/api/lives/{id}")

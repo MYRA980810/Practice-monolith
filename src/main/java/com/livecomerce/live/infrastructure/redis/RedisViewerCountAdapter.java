@@ -6,12 +6,15 @@ import org.springframework.context.annotation.Profile;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 
+import java.time.Duration;
 import java.util.UUID;
 
 @Component
 @Profile("!local")
 @RequiredArgsConstructor
 class RedisViewerCountAdapter implements ViewerCountPort {
+
+    private static final long HEARTBEAT_TTL_MILLIS = 30_000L;
 
     private final StringRedisTemplate redisTemplate;
 
@@ -42,7 +45,24 @@ class RedisViewerCountAdapter implements ViewerCountPort {
         }
     }
 
+    @Override
+    public long heartbeat(UUID liveId, String viewerId) {
+        String key = heartbeatKey(liveId);
+        long now = System.currentTimeMillis();
+
+        redisTemplate.opsForZSet().add(key, viewerId, now);
+        redisTemplate.opsForZSet().removeRangeByScore(key, 0, now - HEARTBEAT_TTL_MILLIS);
+        redisTemplate.expire(key, Duration.ofSeconds(120));
+
+        Long count = redisTemplate.opsForZSet().zCard(key);
+        return count == null ? 0L : count;
+    }
+
     private static String key(UUID liveId) {
         return "live:" + liveId + ":viewers";
+    }
+
+    private static String heartbeatKey(UUID liveId) {
+        return "live:" + liveId + ":viewers:heartbeat";
     }
 }

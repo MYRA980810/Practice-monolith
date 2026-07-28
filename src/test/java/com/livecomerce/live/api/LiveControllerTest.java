@@ -64,6 +64,7 @@ class LiveControllerTest {
     @MockitoBean StartLiveUseCase startLiveUseCase;
     @MockitoBean EndLiveUseCase endLiveUseCase;
     @MockitoBean CancelLiveUseCase cancelLiveUseCase;
+    @MockitoBean RecordViewerHeartbeatUseCase recordViewerHeartbeatUseCase;
     @MockitoBean LoadLivePort loadLivePort;
 
     private static final UUID SELLER_ID = UUID.randomUUID();
@@ -177,6 +178,29 @@ class LiveControllerTest {
 
         mvc.perform(post("/api/lives/{id}/cancel", LIVE_ID))
                 .andExpect(status().isOk());
+    }
+
+    // --- POST /api/lives/{id}/heartbeat ---
+
+    @Test
+    void heartbeat_withValidRequest_returns200WithCount() throws Exception {
+        when(recordViewerHeartbeatUseCase.recordHeartbeat(any())).thenReturn(7L);
+
+        mvc.perform(post("/api/lives/{id}/heartbeat", LIVE_ID)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"viewerId": "viewer-abc"}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.viewerCount").value(7));
+    }
+
+    @Test
+    void heartbeat_withMissingViewerId_returns400() throws Exception {
+        mvc.perform(post("/api/lives/{id}/heartbeat", LIVE_ID)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isBadRequest());
     }
 
     // --- GET /api/lives/{id} ---

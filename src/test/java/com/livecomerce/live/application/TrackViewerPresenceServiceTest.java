@@ -1,12 +1,15 @@
 package com.livecomerce.live.application;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.livecomerce.live.application.port.in.RecordViewerHeartbeatUseCase;
 import com.livecomerce.live.application.port.out.AgoraRtmMessagePort;
 import com.livecomerce.live.application.port.out.LoadLivePort;
 import com.livecomerce.live.application.port.out.SaveLivePort;
 import com.livecomerce.live.application.port.out.ViewerCountPort;
 import com.livecomerce.live.domain.Live;
 import com.livecomerce.live.domain.LiveContext;
+import com.livecomerce.live.domain.LiveNotFoundException;
+import com.livecomerce.live.domain.LiveNotLiveException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -18,6 +21,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.ArgumentMatchers.eq;
@@ -45,6 +49,10 @@ class TrackViewerPresenceServiceTest {
         var live = Live.create(SELLER_ID, STORE_ID, LiveContext.STORE, "Test Live", null, null, 60);
         live.start();
         return live;
+    }
+
+    private Live scheduledLive() {
+        return Live.create(SELLER_ID, STORE_ID, LiveContext.STORE, "Test Live", null, null, 60);
     }
 
     @Test
@@ -119,5 +127,80 @@ class TrackViewerPresenceServiceTest {
                 .sendChannelMessage(any(), any());
 
         sut.handleJoin(channelId);
+    }
+
+    // --- recordHeartbeat ---
+
+    @Test
+    void recordHeartbeat_registersViewerAndBroadcastsCount() {
+        var live = startedLive();
+        String viewerId = "viewer-abc";
+
+        when(loadLivePort.loadById(live.getId())).thenReturn(Optional.of(live));
+        when(viewerCountPort.heartbeat(live.getId(), viewerId)).thenReturn(4L);
+        when(saveLivePort.save(any())).thenReturn(live);
+
+        long count = sut.recordHeartbeat(new RecordViewerHeartbeatUseCase.RecordHeartbeatCommand(live.getId(), viewerId));
+
+        assertThat(count).isEqualTo(4L);
+        verify(viewerCountPort).heartbeat(live.getId(), viewerId);
+        var captor = ArgumentCaptor.forClass(String.class);
+        verify(agoraRtmMessagePort).sendChannelMessage(eq("live-chat:" + live.getId()), captor.capture());
+        assertThat(captor.getValue()).contains("\"type\":\"viewer-count\"").contains("\"count\":4");
+    }
+
+    @Test
+    void recordHeartbeat_whenCountExceedsPeak_updatesPeakAndSaves() {
+        var live = startedLive();
+        String viewerId = "viewer-abc";
+
+        when(loadLivePort.loadById(live.getId())).thenReturn(Optional.of(live));
+        when(viewerCountPort.heartbeat(live.getId(), viewerId)).thenReturn(12L);
+        when(saveLivePort.save(any())).thenReturn(live);
+
+        sut.recordHeartbeat(new RecordViewerHeartbeatUseCase.RecordHeartbeatCommand(live.getId(), viewerId));
+
+        verify(saveLivePort).save(live);
+        assertThat(live.getPeakViewers()).isEqualTo(12);
+    }
+
+    @Test
+    void recordHeartbeat_liveNotFound_throwsLiveNotFound() {
+        var liveId = UUID.randomUUID();
+        when(loadLivePort.loadById(liveId)).thenReturn(Optional.empty());
+
+        var cmd = new RecordViewerHeartbeatUseCase.RecordHeartbeatCommand(liveId, "viewer-abc");
+
+        assertThatThrownBy(() -> sut.recordHeartbeat(cmd))
+                .isInstanceOf(LiveNotFoundException.class);
+        verifyNoInteractions(viewerCountPort, saveLivePort, agoraRtmMessagePort);
+    }
+
+    @Test
+    void recordHeartbeat_liveNotLive_throwsLiveNotLiveException() {
+        var live = scheduledLive();
+        when(loadLivePort.loadById(live.getId())).thenReturn(Optional.of(live));
+
+        var cmd = new RecordViewerHeartbeatUseCase.RecordHeartbeatCommand(live.getId(), "viewer-abc");
+
+        assertThatThrownBy(() -> sut.recordHeartbeat(cmd))
+                .isInstanceOf(LiveNotLiveException.class);
+        verifyNoInteractions(viewerCountPort, saveLivePort);
+    }
+
+    @Test
+    void recordHeartbeat_whenCountDoesNotExceedPeak_doesNotSave() {
+        var live = startedLive();
+        live.updatePeakViewers(20);
+        String viewerId = "viewer-abc";
+
+        when(loadLivePort.loadById(live.getId())).thenReturn(Optional.of(live));
+        when(viewerCountPort.heartbeat(live.getId(), viewerId)).thenReturn(5L);
+
+        long count = sut.recordHeartbeat(new RecordViewerHeartbeatUseCase.RecordHeartbeatCommand(live.getId(), viewerId));
+
+        assertThat(count).isEqualTo(5L);
+        assertThat(live.getPeakViewers()).isEqualTo(20);
+        verify(saveLivePort, never()).save(any());
     }
 }

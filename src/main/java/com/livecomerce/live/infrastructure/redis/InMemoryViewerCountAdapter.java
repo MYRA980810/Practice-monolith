@@ -4,6 +4,7 @@ import com.livecomerce.live.application.port.out.ViewerCountPort;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
+import java.time.Instant;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
@@ -12,7 +13,10 @@ import java.util.concurrent.atomic.AtomicLong;
 @Profile("local")
 class InMemoryViewerCountAdapter implements ViewerCountPort {
 
+    private static final long HEARTBEAT_TTL_SECONDS = 30L;
+
     private final ConcurrentHashMap<UUID, AtomicLong> store = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<UUID, ConcurrentHashMap<String, Instant>> heartbeats = new ConcurrentHashMap<>();
 
     @Override
     public long increment(UUID liveId) {
@@ -33,5 +37,16 @@ class InMemoryViewerCountAdapter implements ViewerCountPort {
     public long get(UUID liveId) {
         AtomicLong counter = store.get(liveId);
         return counter == null ? 0L : counter.get();
+    }
+
+    @Override
+    public long heartbeat(UUID liveId, String viewerId) {
+        var viewers = heartbeats.computeIfAbsent(liveId, k -> new ConcurrentHashMap<>());
+        viewers.put(viewerId, Instant.now());
+
+        Instant cutoff = Instant.now().minusSeconds(HEARTBEAT_TTL_SECONDS);
+        viewers.values().removeIf(seenAt -> seenAt.isBefore(cutoff));
+
+        return viewers.size();
     }
 }

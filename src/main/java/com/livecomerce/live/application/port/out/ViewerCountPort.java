@@ -9,4 +9,6 @@ public interface ViewerCountPort {
     long decrement(UUID liveId);
 
     long get(UUID liveId);
+
+    long heartbeat(UUID liveId, String viewerId);
 }
