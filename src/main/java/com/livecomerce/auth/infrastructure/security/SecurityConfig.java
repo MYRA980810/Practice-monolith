@@ -1,6 +1,8 @@
 package com.livecomerce.auth.infrastructure.security;
 
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
@@ -28,6 +30,8 @@ import java.util.List;
 @EnableConfigurationProperties(JwtProperties.class)
 @RequiredArgsConstructor
 class SecurityConfig {
+
+    private static final Logger log = LoggerFactory.getLogger(SecurityConfig.class);
 
     private final JwtService jwtService;
     private final UserDetailsAdapter userDetailsAdapter;
@@ -62,8 +66,10 @@ class SecurityConfig {
                         .redirectionEndpoint(ep -> ep
                                 .baseUri("/api/auth/oauth2/callback/*"))
                         .successHandler(googleOAuth2SuccessHandler)
-                        .failureHandler((req, res, ex) ->
-                                res.sendRedirect(frontendUrl + "/auth/login?error=oauth"))
+                        .failureHandler((req, res, ex) -> {
+                            log.warn("OAuth2 login failed", ex);
+                            res.sendRedirect(frontendUrl + "/auth/login?error=oauth");
+                        })
                 )
                 .addFilterBefore(new JwtAuthFilter(jwtService, userDetailsAdapter),
                         UsernamePasswordAuthenticationFilter.class)
