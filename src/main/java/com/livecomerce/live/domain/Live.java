@@ -43,6 +43,21 @@ public class Live implements Persistable<UUID> {
     @Column(name = "stream_token", columnDefinition = "TEXT")
     private String streamToken;
 
+    @Column(name = "ivs_channel_arn", unique = true, length = 255)
+    private String ivsChannelArn;
+
+    @Column(name = "ivs_ingest_endpoint", length = 255)
+    private String ivsIngestEndpoint;
+
+    @Column(name = "ivs_stream_key_arn", length = 255)
+    private String ivsStreamKeyArn;
+
+    @Column(name = "ivs_stream_key_value", columnDefinition = "TEXT")
+    private String ivsStreamKeyValue;
+
+    @Column(name = "ivs_playback_url", length = 500)
+    private String ivsPlaybackUrl;
+
     @Column(name = "thumbnail_url", length = 500)
     private String thumbnailUrl;
 
@@ -132,6 +147,16 @@ public class Live implements Persistable<UUID> {
     public void setStreamToken(String token) {
         this.streamToken = token;
         this.updatedAt   = OffsetDateTime.now();
+    }
+
+    public void setIvsChannel(String channelArn, String ingestEndpoint, String streamKeyArn,
+                               String streamKeyValue, String playbackUrl) {
+        this.ivsChannelArn      = channelArn;
+        this.ivsIngestEndpoint  = ingestEndpoint;
+        this.ivsStreamKeyArn    = streamKeyArn;
+        this.ivsStreamKeyValue  = streamKeyValue;
+        this.ivsPlaybackUrl     = playbackUrl;
+        this.updatedAt          = OffsetDateTime.now();
     }
 
     public void updatePeakViewers(int currentCount) {

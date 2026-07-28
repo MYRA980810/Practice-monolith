@@ -6,6 +6,7 @@ import com.livecomerce.live.application.port.in.EndLiveUseCase.EndLiveCommand;
 import com.livecomerce.live.application.port.out.AgoraRtmMessagePort;
 import com.livecomerce.live.application.port.out.LoadLivePort;
 import com.livecomerce.live.application.port.out.SaveLivePort;
+import com.livecomerce.live.application.port.out.VideoBroadcastPort;
 import com.livecomerce.live.domain.*;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -31,6 +32,7 @@ class EndLiveServiceTest {
     @Mock LoadLivePort              loadLivePort;
     @Mock SaveLivePort              saveLivePort;
     @Mock AgoraRtmMessagePort       agoraRtmMessagePort;
+    @Mock VideoBroadcastPort        videoBroadcastPort;
     @Mock ApplicationEventPublisher eventPublisher;
     @Spy  ObjectMapper              objectMapper = new ObjectMapper();
     @InjectMocks EndLiveService sut;
@@ -41,6 +43,12 @@ class EndLiveServiceTest {
     private Live liveLive() {
         var live = Live.create(SELLER_ID, STORE_ID, LiveContext.STORE, "My Live", null, null, 60);
         live.start();
+        return live;
+    }
+
+    private Live ivsLive() {
+        var live = liveLive();
+        live.setIvsChannel("arn:ivs:channel", "rtmps://ingest", "arn:ivs:key", "sk_stream_key", "https://playback.url");
         return live;
     }
 
@@ -57,6 +65,30 @@ class EndLiveServiceTest {
         verify(agoraRtmMessagePort).sendChannelMessage(
                 eq("live-chat:" + live.getId()),
                 contains("\"type\":\"live-ended\""));
+        verifyNoInteractions(videoBroadcastPort);
+    }
+
+    @Test
+    void endLive_withIvsChannel_stopsIvsStream() {
+        var live = ivsLive();
+        when(loadLivePort.loadById(live.getId())).thenReturn(Optional.of(live));
+        when(saveLivePort.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        sut.endLive(new EndLiveCommand(live.getId(), SELLER_ID));
+
+        verify(videoBroadcastPort).stopStream("arn:ivs:channel");
+    }
+
+    @Test
+    void endLive_withIvsChannel_stopStreamFailure_isSwallowed() {
+        var live = ivsLive();
+        when(loadLivePort.loadById(live.getId())).thenReturn(Optional.of(live));
+        when(saveLivePort.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        doThrow(new RuntimeException("IVS error")).when(videoBroadcastPort).stopStream("arn:ivs:channel");
+
+        var result = sut.endLive(new EndLiveCommand(live.getId(), SELLER_ID));
+
+        assertThat(result.getStatus()).isEqualTo(LiveStatus.ENDED);
     }
 
     @Test

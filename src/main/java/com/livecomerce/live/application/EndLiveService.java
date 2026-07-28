@@ -6,6 +6,7 @@ import com.livecomerce.live.application.port.in.EndLiveUseCase;
 import com.livecomerce.live.application.port.out.AgoraRtmMessagePort;
 import com.livecomerce.live.application.port.out.LoadLivePort;
 import com.livecomerce.live.application.port.out.SaveLivePort;
+import com.livecomerce.live.application.port.out.VideoBroadcastPort;
 import com.livecomerce.live.domain.Live;
 import com.livecomerce.live.domain.LiveNotFoundException;
 import com.livecomerce.live.domain.LiveNotOwnedBySellerException;
@@ -29,6 +30,7 @@ public class EndLiveService implements EndLiveUseCase {
     private final LoadLivePort              loadLivePort;
     private final SaveLivePort              saveLivePort;
     private final AgoraRtmMessagePort       agoraRtmMessagePort;
+    private final VideoBroadcastPort        videoBroadcastPort;
     private final ObjectMapper              objectMapper;
     private final ApplicationEventPublisher eventPublisher;
 
@@ -52,6 +54,14 @@ public class EndLiveService implements EndLiveUseCase {
             agoraRtmMessagePort.sendChannelMessage("live-chat:" + saved.getId(), payload);
         } catch (Exception e) {
             log.warn("Agora RTM live-ended failed: {}", e.getMessage());
+        }
+
+        if (live.getIvsChannelArn() != null) {
+            try {
+                videoBroadcastPort.stopStream(live.getIvsChannelArn());
+            } catch (Exception e) {
+                log.warn("IVS stopStream failed: {}", e.getMessage());
+            }
         }
 
         return saved;

@@ -13,6 +13,8 @@ public interface LoadLivePort {
 
     Optional<Live> loadByAgoraChannelId(String agoraChannelId);
 
+    Optional<Live> loadByIvsChannelArn(String ivsChannelArn);
+
     List<Live> loadBySellerId(UUID sellerId);
 
     List<Live> loadBySellerIdAndStatus(UUID sellerId, LiveStatus status);

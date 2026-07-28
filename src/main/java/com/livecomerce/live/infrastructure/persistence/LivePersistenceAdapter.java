@@ -35,6 +35,11 @@ class LivePersistenceAdapter implements SaveLivePort, LoadLivePort {
     }
 
     @Override
+    public Optional<Live> loadByIvsChannelArn(String ivsChannelArn) {
+        return repository.findByIvsChannelArn(ivsChannelArn);
+    }
+
+    @Override
     public List<Live> loadBySellerId(UUID sellerId) {
         return repository.findBySellerId(sellerId);
     }

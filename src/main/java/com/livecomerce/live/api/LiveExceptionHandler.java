@@ -9,6 +9,7 @@ import com.livecomerce.live.domain.LiveProductAlreadySoldException;
 import com.livecomerce.live.domain.LiveProductNotFoundException;
 import com.livecomerce.live.domain.LiveProductOutOfStockException;
 import com.livecomerce.live.domain.LiveSubscriptionNotForSellerException;
+import com.livecomerce.live.domain.VideoProviderUnavailableException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -80,6 +81,13 @@ class LiveExceptionHandler {
     ProblemDetail handleSubscriptionNotForSeller(LiveSubscriptionNotForSellerException e) {
         var detail = ProblemDetail.forStatusAndDetail(HttpStatus.FORBIDDEN, e.getMessage());
         detail.setType(URI.create("https://livecomerce.com/errors/live-subscription-buyers-only"));
+        return detail;
+    }
+
+    @ExceptionHandler(VideoProviderUnavailableException.class)
+    ProblemDetail handleVideoProviderUnavailable(VideoProviderUnavailableException e) {
+        var detail = ProblemDetail.forStatusAndDetail(HttpStatus.SERVICE_UNAVAILABLE, e.getMessage());
+        detail.setType(URI.create("https://livecomerce.com/errors/video-provider-unavailable"));
         return detail;
     }
 }

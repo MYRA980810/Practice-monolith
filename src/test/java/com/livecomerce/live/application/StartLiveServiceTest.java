@@ -7,6 +7,8 @@ import com.livecomerce.live.application.port.out.LoadLivePort;
 import com.livecomerce.live.application.port.out.LoadLiveSubscriptionPort;
 import com.livecomerce.live.application.port.out.SaveLivePort;
 import com.livecomerce.live.application.port.out.SaveLiveSubscriptionPort;
+import com.livecomerce.live.application.port.out.VideoBroadcastPort;
+import com.livecomerce.live.application.port.out.VideoBroadcastPort.ChannelHandle;
 import com.livecomerce.live.domain.*;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -15,6 +17,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.List;
 import java.util.Optional;
@@ -32,6 +35,7 @@ class StartLiveServiceTest {
     @Mock LoadLivePort                loadLivePort;
     @Mock SaveLivePort                saveLivePort;
     @Mock AgoraTokenPort              agoraTokenPort;
+    @Mock VideoBroadcastPort          videoBroadcastPort;
     @Mock LoadLiveSubscriptionPort    loadLiveSubscriptionPort;
     @Mock SaveLiveSubscriptionPort    saveLiveSubscriptionPort;
     @Mock ApplicationEventPublisher   eventPublisher;
@@ -57,6 +61,48 @@ class StartLiveServiceTest {
         assertThat(result.getStatus()).isEqualTo(LiveStatus.LIVE);
         assertThat(result.getStreamToken()).isEqualTo("agora-token-abc");
         verify(agoraTokenPort).generateRtcToken(live.getAgoraChannelId(), "uid-42", 3600);
+        verifyNoInteractions(videoBroadcastPort);
+    }
+
+    @Test
+    void startLive_withIvsProvider_createsIvsChannelAndSkipsAgora() {
+        ReflectionTestUtils.setField(sut, "videoProvider", "ivs");
+
+        var live = scheduledLive();
+        when(loadLivePort.loadById(live.getId())).thenReturn(Optional.of(live));
+        when(videoBroadcastPort.createChannel("live-" + live.getId())).thenReturn(
+                new ChannelHandle("arn:ivs:channel", "rtmps://ingest", "arn:ivs:key",
+                        "sk_stream_key", "https://playback.url"));
+        when(saveLivePort.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        var cmd    = new StartLiveCommand(live.getId(), SELLER_ID, "uid-42");
+        var result = sut.startLive(cmd);
+
+        assertThat(result.getStatus()).isEqualTo(LiveStatus.LIVE);
+        assertThat(result.getIvsChannelArn()).isEqualTo("arn:ivs:channel");
+        assertThat(result.getIvsIngestEndpoint()).isEqualTo("rtmps://ingest");
+        assertThat(result.getIvsStreamKeyArn()).isEqualTo("arn:ivs:key");
+        assertThat(result.getIvsStreamKeyValue()).isEqualTo("sk_stream_key");
+        assertThat(result.getIvsPlaybackUrl()).isEqualTo("https://playback.url");
+        assertThat(result.getStreamToken()).isNull();
+        verify(videoBroadcastPort).createChannel("live-" + live.getId());
+        verifyNoInteractions(agoraTokenPort);
+    }
+
+    @Test
+    void startLive_withIvsProvider_whenCreateChannelFails_throwsVideoProviderUnavailableAndDoesNotSave() {
+        ReflectionTestUtils.setField(sut, "videoProvider", "ivs");
+
+        var live = scheduledLive();
+        when(loadLivePort.loadById(live.getId())).thenReturn(Optional.of(live));
+        when(videoBroadcastPort.createChannel("live-" + live.getId()))
+                .thenThrow(new RuntimeException("AWS IVS throttled"));
+
+        var cmd = new StartLiveCommand(live.getId(), SELLER_ID, "uid-42");
+
+        assertThatThrownBy(() -> sut.startLive(cmd))
+                .isInstanceOf(VideoProviderUnavailableException.class);
+        verify(saveLivePort, never()).save(any());
     }
 
     @Test

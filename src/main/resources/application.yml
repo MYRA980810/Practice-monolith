@@ -63,6 +63,13 @@ spring:
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
 
+  cloud:
+    aws:
+      region:
+        static: ${AWS_REGION:us-east-1}
+      sqs:
+        queue-not-found-strategy: fail
+
 server:
   port: 8080
 
@@ -98,8 +105,17 @@ agora:
   app-id: ${AGORA_APP_ID}
   app-certificate: ${AGORA_APP_CERTIFICATE}
   webhook-secret: ${AGORA_WEBHOOK_SECRET}
-  customer-id: ${AGORA_CUSTOMER_ID}          
+  customer-id: ${AGORA_CUSTOMER_ID}
   customer-secret: ${AGORA_CUSTOMER_SECRET}
+
+ivs:
+  region: ${AWS_REGION:us-east-1}
+  channel-type: ${IVS_CHANNEL_TYPE:STANDARD}
+  latency-mode: LOW
+  stream-events-queue-name: ${IVS_STREAM_EVENTS_QUEUE_NAME:ivs_stream_events}
+
+live:
+  video-provider: ${LIVE_VIDEO_PROVIDER:agora}
 
 cloudinary:
   cloud-name: ${CLOUDINARY_CLOUD_NAME:placeholder}
