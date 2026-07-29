@@ -69,7 +69,7 @@ class AuthControllerTest {
     private static final UUID USER_ID = UUID.randomUUID();
 
     private static final AuthResult AUTH_RESULT = AuthResult.of(
-            "jwt-token", USER_ID, "seller@test.com", Role.SELLER, null, "raw-refresh-token"
+            "jwt-token", USER_ID, "seller@test.com", Role.SELLER, null, "raw-refresh-token", false
     );
 
     private static final PendingVerificationResult PENDING_RESULT =
@@ -290,7 +290,7 @@ class AuthControllerTest {
     @Test
     void resetPassword_withMatchingPasswords_returns200WithJwt() throws Exception {
         when(resetPasswordUseCase.reset(any()))
-                .thenReturn(AuthResult.of("access-jwt", USER_ID, "user@test.com", Role.BUYER, null, "raw-refresh-token"));
+                .thenReturn(AuthResult.of("access-jwt", USER_ID, "user@test.com", Role.BUYER, null, "raw-refresh-token", false));
 
         mvc.perform(post("/api/auth/reset-password")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -311,7 +311,7 @@ class AuthControllerTest {
     @Test
     void exchangeOAuthCode_withValidCode_returns200WithAuthResponse() throws Exception {
         when(exchangeOAuthCodeUseCase.exchange(any()))
-                .thenReturn(AuthResult.of("full-jwt", USER_ID, "oauth@test.com", Role.SELLER, null, "raw-refresh-token"));
+                .thenReturn(AuthResult.of("full-jwt", USER_ID, "oauth@test.com", Role.SELLER, null, "raw-refresh-token", false));
 
         mvc.perform(post("/api/auth/oauth2/exchange")
                         .contentType(MediaType.APPLICATION_JSON)

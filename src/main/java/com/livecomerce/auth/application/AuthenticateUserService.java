@@ -41,6 +41,6 @@ public class AuthenticateUserService implements AuthenticateUserUseCase {
 
         var resolvedContact = user.getEmail() != null ? user.getEmail() : user.getPhone();
         var rawRefreshToken = issueRefreshTokenPort.issueForUser(user.getId());
-        return AuthResult.of(tokenGeneratorPort.generate(user), user.getId(), resolvedContact, user.getRole(), user.getAvatarUrl(), rawRefreshToken);
+        return AuthResult.of(tokenGeneratorPort.generate(user), user.getId(), resolvedContact, user.getRole(), user.getAvatarUrl(), rawRefreshToken, user.isProfileComplete());
     }
 }

@@ -8,7 +8,8 @@ public record AuthResponse(
         String userId,
         String contact,
         String role,
-        String avatarUrl
+        String avatarUrl,
+        boolean profileComplete
 ) {
     public static AuthResponse from(AuthResult result) {
         return new AuthResponse(
@@ -17,7 +18,8 @@ public record AuthResponse(
                 result.userId().toString(),
                 result.contact(),
                 result.role() != null ? result.role().name() : null,
-                result.avatarUrl()
+                result.avatarUrl(),
+                result.profileComplete()
         );
     }
 }

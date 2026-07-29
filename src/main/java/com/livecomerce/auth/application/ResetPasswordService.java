@@ -41,6 +41,6 @@ public class ResetPasswordService implements ResetPasswordUseCase {
         var saved = saveUserPort.save(user);
         var contact = saved.getEmail() != null ? saved.getEmail() : saved.getPhone();
         var rawRefreshToken = issueRefreshTokenPort.issueForUser(saved.getId());
-        return AuthResult.of(tokenGeneratorPort.generate(saved), saved.getId(), contact, saved.getRole(), saved.getAvatarUrl(), rawRefreshToken);
+        return AuthResult.of(tokenGeneratorPort.generate(saved), saved.getId(), contact, saved.getRole(), saved.getAvatarUrl(), rawRefreshToken, saved.isProfileComplete());
     }
 }

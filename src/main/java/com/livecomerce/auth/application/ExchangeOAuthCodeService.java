@@ -40,6 +40,6 @@ public class ExchangeOAuthCodeService implements ExchangeOAuthCodeUseCase {
             rawRefreshToken = issueRefreshTokenPort.issueForUser(user.getId());
         }
 
-        return AuthResult.of(jwt, user.getId(), user.getEmail(), user.getRole(), user.getAvatarUrl(), rawRefreshToken);
+        return AuthResult.of(jwt, user.getId(), user.getEmail(), user.getRole(), user.getAvatarUrl(), rawRefreshToken, user.isProfileComplete());
     }
 }

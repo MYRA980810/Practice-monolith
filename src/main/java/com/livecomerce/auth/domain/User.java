@@ -51,6 +51,15 @@ public class User implements Persistable<UUID> {
     @Column(nullable = false)
     private boolean verified = false;
 
+    @Column(name = "address_requirement_met", nullable = false)
+    private boolean addressRequirementMet = false;
+
+    @Column(name = "payment_requirement_met", nullable = false)
+    private boolean paymentRequirementMet = false;
+
+    @Column(name = "profile_complete", nullable = false)
+    private boolean profileComplete = false;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private OffsetDateTime createdAt;
 
@@ -116,6 +125,23 @@ public class User implements Persistable<UUID> {
     public void verify() {
         this.verified = true;
         this.updatedAt = OffsetDateTime.now();
+    }
+
+    public void markAddressRequirementMet() {
+        this.addressRequirementMet = true;
+        recomputeProfileComplete();
+    }
+
+    public void markPaymentRequirementMet() {
+        this.paymentRequirementMet = true;
+        recomputeProfileComplete();
+    }
+
+    private void recomputeProfileComplete() {
+        if (!this.profileComplete && this.addressRequirementMet && this.paymentRequirementMet) {
+            this.profileComplete = true;
+            this.updatedAt = OffsetDateTime.now();
+        }
     }
 
     public void updatePasswordHash(String encodedPassword) {

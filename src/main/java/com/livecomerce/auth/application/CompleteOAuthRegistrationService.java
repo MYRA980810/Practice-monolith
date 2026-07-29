@@ -43,7 +43,8 @@ public class CompleteOAuthRegistrationService implements CompleteOAuthRegistrati
                 saved.getEmail(),
                 saved.getRole(),
                 saved.getAvatarUrl(),
-                rawRefreshToken
+                rawRefreshToken,
+                saved.isProfileComplete()
         );
     }
 }

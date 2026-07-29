@@ -11,7 +11,8 @@ public record AuthResult(
         String contact,
         Role role,
         String avatarUrl,
-        String refreshToken
+        String refreshToken,
+        boolean profileComplete
 ) {
 
     public static AuthResult of(
@@ -20,8 +21,9 @@ public record AuthResult(
             String contact,
             Role role,
             String avatarUrl,
-            String refreshToken
+            String refreshToken,
+            boolean profileComplete
     ) {
-        return new AuthResult(token, "Bearer", userId, contact, role, avatarUrl, refreshToken);
+        return new AuthResult(token, "Bearer", userId, contact, role, avatarUrl, refreshToken, profileComplete);
     }
 }

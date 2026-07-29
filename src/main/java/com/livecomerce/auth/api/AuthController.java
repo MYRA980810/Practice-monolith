@@ -156,7 +156,7 @@ class AuthController {
         var cookie = buildRefreshCookie(result.refreshToken());
         return ResponseEntity.ok()
                 .header(HttpHeaders.SET_COOKIE, cookie.toString())
-                .body(new AuthResponse(result.accessToken(), "Bearer", null, null, null, null));
+                .body(new AuthResponse(result.accessToken(), "Bearer", null, null, null, null, false));
     }
 
     @PostMapping("/logout")
