@@ -100,6 +100,13 @@ app:
         STARTER: ${STRIPE_PRICE_STARTER:price_placeholder}
         PRO: ${STRIPE_PRICE_PRO:price_placeholder}
         AGENCY: ${STRIPE_PRICE_AGENCY:/v1/prices/price_1TRlgz7T0J4CsjNYiKNJXV4I}
+  payment:
+    stripe:
+      api-key: ${STRIPE_API_KEY:sk_test_placeholder}
+      webhook-secret: ${PAYMENT_STRIPE_WEBHOOK_SECRET:whsec_placeholder}
+      connect:
+        refresh-url: ${STRIPE_CONNECT_REFRESH_URL:http://localhost:3000/seller/payout/refresh}
+        return-url: ${STRIPE_CONNECT_RETURN_URL:http://localhost:3000/seller/payout/return}
 
 agora:
   app-id: ${AGORA_APP_ID}
