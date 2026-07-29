@@ -8,11 +8,13 @@ import com.livecomerce.live.application.port.out.LoadLivePort;
 import com.livecomerce.live.application.port.out.LoadLiveSubscriptionPort;
 import com.livecomerce.live.application.port.out.SaveLivePort;
 import com.livecomerce.live.application.port.out.SaveLiveSubscriptionPort;
+import com.livecomerce.live.application.port.out.SellerIvsChannelPort;
 import com.livecomerce.live.application.port.out.VideoBroadcastPort;
 import com.livecomerce.live.domain.Live;
 import com.livecomerce.live.domain.LiveNotFoundException;
 import com.livecomerce.live.domain.LiveNotOwnedBySellerException;
 import com.livecomerce.live.domain.ProfileIncompleteException;
+import com.livecomerce.live.domain.SellerIvsChannel;
 import com.livecomerce.live.domain.VideoProviderUnavailableException;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
@@ -39,6 +41,7 @@ public class StartLiveService implements StartLiveUseCase {
     private final SaveLiveSubscriptionPort  saveLiveSubscriptionPort;
     private final ApplicationEventPublisher eventPublisher;
     private final ProfileCompletionPort     profileCompletionPort;
+    private final SellerIvsChannelPort      sellerIvsChannelPort;
 
     @Value("${live.video-provider:agora}")
     private String videoProvider;
@@ -58,11 +61,12 @@ public class StartLiveService implements StartLiveUseCase {
 
         if ("ivs".equals(videoProvider)) {
             try {
-                var handle = videoBroadcastPort.createChannel("live-" + live.getId());
-                live.setIvsChannel(handle.channelArn(), handle.ingestEndpoint(),
-                        handle.streamKeyArn(), handle.streamKeyValue(), handle.playbackUrl());
+                var channel = sellerIvsChannelPort.loadBySellerId(live.getSellerId())
+                        .orElseGet(() -> resolveOrCreateChannel(live.getSellerId()));
+                live.setIvsChannel(channel.getChannelArn(), channel.getIngestEndpoint(),
+                        channel.getStreamKeyArn(), channel.getStreamKeyValue(), channel.getPlaybackUrl());
             } catch (Exception e) {
-                log.error("IVS createChannel failed for live {}: {}", live.getId(), e.getMessage(), e);
+                log.error("IVS channel resolution failed for live {}: {}", live.getId(), e.getMessage(), e);
                 throw new VideoProviderUnavailableException("Unable to start video broadcast for live " + live.getId());
             }
         } else {
@@ -85,5 +89,20 @@ public class StartLiveService implements StartLiveUseCase {
         if (!live.getSellerId().equals(sellerId)) {
             throw new LiveNotOwnedBySellerException(live.getId(), sellerId);
         }
+    }
+
+    private SellerIvsChannel resolveOrCreateChannel(java.util.UUID sellerId) {
+        var handle = videoBroadcastPort.createChannel("seller-" + sellerId);
+        var channel = SellerIvsChannel.create(sellerId, handle);
+        if (sellerIvsChannelPort.trySave(channel)) {
+            return channel;
+        }
+        // Perdimos la carrera: otro startLive() concurrente del mismo seller ya
+        // creó y confirmó su canal primero. Reusamos el ganador; el canal que
+        // acabamos de crear en AWS queda huérfano (ver riesgos, punto sin mitigar
+        // en este cambio: falta un lock previo a la llamada a AWS para evitarlo).
+        return sellerIvsChannelPort.loadBySellerId(sellerId)
+                .orElseThrow(() -> new VideoProviderUnavailableException(
+                        "Unable to resolve IVS channel for seller " + sellerId));
     }
 }

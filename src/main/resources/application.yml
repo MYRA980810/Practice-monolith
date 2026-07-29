@@ -122,7 +122,7 @@ ivs:
   stream-events-queue-name: ${IVS_STREAM_EVENTS_QUEUE_NAME:ivs_stream_events}
 
 live:
-  video-provider: ${LIVE_VIDEO_PROVIDER:agora}
+  video-provider: ${LIVE_VIDEO_PROVIDER}
 
 cloudinary:
   cloud-name: ${CLOUDINARY_CLOUD_NAME:placeholder}

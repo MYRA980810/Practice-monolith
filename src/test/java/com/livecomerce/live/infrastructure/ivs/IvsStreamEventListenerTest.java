@@ -54,7 +54,7 @@ class IvsStreamEventListenerTest {
     @Test
     void streamStart_resolvesLiveByChannelArn_andLogsWithoutThrowing() {
         var live = buildLive();
-        when(loadLivePort.loadByIvsChannelArn(CHANNEL_ARN)).thenReturn(Optional.of(live));
+        when(loadLivePort.loadActiveByIvsChannelArn(CHANNEL_ARN)).thenReturn(Optional.of(live));
 
         var listener = new IvsStreamEventListener(loadLivePort, objectMapper);
         var json = streamStateEventJson("Stream Start", CHANNEL_ARN);
@@ -64,7 +64,7 @@ class IvsStreamEventListenerTest {
 
     @Test
     void unknownChannelArn_logsWarning_andDoesNotThrow() {
-        when(loadLivePort.loadByIvsChannelArn(CHANNEL_ARN)).thenReturn(Optional.empty());
+        when(loadLivePort.loadActiveByIvsChannelArn(CHANNEL_ARN)).thenReturn(Optional.empty());
 
         var listener = new IvsStreamEventListener(loadLivePort, objectMapper);
         var json = streamStateEventJson("Stream Start", CHANNEL_ARN);

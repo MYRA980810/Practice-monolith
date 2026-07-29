@@ -16,7 +16,7 @@ interface LiveJpaRepository extends JpaRepository<Live, UUID> {
 
     Optional<Live> findByAgoraChannelId(String agoraChannelId);
 
-    Optional<Live> findByIvsChannelArn(String ivsChannelArn);
+    Optional<Live> findByIvsChannelArnAndStatus(String ivsChannelArn, LiveStatus status);
 
     List<Live> findByStoreId(UUID storeId);
 

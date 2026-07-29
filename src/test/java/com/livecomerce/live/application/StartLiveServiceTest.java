@@ -8,6 +8,7 @@ import com.livecomerce.live.application.port.out.LoadLivePort;
 import com.livecomerce.live.application.port.out.LoadLiveSubscriptionPort;
 import com.livecomerce.live.application.port.out.SaveLivePort;
 import com.livecomerce.live.application.port.out.SaveLiveSubscriptionPort;
+import com.livecomerce.live.application.port.out.SellerIvsChannelPort;
 import com.livecomerce.live.application.port.out.VideoBroadcastPort;
 import com.livecomerce.live.application.port.out.VideoBroadcastPort.ChannelHandle;
 import com.livecomerce.live.domain.*;
@@ -42,6 +43,7 @@ class StartLiveServiceTest {
     @Mock SaveLiveSubscriptionPort    saveLiveSubscriptionPort;
     @Mock ApplicationEventPublisher   eventPublisher;
     @Mock ProfileCompletionPort       profileCompletionPort;
+    @Mock SellerIvsChannelPort        sellerIvsChannelPort;
     @InjectMocks StartLiveService sut;
 
     private static final UUID SELLER_ID = UUID.randomUUID();
@@ -78,9 +80,11 @@ class StartLiveServiceTest {
 
         var live = scheduledLive();
         when(loadLivePort.loadById(live.getId())).thenReturn(Optional.of(live));
-        when(videoBroadcastPort.createChannel("live-" + live.getId())).thenReturn(
+        when(sellerIvsChannelPort.loadBySellerId(SELLER_ID)).thenReturn(Optional.empty());
+        when(videoBroadcastPort.createChannel("seller-" + SELLER_ID)).thenReturn(
                 new ChannelHandle("arn:ivs:channel", "rtmps://ingest", "arn:ivs:key",
                         "sk_stream_key", "https://playback.url"));
+        when(sellerIvsChannelPort.trySave(any())).thenReturn(true);
         when(saveLivePort.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         var cmd    = new StartLiveCommand(live.getId(), SELLER_ID, "uid-42");
@@ -93,8 +97,58 @@ class StartLiveServiceTest {
         assertThat(result.getIvsStreamKeyValue()).isEqualTo("sk_stream_key");
         assertThat(result.getIvsPlaybackUrl()).isEqualTo("https://playback.url");
         assertThat(result.getStreamToken()).isNull();
-        verify(videoBroadcastPort).createChannel("live-" + live.getId());
+        verify(videoBroadcastPort).createChannel("seller-" + SELLER_ID);
+        verify(sellerIvsChannelPort).trySave(any());
         verifyNoInteractions(agoraTokenPort);
+    }
+
+    @Test
+    void startLive_withIvsProvider_whenChannelAlreadyExistsForSeller_reusesItAndNeverCallsCreateChannel() {
+        ReflectionTestUtils.setField(sut, "videoProvider", "ivs");
+
+        var live = scheduledLive();
+        var existingHandle = new ChannelHandle("arn:ivs:existing", "rtmps://existing", "arn:ivs:existing-key",
+                "sk_existing_key", "https://existing.playback.url");
+        var existingChannel = SellerIvsChannel.create(SELLER_ID, existingHandle);
+        when(loadLivePort.loadById(live.getId())).thenReturn(Optional.of(live));
+        when(sellerIvsChannelPort.loadBySellerId(SELLER_ID)).thenReturn(Optional.of(existingChannel));
+        when(saveLivePort.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        var cmd    = new StartLiveCommand(live.getId(), SELLER_ID, "uid-42");
+        var result = sut.startLive(cmd);
+
+        assertThat(result.getIvsChannelArn()).isEqualTo("arn:ivs:existing");
+        verifyNoInteractions(videoBroadcastPort);
+        verify(sellerIvsChannelPort, never()).trySave(any());
+    }
+
+    @Test
+    void startLive_withIvsProvider_whenTrySaveLosesRace_reloadsWinningChannel() {
+        ReflectionTestUtils.setField(sut, "videoProvider", "ivs");
+
+        var live = scheduledLive();
+        var createdHandle = new ChannelHandle("arn:ivs:created", "rtmps://created", "arn:ivs:created-key",
+                "sk_created_key", "https://created.playback.url");
+        var winningHandle = new ChannelHandle("arn:ivs:winner", "rtmps://winner", "arn:ivs:winner-key",
+                "sk_winner_key", "https://winner.playback.url");
+        var winningChannel = SellerIvsChannel.create(SELLER_ID, winningHandle);
+        when(loadLivePort.loadById(live.getId())).thenReturn(Optional.of(live));
+        when(sellerIvsChannelPort.loadBySellerId(SELLER_ID))
+                .thenReturn(Optional.empty())
+                .thenReturn(Optional.of(winningChannel));
+        when(videoBroadcastPort.createChannel("seller-" + SELLER_ID)).thenReturn(createdHandle);
+        when(sellerIvsChannelPort.trySave(any())).thenReturn(false);
+        when(saveLivePort.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        var cmd    = new StartLiveCommand(live.getId(), SELLER_ID, "uid-42");
+        var result = sut.startLive(cmd);
+
+        assertThat(result.getIvsChannelArn()).isEqualTo("arn:ivs:winner");
+        assertThat(result.getIvsIngestEndpoint()).isEqualTo("rtmps://winner");
+        assertThat(result.getIvsStreamKeyArn()).isEqualTo("arn:ivs:winner-key");
+        assertThat(result.getIvsStreamKeyValue()).isEqualTo("sk_winner_key");
+        assertThat(result.getIvsPlaybackUrl()).isEqualTo("https://winner.playback.url");
+        verify(sellerIvsChannelPort, times(2)).loadBySellerId(SELLER_ID);
     }
 
     @Test
@@ -103,7 +157,8 @@ class StartLiveServiceTest {
 
         var live = scheduledLive();
         when(loadLivePort.loadById(live.getId())).thenReturn(Optional.of(live));
-        when(videoBroadcastPort.createChannel("live-" + live.getId()))
+        when(sellerIvsChannelPort.loadBySellerId(SELLER_ID)).thenReturn(Optional.empty());
+        when(videoBroadcastPort.createChannel("seller-" + SELLER_ID))
                 .thenThrow(new RuntimeException("AWS IVS throttled"));
 
         var cmd = new StartLiveCommand(live.getId(), SELLER_ID, "uid-42");

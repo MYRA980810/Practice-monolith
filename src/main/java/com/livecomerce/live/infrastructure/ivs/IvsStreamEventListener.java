@@ -41,7 +41,7 @@ class IvsStreamEventListener {
                 return;
             }
 
-            var liveOpt = loadLivePort.loadByIvsChannelArn(channelArn);
+            var liveOpt = loadLivePort.loadActiveByIvsChannelArn(channelArn);
             if (liveOpt.isEmpty()) {
                 log.warn("IVS EventBridge event for unknown channelArn={}, eventName={}",
                         channelArn, detail != null ? detail.eventName() : null);
@@ -51,17 +51,19 @@ class IvsStreamEventListener {
             var live = liveOpt.get();
             String eventName = detail != null && detail.eventName() != null
                     ? detail.eventName() : "unknown";
+            String streamId = detail != null ? detail.streamId() : null;
+            String code = detail != null ? detail.code() : null;
 
             switch (eventName) {
                 case "Stream Start" ->
                         log.info("IVS stream started: liveId={}, channelArn={}, streamId={}",
-                                live.getId(), channelArn, detail.streamId());
+                                live.getId(), channelArn, streamId);
                 case "Stream End", "Session Ended" ->
                         log.info("IVS stream ended (informational, not auto-ending live): liveId={}, channelArn={}, streamId={}",
-                                live.getId(), channelArn, detail.streamId());
+                                live.getId(), channelArn, streamId);
                 case "Stream Failure", "Stream Takeover Failure" ->
                         log.warn("IVS stream failure event: liveId={}, channelArn={}, eventName={}, code={}",
-                                live.getId(), channelArn, eventName, detail.code());
+                                live.getId(), channelArn, eventName, code);
                 default ->
                         log.info("IVS EventBridge event received: liveId={}, channelArn={}, eventName={}",
                                 live.getId(), channelArn, eventName);
