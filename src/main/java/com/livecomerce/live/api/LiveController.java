@@ -52,7 +52,7 @@ class LiveController {
 
     @PostMapping("/api/lives/{id}/start")
     @PreAuthorize("hasRole('SELLER')")
-    ResponseEntity<LiveResponse> startLive(
+    ResponseEntity<LiveBroadcastResponse> startLive(
             @PathVariable UUID id,
             @Valid @RequestBody StartLiveRequest request,
             @AuthenticationPrincipal UserPrincipal principal) {
@@ -60,7 +60,7 @@ class LiveController {
         var live = startLiveUseCase.startLive(new StartLiveUseCase.StartLiveCommand(
                 id, principal.getUserId(), request.rtcUid()
         ));
-        return ResponseEntity.ok(LiveResponse.from(live));
+        return ResponseEntity.ok(LiveBroadcastResponse.from(live));
     }
 
     @PostMapping("/api/lives/{id}/end")

@@ -149,7 +149,25 @@ class LiveControllerTest {
                                 {"rtcUid": "user-123"}
                                 """))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.sellerId").value(SELLER_ID.toString()));
+                .andExpect(jsonPath("$.live.sellerId").value(SELLER_ID.toString()));
+    }
+
+    @Test
+    void startLive_returnsBroadcastCredentials() throws Exception {
+        var live = buildLive();
+        live.setStreamToken("agora-rtc-token");
+        live.setIvsChannel("channel-arn", "rtmps://ingest.example", "key-arn", "sk_secret_value", "https://playback.example");
+        when(startLiveUseCase.startLive(any())).thenReturn(live);
+
+        mvc.perform(post("/api/lives/{id}/start", LIVE_ID)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"rtcUid": "user-123"}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.streamToken").value("agora-rtc-token"))
+                .andExpect(jsonPath("$.ivsIngestEndpoint").value("rtmps://ingest.example"))
+                .andExpect(jsonPath("$.ivsStreamKeyValue").value("sk_secret_value"));
     }
 
     @Test
@@ -213,6 +231,21 @@ class LiveControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.sellerId").value(SELLER_ID.toString()))
                 .andExpect(jsonPath("$.status").value("SCHEDULED"));
+    }
+
+    @Test
+    void getLive_neverExposesBroadcastCredentials() throws Exception {
+        var live = buildLive();
+        live.setStreamToken("agora-rtc-token");
+        live.setIvsChannel("channel-arn", "rtmps://ingest.example", "key-arn", "sk_secret_value", "https://playback.example");
+        when(loadLivePort.loadById(any())).thenReturn(Optional.of(live));
+
+        mvc.perform(get("/api/lives/{id}", LIVE_ID))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.streamToken").doesNotExist())
+                .andExpect(jsonPath("$.ivsIngestEndpoint").doesNotExist())
+                .andExpect(jsonPath("$.ivsStreamKeyValue").doesNotExist())
+                .andExpect(jsonPath("$.ivsPlaybackUrl").value("https://playback.example"));
     }
 
     @Test

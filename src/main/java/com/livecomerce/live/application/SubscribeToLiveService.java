@@ -1,5 +1,6 @@
 package com.livecomerce.live.application;
 
+import com.livecomerce.live.ProfileCompletionPort;
 import com.livecomerce.live.application.port.in.SubscribeToLiveUseCase;
 import com.livecomerce.live.application.port.out.LoadLivePort;
 import com.livecomerce.live.application.port.out.LoadLiveSubscriptionPort;
@@ -8,6 +9,7 @@ import com.livecomerce.live.domain.LiveNotFoundException;
 import com.livecomerce.live.domain.LiveNotScheduledException;
 import com.livecomerce.live.domain.LiveStatus;
 import com.livecomerce.live.domain.LiveSubscription;
+import com.livecomerce.live.domain.ProfileIncompleteException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,6 +22,7 @@ public class SubscribeToLiveService implements SubscribeToLiveUseCase {
     private final LoadLivePort             loadLivePort;
     private final LoadLiveSubscriptionPort loadLiveSubscriptionPort;
     private final SaveLiveSubscriptionPort saveLiveSubscriptionPort;
+    private final ProfileCompletionPort    profileCompletionPort;
 
     @Override
     public void subscribe(SubscribeToLiveCommand command) {
@@ -28,6 +31,10 @@ public class SubscribeToLiveService implements SubscribeToLiveUseCase {
 
         if (live.getStatus() != LiveStatus.SCHEDULED) {
             throw new LiveNotScheduledException(command.liveId());
+        }
+
+        if (!profileCompletionPort.isProfileComplete(command.buyerId())) {
+            throw new ProfileIncompleteException(command.buyerId());
         }
 
         if (loadLiveSubscriptionPort.existsByLiveIdAndBuyerId(command.liveId(), command.buyerId())) {

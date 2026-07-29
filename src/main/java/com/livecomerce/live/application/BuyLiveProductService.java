@@ -1,6 +1,7 @@
 package com.livecomerce.live.application;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.livecomerce.live.ProfileCompletionPort;
 import com.livecomerce.live.application.port.in.BuyLiveProductUseCase;
 import com.livecomerce.live.application.port.out.AgoraRtmMessagePort;
 import com.livecomerce.live.application.port.out.AtomicLiveProductStockPort;
@@ -32,6 +33,7 @@ public class BuyLiveProductService implements BuyLiveProductUseCase {
     private final LivePurchasePort           livePurchasePort;
     private final AgoraRtmMessagePort        agoraRtmMessagePort;
     private final ObjectMapper               objectMapper;
+    private final ProfileCompletionPort      profileCompletionPort;
 
     @Override
     public Order buyLiveProduct(BuyLiveProductCommand command) {
@@ -43,6 +45,10 @@ public class BuyLiveProductService implements BuyLiveProductUseCase {
         if (live.getStatus() != LiveStatus.LIVE) {
             throw new IllegalStateException(
                     "Cannot buy product: live session is not LIVE, status=" + live.getStatus());
+        }
+
+        if (!profileCompletionPort.isProfileComplete(command.buyerId())) {
+            throw new ProfileIncompleteException(command.buyerId());
         }
 
         var updated = atomicStockPort.atomicIncrementStockSold(lp.getId(), command.quantity());

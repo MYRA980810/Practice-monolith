@@ -1,5 +1,6 @@
 package com.livecomerce.live.application;
 
+import com.livecomerce.live.ProfileCompletionPort;
 import com.livecomerce.live.application.port.in.SubscribeToLiveUseCase.SubscribeToLiveCommand;
 import com.livecomerce.live.application.port.out.LoadLivePort;
 import com.livecomerce.live.application.port.out.LoadLiveSubscriptionPort;
@@ -9,6 +10,8 @@ import com.livecomerce.live.domain.LiveContext;
 import com.livecomerce.live.domain.LiveNotFoundException;
 import com.livecomerce.live.domain.LiveNotScheduledException;
 import com.livecomerce.live.domain.LiveSubscription;
+import com.livecomerce.live.domain.ProfileIncompleteException;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -28,10 +31,16 @@ class SubscribeToLiveServiceTest {
     @Mock LoadLivePort             loadLivePort;
     @Mock LoadLiveSubscriptionPort loadLiveSubscriptionPort;
     @Mock SaveLiveSubscriptionPort saveLiveSubscriptionPort;
+    @Mock ProfileCompletionPort    profileCompletionPort;
     @InjectMocks SubscribeToLiveService sut;
 
     private static final UUID SELLER_ID = UUID.randomUUID();
     private static final UUID BUYER_ID  = UUID.randomUUID();
+
+    @BeforeEach
+    void setUp() {
+        lenient().when(profileCompletionPort.isProfileComplete(any())).thenReturn(true);
+    }
 
     private static Live scheduledLive() {
         return Live.create(SELLER_ID, null, LiveContext.SELLER_PROFILE, "Live", null, null, 60);
@@ -106,5 +115,17 @@ class SubscribeToLiveServiceTest {
         sut.subscribe(new SubscribeToLiveCommand(live.getId(), anyUserId));
 
         verify(saveLiveSubscriptionPort).save(any(LiveSubscription.class));
+    }
+
+    @Test
+    void subscribe_withIncompleteProfile_throwsProfileIncompleteException() {
+        var live = scheduledLive();
+        when(loadLivePort.loadById(live.getId())).thenReturn(Optional.of(live));
+        when(profileCompletionPort.isProfileComplete(BUYER_ID)).thenReturn(false);
+
+        assertThatThrownBy(() -> sut.subscribe(new SubscribeToLiveCommand(live.getId(), BUYER_ID)))
+                .isInstanceOf(ProfileIncompleteException.class);
+
+        verify(saveLiveSubscriptionPort, never()).save(any());
     }
 }

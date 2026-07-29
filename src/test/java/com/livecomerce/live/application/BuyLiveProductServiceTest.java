@@ -1,6 +1,7 @@
 package com.livecomerce.live.application;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.livecomerce.live.ProfileCompletionPort;
 import com.livecomerce.live.application.port.in.BuyLiveProductUseCase.BuyLiveProductCommand;
 import com.livecomerce.live.application.port.out.AgoraRtmMessagePort;
 import com.livecomerce.live.application.port.out.AtomicLiveProductStockPort;
@@ -11,6 +12,7 @@ import com.livecomerce.order.LivePurchasePort;
 import com.livecomerce.order.LivePurchasePort.LivePurchaseCommand;
 import com.livecomerce.order.domain.Order;
 import com.livecomerce.order.domain.OrderItemType;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -25,6 +27,7 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
@@ -38,6 +41,7 @@ class BuyLiveProductServiceTest {
     @Mock AtomicLiveProductStockPort atomicStockPort;
     @Mock AgoraRtmMessagePort        agoraRtmMessagePort;
     @Spy  ObjectMapper               objectMapper = new ObjectMapper();
+    @Mock ProfileCompletionPort      profileCompletionPort;
     @InjectMocks BuyLiveProductService sut;
 
     private static final UUID SELLER_ID  = UUID.randomUUID();
@@ -45,6 +49,11 @@ class BuyLiveProductServiceTest {
     private static final UUID BUYER_ID   = UUID.randomUUID();
     private static final UUID PRODUCT_ID = UUID.randomUUID();
     private static final UUID VARIANT_ID = UUID.randomUUID();
+
+    @BeforeEach
+    void setUp() {
+        lenient().when(profileCompletionPort.isProfileComplete(any())).thenReturn(true);
+    }
 
     private Live startedLive() {
         var live = Live.create(SELLER_ID, STORE_ID, LiveContext.STORE, "Live", null, null, 60);
@@ -159,5 +168,21 @@ class BuyLiveProductServiceTest {
         var result = sut.buyLiveProduct(cmd);
 
         assertThat(result).isEqualTo(mockOrder);
+    }
+
+    @Test
+    void buyLiveProduct_withIncompleteProfile_throwsProfileIncompleteException() {
+        var live = startedLive();
+        var lp = LiveProduct.forCatalogProduct(live, PRODUCT_ID, VARIANT_ID, "Shirt", new BigDecimal("99"), "MXN", 10);
+
+        when(loadLiveProductPort.loadById(lp.getId())).thenReturn(Optional.of(lp));
+        when(loadLivePort.loadById(live.getId())).thenReturn(Optional.of(live));
+        when(profileCompletionPort.isProfileComplete(BUYER_ID)).thenReturn(false);
+
+        var cmd = new BuyLiveProductCommand(live.getId(), lp.getId(), BUYER_ID, 1);
+
+        assertThatThrownBy(() -> sut.buyLiveProduct(cmd))
+                .isInstanceOf(ProfileIncompleteException.class);
+        verify(atomicStockPort, never()).atomicIncrementStockSold(any(), anyInt());
     }
 }

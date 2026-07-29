@@ -1,6 +1,7 @@
 package com.livecomerce.live.application;
 
 import com.livecomerce.live.LiveStartedEvent;
+import com.livecomerce.live.ProfileCompletionPort;
 import com.livecomerce.live.application.port.in.StartLiveUseCase;
 import com.livecomerce.live.application.port.out.AgoraTokenPort;
 import com.livecomerce.live.application.port.out.LoadLivePort;
@@ -11,6 +12,7 @@ import com.livecomerce.live.application.port.out.VideoBroadcastPort;
 import com.livecomerce.live.domain.Live;
 import com.livecomerce.live.domain.LiveNotFoundException;
 import com.livecomerce.live.domain.LiveNotOwnedBySellerException;
+import com.livecomerce.live.domain.ProfileIncompleteException;
 import com.livecomerce.live.domain.VideoProviderUnavailableException;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
@@ -36,6 +38,7 @@ public class StartLiveService implements StartLiveUseCase {
     private final LoadLiveSubscriptionPort  loadLiveSubscriptionPort;
     private final SaveLiveSubscriptionPort  saveLiveSubscriptionPort;
     private final ApplicationEventPublisher eventPublisher;
+    private final ProfileCompletionPort     profileCompletionPort;
 
     @Value("${live.video-provider:agora}")
     private String videoProvider;
@@ -46,6 +49,10 @@ public class StartLiveService implements StartLiveUseCase {
                 .orElseThrow(() -> new LiveNotFoundException(command.liveId()));
 
         verifySeller(live, command.sellerId());
+
+        if (!profileCompletionPort.isProfileComplete(command.sellerId())) {
+            throw new ProfileIncompleteException(command.sellerId());
+        }
 
         live.start();
 

@@ -1,6 +1,7 @@
 package com.livecomerce.live.application;
 
 import com.livecomerce.live.LiveStartedEvent;
+import com.livecomerce.live.ProfileCompletionPort;
 import com.livecomerce.live.application.port.in.StartLiveUseCase.StartLiveCommand;
 import com.livecomerce.live.application.port.out.AgoraTokenPort;
 import com.livecomerce.live.application.port.out.LoadLivePort;
@@ -10,6 +11,7 @@ import com.livecomerce.live.application.port.out.SaveLiveSubscriptionPort;
 import com.livecomerce.live.application.port.out.VideoBroadcastPort;
 import com.livecomerce.live.application.port.out.VideoBroadcastPort.ChannelHandle;
 import com.livecomerce.live.domain.*;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -39,10 +41,16 @@ class StartLiveServiceTest {
     @Mock LoadLiveSubscriptionPort    loadLiveSubscriptionPort;
     @Mock SaveLiveSubscriptionPort    saveLiveSubscriptionPort;
     @Mock ApplicationEventPublisher   eventPublisher;
+    @Mock ProfileCompletionPort       profileCompletionPort;
     @InjectMocks StartLiveService sut;
 
     private static final UUID SELLER_ID = UUID.randomUUID();
     private static final UUID STORE_ID  = UUID.randomUUID();
+
+    @BeforeEach
+    void setUp() {
+        lenient().when(profileCompletionPort.isProfileComplete(any())).thenReturn(true);
+    }
 
     private Live scheduledLive() {
         return Live.create(SELLER_ID, STORE_ID, LiveContext.STORE, "My Live", null, null, 60);
@@ -178,5 +186,18 @@ class StartLiveServiceTest {
         verify(eventPublisher).publishEvent(captor.capture());
         assertThat(captor.getValue().subscriberIds()).isEmpty();
         verify(saveLiveSubscriptionPort).deleteAllByLiveId(live.getId());
+    }
+
+    @Test
+    void startLive_withIncompleteProfile_throwsProfileIncompleteException() {
+        var live = scheduledLive();
+        when(loadLivePort.loadById(live.getId())).thenReturn(Optional.of(live));
+        when(profileCompletionPort.isProfileComplete(SELLER_ID)).thenReturn(false);
+
+        var cmd = new StartLiveCommand(live.getId(), SELLER_ID, "uid-42");
+
+        assertThatThrownBy(() -> sut.startLive(cmd))
+                .isInstanceOf(ProfileIncompleteException.class);
+        verify(saveLivePort, never()).save(any());
     }
 }
