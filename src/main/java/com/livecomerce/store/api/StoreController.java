@@ -90,18 +90,11 @@ class StoreController {
             @Valid @RequestBody UpdateStoreRequest request,
             @AuthenticationPrincipal UserPrincipal principal) {
 
-        var shippingAddress = request.shippingStreet() != null
-                ? new UpdateStoreUseCase.ShippingAddressData(
-                        request.shippingStreet(), request.shippingExtNumber(), request.shippingIntNumber(),
-                        request.shippingNeighborhood(), request.shippingCity(), request.shippingState(),
-                        request.shippingZipCode(), request.shippingCountry())
-                : null;
         var store = updateStoreUseCase.update(new UpdateStoreUseCase.UpdateStoreCommand(
                 principal.getUserId(),
                 request.name(),
                 request.description(),
-                request.logoUrl(),
-                shippingAddress
+                request.logoUrl()
         ));
         return ResponseEntity.ok(StoreResponse.from(store));
     }

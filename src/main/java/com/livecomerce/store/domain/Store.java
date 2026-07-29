@@ -62,27 +62,43 @@ public class Store implements Persistable<UUID> {
     @Column(name = "updated_at", nullable = false)
     private OffsetDateTime updatedAt;
 
+    /** @deprecated superseded by {@code SellerAddress} (keyed by userId, not by store). */
+    @Deprecated
     @Column(name = "shipping_street", length = 255)
     private String shippingStreet;
 
+    /** @deprecated superseded by {@code SellerAddress} (keyed by userId, not by store). */
+    @Deprecated
     @Column(name = "shipping_ext_number", length = 20)
     private String shippingExtNumber;
 
+    /** @deprecated superseded by {@code SellerAddress} (keyed by userId, not by store). */
+    @Deprecated
     @Column(name = "shipping_int_number", length = 20)
     private String shippingIntNumber;
 
+    /** @deprecated superseded by {@code SellerAddress} (keyed by userId, not by store). */
+    @Deprecated
     @Column(name = "shipping_neighborhood", length = 100)
     private String shippingNeighborhood;
 
+    /** @deprecated superseded by {@code SellerAddress} (keyed by userId, not by store). */
+    @Deprecated
     @Column(name = "shipping_city", length = 100)
     private String shippingCity;
 
+    /** @deprecated superseded by {@code SellerAddress} (keyed by userId, not by store). */
+    @Deprecated
     @Column(name = "shipping_state", length = 100)
     private String shippingState;
 
+    /** @deprecated superseded by {@code SellerAddress} (keyed by userId, not by store). */
+    @Deprecated
     @Column(name = "shipping_zip_code", length = 10)
     private String shippingZipCode;
 
+    /** @deprecated superseded by {@code SellerAddress} (keyed by userId, not by store). */
+    @Deprecated
     @Column(name = "shipping_country", length = 3)
     private String shippingCountry;
 
@@ -124,6 +140,8 @@ public class Store implements Persistable<UUID> {
         this.updatedAt   = OffsetDateTime.now();
     }
 
+    /** @deprecated superseded by {@code SellerAddress} (keyed by userId, not by store). */
+    @Deprecated
     public void updateShippingAddress(String street, String extNumber, String intNumber,
             String neighborhood, String city, String state, String zipCode, String country) {
         this.shippingStreet       = street;

@@ -15,29 +15,5 @@ public record UpdateStoreRequest(
 
         @URL
         @Size(max = 500)
-        String logoUrl,
-
-        @Size(max = 255)
-        String shippingStreet,
-
-        @Size(max = 20)
-        String shippingExtNumber,
-
-        @Size(max = 20)
-        String shippingIntNumber,
-
-        @Size(max = 100)
-        String shippingNeighborhood,
-
-        @Size(max = 100)
-        String shippingCity,
-
-        @Size(max = 100)
-        String shippingState,
-
-        @Size(max = 10)
-        String shippingZipCode,
-
-        @Size(max = 3)
-        String shippingCountry
+        String logoUrl
 ) {}

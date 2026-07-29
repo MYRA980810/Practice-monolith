@@ -9,6 +9,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 
 import java.util.UUID;
 
@@ -20,6 +21,7 @@ import static org.mockito.Mockito.*;
 class AddBuyerAddressServiceTest {
 
     @Mock BuyerAddressPort buyerAddressPort;
+    @Mock ApplicationEventPublisher eventPublisher;
     @InjectMocks AddBuyerAddressService sut;
 
     private static final UUID USER_ID = UUID.randomUUID();

@@ -19,4 +19,6 @@ public interface BuyerAddressPort {
     void clearDefaultForUser(UUID userId);
 
     void deleteById(UUID id);
+
+    int countByUserId(UUID userId);
 }
