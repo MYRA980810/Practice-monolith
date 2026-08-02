@@ -30,8 +30,10 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -97,6 +99,29 @@ class BuyerPaymentMethodControllerTest {
         mvc.perform(post("/api/buyer/payment-methods/setup-intent"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.clientSecret").value("seti_123_secret_abc"));
+
+        verify(createSetupIntentUseCase).createSetupIntent(
+                argThat(cmd -> "buyer@test.com".equals(cmd.email())));
+    }
+
+    @Test
+    void createSetupIntent_whenBuyerHasNoEmail_doesNotSendPhoneAsEmail() throws Exception {
+        var phoneOnlyPrincipal = new UserPrincipal(
+                USER_ID, "+15551234567", null, "hash",
+                List.of(new SimpleGrantedAuthority("ROLE_BUYER")), true
+        );
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken(phoneOnlyPrincipal, null, phoneOnlyPrincipal.getAuthorities())
+        );
+
+        when(createSetupIntentUseCase.createSetupIntent(any()))
+                .thenReturn(new CreateSetupIntentUseCase.SetupIntentResult("seti_456_secret_def"));
+
+        mvc.perform(post("/api/buyer/payment-methods/setup-intent"))
+                .andExpect(status().isOk());
+
+        verify(createSetupIntentUseCase).createSetupIntent(
+                argThat(cmd -> cmd.email() == null));
     }
 
     // --- GET /api/buyer/payment-methods ---

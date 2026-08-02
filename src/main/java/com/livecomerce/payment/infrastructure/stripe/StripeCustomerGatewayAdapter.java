@@ -26,9 +26,13 @@ class StripeCustomerGatewayAdapter implements StripeCustomerGatewayPort {
     @Override
     public String createCustomer(String email) {
         try {
-            var params = CustomerCreateParams.builder()
-                    .setEmail(email)
-                    .build();
+            var paramsBuilder = CustomerCreateParams.builder();
+
+            if (email != null) {
+                paramsBuilder.setEmail(email);
+            }
+
+            var params = paramsBuilder.build();
 
             var customer = Customer.create(params);
 

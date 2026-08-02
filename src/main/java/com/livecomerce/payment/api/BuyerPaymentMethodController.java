@@ -35,7 +35,7 @@ class BuyerPaymentMethodController {
             @AuthenticationPrincipal UserPrincipal principal) {
 
         var result = createSetupIntentUseCase.createSetupIntent(
-                new CreateSetupIntentCommand(principal.getUserId(), principal.getContact()));
+                new CreateSetupIntentCommand(principal.getUserId(), principal.getEmail()));
         return ResponseEntity.ok(new SetupIntentResponse(result.clientSecret()));
     }
 
