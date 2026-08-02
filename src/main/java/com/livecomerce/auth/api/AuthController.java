@@ -4,11 +4,14 @@ import com.livecomerce.auth.application.port.in.AuthenticateUserUseCase;
 import com.livecomerce.auth.application.port.in.CompleteOAuthRegistrationUseCase;
 import com.livecomerce.auth.application.port.in.ExchangeOAuthCodeUseCase;
 import com.livecomerce.auth.application.port.in.ForgotPasswordUseCase;
+import com.livecomerce.auth.application.port.in.GetCurrentUserUseCase;
 import com.livecomerce.auth.application.port.in.LogoutUseCase;
 import com.livecomerce.auth.application.port.in.RefreshAccessTokenUseCase;
 import com.livecomerce.auth.application.port.in.RegisterUserUseCase;
 import com.livecomerce.auth.application.port.in.ResendOtpUseCase;
 import com.livecomerce.auth.application.port.in.ResetPasswordUseCase;
+import com.livecomerce.auth.application.port.in.UpdateUserAliasUseCase;
+import com.livecomerce.auth.application.port.in.UpdateUserAliasUseCase.UpdateUserAliasCommand;
 import com.livecomerce.auth.application.port.in.UpdateUserAvatarUseCase;
 import com.livecomerce.auth.application.port.in.UpdateUserAvatarUseCase.UpdateUserAvatarCommand;
 import com.livecomerce.auth.application.port.in.VerifyOtpUseCase;
@@ -23,6 +26,7 @@ import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.CookieValue;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -48,8 +52,10 @@ class AuthController {
     private final ResetPasswordUseCase resetPasswordUseCase;
     private final ExchangeOAuthCodeUseCase exchangeOAuthCodeUseCase;
     private final UpdateUserAvatarUseCase updateUserAvatarUseCase;
+    private final UpdateUserAliasUseCase updateUserAliasUseCase;
     private final RefreshAccessTokenUseCase refreshAccessTokenUseCase;
     private final LogoutUseCase logoutUseCase;
+    private final GetCurrentUserUseCase getCurrentUserUseCase;
 
     @Value("${jwt.refresh-expiration-ms:2592000000}")
     private long refreshExpirationMs;
@@ -138,6 +144,21 @@ class AuthController {
         var avatarUrl = updateUserAvatarUseCase.updateAvatar(
                 new UpdateUserAvatarCommand(principal.getUserId(), request.avatarUrl()));
         return ResponseEntity.ok(new UpdateAvatarResponse(avatarUrl));
+    }
+
+    @PatchMapping("/me/alias")
+    ResponseEntity<UpdateAliasResponse> updateAlias(
+            @Valid @RequestBody UpdateAliasRequest request,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        var alias = updateUserAliasUseCase.updateAlias(
+                new UpdateUserAliasCommand(principal.getUserId(), request.alias()));
+        return ResponseEntity.ok(new UpdateAliasResponse(alias));
+    }
+
+    @GetMapping("/me")
+    ResponseEntity<UserProfileResponse> getCurrentUser(@AuthenticationPrincipal UserPrincipal principal) {
+        var profile = getCurrentUserUseCase.getCurrentUser(principal.getUserId());
+        return ResponseEntity.ok(UserProfileResponse.from(profile));
     }
 
     @PostMapping("/refresh")

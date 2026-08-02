@@ -74,4 +74,15 @@ class UserTest {
 
         assertThat(user.isProfileComplete()).isTrue();
     }
+
+    @Test
+    void updateAlias_setsAliasAndUpdatesTimestamp() {
+        var user = buildUser();
+        var previousUpdatedAt = user.getUpdatedAt();
+
+        user.updateAlias("jane-doe");
+
+        assertThat(user.getAlias()).isEqualTo("jane-doe");
+        assertThat(user.getUpdatedAt()).isAfterOrEqualTo(previousUpdatedAt);
+    }
 }

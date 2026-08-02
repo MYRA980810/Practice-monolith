@@ -36,6 +36,11 @@ class UserPersistenceAdapter implements LoadUserPort, SaveUserPort {
     }
 
     @Override
+    public Optional<User> loadByAlias(String alias) {
+        return repository.findByAlias(alias);
+    }
+
+    @Override
     public User save(User user) {
         return repository.save(user);
     }

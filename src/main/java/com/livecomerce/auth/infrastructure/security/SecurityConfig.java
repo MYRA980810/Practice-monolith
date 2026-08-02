@@ -56,6 +56,7 @@ class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/products", "/api/products/{id}").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/categories").permitAll()
                         .requestMatchers("/api/billing/webhook/**").permitAll()
+                        .requestMatchers("/api/payment/webhook").permitAll()
                         .requestMatchers("/api/webhooks/agora/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/lives/*/heartbeat").permitAll()
                         .anyRequest().authenticated()

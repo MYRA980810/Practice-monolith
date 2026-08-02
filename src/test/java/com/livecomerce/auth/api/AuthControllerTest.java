@@ -1,5 +1,6 @@
 package com.livecomerce.auth.api;
 
+import com.livecomerce.auth.application.AliasAlreadyTakenException;
 import com.livecomerce.auth.application.EmailAlreadyTakenException;
 import com.livecomerce.auth.application.InvalidCredentialsException;
 import com.livecomerce.auth.application.OAuthCodeInvalidException;
@@ -9,19 +10,25 @@ import com.livecomerce.auth.application.port.in.AuthResult;
 import com.livecomerce.auth.application.port.in.AuthenticateUserUseCase;
 import com.livecomerce.auth.application.port.in.ExchangeOAuthCodeUseCase;
 import com.livecomerce.auth.application.port.in.ForgotPasswordUseCase;
+import com.livecomerce.auth.application.port.in.GetCurrentUserUseCase;
 import com.livecomerce.auth.application.port.in.LogoutUseCase;
 import com.livecomerce.auth.application.port.in.PendingVerificationResult;
 import com.livecomerce.auth.application.port.in.RefreshAccessTokenUseCase;
 import com.livecomerce.auth.application.port.in.RegisterUserUseCase;
+import com.livecomerce.auth.application.port.in.UserProfileResult;
 import com.livecomerce.auth.application.port.in.CompleteOAuthRegistrationUseCase;
 import com.livecomerce.auth.application.port.in.ResetPasswordUseCase;
 import com.livecomerce.auth.application.port.in.ResetTokenResult;
 import com.livecomerce.auth.application.port.in.ResendOtpUseCase;
+import com.livecomerce.auth.application.port.in.UpdateUserAliasUseCase;
 import com.livecomerce.auth.application.port.in.VerifyOtpUseCase;
 import com.livecomerce.auth.application.port.in.VerifyResetCodeUseCase;
 import com.livecomerce.auth.domain.Role;
 import com.livecomerce.auth.domain.VerificationChannel;
+import com.livecomerce.shared.UserPrincipal;
 import jakarta.servlet.http.Cookie;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration;
@@ -29,16 +36,27 @@ import org.springframework.boot.autoconfigure.security.oauth2.client.OAuth2Clien
 import org.springframework.boot.autoconfigure.security.oauth2.client.servlet.OAuth2ClientWebSecurityAutoConfiguration;
 import org.springframework.boot.autoconfigure.security.servlet.SecurityFilterAutoConfiguration;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.web.method.annotation.AuthenticationPrincipalArgumentResolver;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.web.method.support.HandlerMethodArgumentResolver;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
+import java.util.List;
 import java.util.UUID;
 
 import static org.hamcrest.Matchers.containsString;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.cookie;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
@@ -49,7 +67,16 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         controllers = AuthController.class,
         excludeAutoConfiguration = {SecurityAutoConfiguration.class, SecurityFilterAutoConfiguration.class, OAuth2ClientAutoConfiguration.class, OAuth2ClientWebSecurityAutoConfiguration.class}
 )
+@Import(AuthControllerTest.SecurityResolverConfig.class)
 class AuthControllerTest {
+
+    @TestConfiguration
+    static class SecurityResolverConfig implements WebMvcConfigurer {
+        @Override
+        public void addArgumentResolvers(List<HandlerMethodArgumentResolver> resolvers) {
+            resolvers.add(new AuthenticationPrincipalArgumentResolver());
+        }
+    }
 
     @Autowired MockMvc mvc;
 
@@ -63,8 +90,10 @@ class AuthControllerTest {
     @MockitoBean ResetPasswordUseCase resetPasswordUseCase;
     @MockitoBean ExchangeOAuthCodeUseCase exchangeOAuthCodeUseCase;
     @MockitoBean com.livecomerce.auth.application.port.in.UpdateUserAvatarUseCase updateUserAvatarUseCase;
+    @MockitoBean UpdateUserAliasUseCase updateUserAliasUseCase;
     @MockitoBean RefreshAccessTokenUseCase refreshAccessTokenUseCase;
     @MockitoBean LogoutUseCase logoutUseCase;
+    @MockitoBean GetCurrentUserUseCase getCurrentUserUseCase;
 
     private static final UUID USER_ID = UUID.randomUUID();
 
@@ -74,6 +103,22 @@ class AuthControllerTest {
 
     private static final PendingVerificationResult PENDING_RESULT =
             new PendingVerificationResult("pending-jwt", VerificationChannel.EMAIL);
+
+    @BeforeEach
+    void setUpPrincipal() {
+        var principal = new UserPrincipal(
+                USER_ID, "seller@test.com", "hash",
+                List.of(new SimpleGrantedAuthority("ROLE_SELLER")), true
+        );
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken(principal, null, principal.getAuthorities())
+        );
+    }
+
+    @AfterEach
+    void clearContext() {
+        SecurityContextHolder.clearContext();
+    }
 
     // --- LOGIN ---
 
@@ -453,5 +498,87 @@ class AuthControllerTest {
         mvc.perform(post("/api/auth/logout")
                         .cookie(new Cookie("refresh_token", "raw-refresh-token")))
                 .andExpect(status().isForbidden());
+    }
+
+    // --- PATCH /me/alias ---
+
+    @Test
+    void updateAlias_withValidAlias_returns200() throws Exception {
+        when(updateUserAliasUseCase.updateAlias(any())).thenReturn("jane-doe");
+
+        mvc.perform(patch("/api/auth/me/alias")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"alias":"jane-doe"}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.alias").value("jane-doe"));
+    }
+
+    @Test
+    void updateAlias_withBlankAlias_returns400() throws Exception {
+        mvc.perform(patch("/api/auth/me/alias")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"alias":""}
+                                """))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void updateAlias_withUppercaseAlias_returns400() throws Exception {
+        mvc.perform(patch("/api/auth/me/alias")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"alias":"Jane-Doe"}
+                                """))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void updateAlias_withInvalidCharacters_returns400() throws Exception {
+        mvc.perform(patch("/api/auth/me/alias")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"alias":"jane_doe!"}
+                                """))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void updateAlias_whenAliasAlreadyTaken_returns409ProblemDetail() throws Exception {
+        when(updateUserAliasUseCase.updateAlias(any()))
+                .thenThrow(new AliasAlreadyTakenException("jane-doe"));
+
+        mvc.perform(patch("/api/auth/me/alias")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"alias":"jane-doe"}
+                                """))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.status").value(409))
+                .andExpect(jsonPath("$.type").value("https://livecomerce.com/errors/alias-already-taken"));
+    }
+
+    // --- GET /me ---
+
+    @Test
+    void getCurrentUser_returns200WithProfile() throws Exception {
+        var profile = new UserProfileResult(
+                USER_ID, "seller@test.com", null, Role.SELLER,
+                "Jane", "Doe", "jane-doe", "https://res.cloudinary.com/test/avatar.jpg", true
+        );
+        when(getCurrentUserUseCase.getCurrentUser(any())).thenReturn(profile);
+
+        mvc.perform(get("/api/auth/me"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(USER_ID.toString()))
+                .andExpect(jsonPath("$.email").value("seller@test.com"))
+                .andExpect(jsonPath("$.role").value("SELLER"))
+                .andExpect(jsonPath("$.firstName").value("Jane"))
+                .andExpect(jsonPath("$.lastName").value("Doe"))
+                .andExpect(jsonPath("$.alias").value("jane-doe"))
+                .andExpect(jsonPath("$.avatarUrl").value("https://res.cloudinary.com/test/avatar.jpg"))
+                .andExpect(jsonPath("$.profileComplete").value(true));
     }
 }

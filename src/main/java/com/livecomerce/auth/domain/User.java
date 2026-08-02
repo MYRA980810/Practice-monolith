@@ -36,6 +36,9 @@ public class User implements Persistable<UUID> {
     @Column(name = "avatar_url", length = 512)
     private String avatarUrl;
 
+    @Column(length = 30, unique = true)
+    private String alias;
+
     @Column(name = "first_name", nullable = false, length = 100)
     private String firstName;
 
@@ -156,6 +159,11 @@ public class User implements Persistable<UUID> {
 
     public void updateAvatar(String avatarUrl) {
         this.avatarUrl = avatarUrl;
+        this.updatedAt = OffsetDateTime.now();
+    }
+
+    public void updateAlias(String alias) {
+        this.alias = alias;
         this.updatedAt = OffsetDateTime.now();
     }
 

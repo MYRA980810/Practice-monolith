@@ -10,4 +10,5 @@ public interface LoadUserPort {
     Optional<User> loadByPhone(String phone);
     Optional<User> loadById(UUID id);
     Optional<User> loadByProvider(String provider, String providerId);
+    Optional<User> loadByAlias(String alias);
 }
