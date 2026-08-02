@@ -32,6 +32,7 @@ class UserDetailsAdapter implements UserDetailsService {
                     return new UserPrincipal(
                             user.getId(),
                             contact,
+                            user.getEmail(),
                             user.getPasswordHash(),
                             List.of(new SimpleGrantedAuthority("ROLE_" + user.getRole().name())),
                             user.isActive()

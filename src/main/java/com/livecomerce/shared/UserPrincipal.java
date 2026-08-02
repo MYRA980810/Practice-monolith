@@ -11,17 +11,24 @@ public class UserPrincipal implements UserDetails {
 
     private final UUID userId;
     private final String contact;
+    private final String email;
     private final String passwordHash;
     private final List<GrantedAuthority> authorities;
     private final boolean active;
 
-    public UserPrincipal(UUID userId, String contact, String passwordHash,
+    public UserPrincipal(UUID userId, String contact, String email, String passwordHash,
                          List<GrantedAuthority> authorities, boolean active) {
         this.userId       = userId;
         this.contact      = contact;
+        this.email        = email;
         this.passwordHash = passwordHash;
         this.authorities  = authorities;
         this.active       = active;
+    }
+
+    public UserPrincipal(UUID userId, String contact, String passwordHash,
+                         List<GrantedAuthority> authorities, boolean active) {
+        this(userId, contact, contact, passwordHash, authorities, active);
     }
 
     public UUID getUserId() {
@@ -30,6 +37,10 @@ public class UserPrincipal implements UserDetails {
 
     public String getContact() {
         return contact;
+    }
+
+    public String getEmail() {
+        return email;
     }
 
     @Override public String getUsername()                                      { return userId.toString(); }
