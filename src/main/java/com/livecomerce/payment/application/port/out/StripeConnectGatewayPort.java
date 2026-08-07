@@ -24,6 +24,8 @@ public interface StripeConnectGatewayPort {
 
     String createAccountLink(String stripeAccountId, String refreshUrl, String returnUrl);
 
+    String createAccountOnboardingSession(String stripeAccountId);
+
     AccountStatus retrieveAccountStatus(String stripeAccountId);
 
     record BalanceAmount(long amount, String currency) {

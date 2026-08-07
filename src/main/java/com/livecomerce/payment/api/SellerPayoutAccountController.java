@@ -2,6 +2,7 @@ package com.livecomerce.payment.api;
 
 import com.livecomerce.payment.application.port.in.CreateConnectOnboardingLinkUseCase;
 import com.livecomerce.payment.application.port.in.CreateConnectOnboardingLinkUseCase.CreateOnboardingLinkCommand;
+import com.livecomerce.payment.application.port.in.CreateEmbeddedOnboardingSessionUseCase;
 import com.livecomerce.payment.application.port.in.GetSellerPayoutAccountDetailsUseCase;
 import com.livecomerce.payment.application.port.in.GetSellerPayoutStatusUseCase;
 import com.livecomerce.payment.application.port.in.ListSellerPayoutsUseCase;
@@ -24,6 +25,7 @@ class SellerPayoutAccountController {
 
     private final GetSellerPayoutStatusUseCase getSellerPayoutStatusUseCase;
     private final CreateConnectOnboardingLinkUseCase createConnectOnboardingLinkUseCase;
+    private final CreateEmbeddedOnboardingSessionUseCase createEmbeddedOnboardingSessionUseCase;
     private final GetSellerPayoutAccountDetailsUseCase getSellerPayoutAccountDetailsUseCase;
     private final ListSellerPayoutsUseCase listSellerPayoutsUseCase;
 
@@ -34,6 +36,16 @@ class SellerPayoutAccountController {
         var result = createConnectOnboardingLinkUseCase.createOnboardingLink(
                 new CreateOnboardingLinkCommand(principal.getUserId(), principal.getEmail()));
         return ResponseEntity.ok(new OnboardingLinkResponse(result.url()));
+    }
+
+    @PostMapping("/embedded-onboarding-session")
+    ResponseEntity<EmbeddedOnboardingSessionResponse> createEmbeddedOnboardingSession(
+            @AuthenticationPrincipal UserPrincipal principal) {
+
+        var result = createEmbeddedOnboardingSessionUseCase.createEmbeddedOnboardingSession(
+                new CreateEmbeddedOnboardingSessionUseCase.CreateEmbeddedOnboardingSessionCommand(
+                        principal.getUserId(), principal.getEmail()));
+        return ResponseEntity.ok(new EmbeddedOnboardingSessionResponse(result.clientSecret()));
     }
 
     @GetMapping("/status")

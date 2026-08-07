@@ -1,6 +1,7 @@
 package com.livecomerce.payment.api;
 
 import com.livecomerce.payment.application.port.in.CreateConnectOnboardingLinkUseCase;
+import com.livecomerce.payment.application.port.in.CreateEmbeddedOnboardingSessionUseCase;
 import com.livecomerce.payment.application.port.in.GetSellerPayoutAccountDetailsUseCase;
 import com.livecomerce.payment.application.port.in.GetSellerPayoutStatusUseCase;
 import com.livecomerce.payment.application.port.in.ListSellerPayoutsUseCase;
@@ -61,6 +62,7 @@ class SellerPayoutAccountControllerTest {
 
     @MockitoBean GetSellerPayoutStatusUseCase getSellerPayoutStatusUseCase;
     @MockitoBean CreateConnectOnboardingLinkUseCase createConnectOnboardingLinkUseCase;
+    @MockitoBean CreateEmbeddedOnboardingSessionUseCase createEmbeddedOnboardingSessionUseCase;
     @MockitoBean GetSellerPayoutAccountDetailsUseCase getSellerPayoutAccountDetailsUseCase;
     @MockitoBean ListSellerPayoutsUseCase listSellerPayoutsUseCase;
 
@@ -116,6 +118,43 @@ class SellerPayoutAccountControllerTest {
                 .andExpect(status().isOk());
 
         verify(createConnectOnboardingLinkUseCase).createOnboardingLink(
+                argThat(cmd -> cmd.email() == null));
+    }
+
+    // --- POST /api/seller/payout-account/embedded-onboarding-session ---
+
+    @Test
+    void createEmbeddedOnboardingSession_returns200WithClientSecret() throws Exception {
+        when(createEmbeddedOnboardingSessionUseCase.createEmbeddedOnboardingSession(any()))
+                .thenReturn(new CreateEmbeddedOnboardingSessionUseCase.EmbeddedOnboardingSessionResult(
+                        "accs_test_123_secret_abc"));
+
+        mvc.perform(post("/api/seller/payout-account/embedded-onboarding-session"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.clientSecret").value("accs_test_123_secret_abc"));
+
+        verify(createEmbeddedOnboardingSessionUseCase).createEmbeddedOnboardingSession(
+                argThat(cmd -> "seller@test.com".equals(cmd.email())));
+    }
+
+    @Test
+    void createEmbeddedOnboardingSession_whenSellerHasNoEmail_doesNotSendPhoneAsEmail() throws Exception {
+        var phoneOnlyPrincipal = new UserPrincipal(
+                USER_ID, "+15551234567", null, "hash",
+                List.of(new SimpleGrantedAuthority("ROLE_SELLER")), true
+        );
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken(phoneOnlyPrincipal, null, phoneOnlyPrincipal.getAuthorities())
+        );
+
+        when(createEmbeddedOnboardingSessionUseCase.createEmbeddedOnboardingSession(any()))
+                .thenReturn(new CreateEmbeddedOnboardingSessionUseCase.EmbeddedOnboardingSessionResult(
+                        "accs_test_123_secret_abc"));
+
+        mvc.perform(post("/api/seller/payout-account/embedded-onboarding-session"))
+                .andExpect(status().isOk());
+
+        verify(createEmbeddedOnboardingSessionUseCase).createEmbeddedOnboardingSession(
                 argThat(cmd -> cmd.email() == null));
     }
 

@@ -5,12 +5,14 @@ import com.livecomerce.payment.application.port.out.StripeConnectGatewayPort;
 import com.stripe.exception.StripeException;
 import com.stripe.model.Account;
 import com.stripe.model.AccountLink;
+import com.stripe.model.AccountSession;
 import com.stripe.model.Balance;
 import com.stripe.model.BankAccount;
 import com.stripe.model.Payout;
 import com.stripe.net.RequestOptions;
 import com.stripe.param.AccountCreateParams;
 import com.stripe.param.AccountLinkCreateParams;
+import com.stripe.param.AccountSessionCreateParams;
 import com.stripe.param.PayoutListParams;
 import org.springframework.stereotype.Component;
 
@@ -59,6 +61,29 @@ class StripeConnectGatewayAdapter implements StripeConnectGatewayPort {
 
         } catch (StripeException e) {
             throw new PaymentGatewayException("Error al crear account link de Stripe: " + e.getMessage(), e);
+        }
+    }
+
+    @Override
+    public String createAccountOnboardingSession(String stripeAccountId) {
+        try {
+            var params = AccountSessionCreateParams.builder()
+                    .setAccount(stripeAccountId)
+                    .setComponents(
+                            AccountSessionCreateParams.Components.builder()
+                                    .setAccountOnboarding(
+                                            AccountSessionCreateParams.Components.AccountOnboarding.builder()
+                                                    .setEnabled(true)
+                                                    .build())
+                                    .build())
+                    .build();
+
+            var accountSession = AccountSession.create(params);
+
+            return accountSession.getClientSecret();
+
+        } catch (StripeException e) {
+            throw new PaymentGatewayException("Error al crear sesión de onboarding embebido de Stripe: " + e.getMessage(), e);
         }
     }
 
