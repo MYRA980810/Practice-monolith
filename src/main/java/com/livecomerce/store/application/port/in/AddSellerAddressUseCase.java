@@ -16,7 +16,9 @@ public interface AddSellerAddressUseCase {
             String state,
             String zipCode,
             String country,
-            boolean isDefault
+            boolean isDefault,
+            Double latitude,
+            Double longitude
     ) {}
 
     SellerAddress add(AddSellerAddressCommand cmd);

@@ -29,5 +29,9 @@ public record AddBuyerAddressRequest(
         @NotBlank @Size(max = 3)
         String country,
 
-        boolean isDefault
+        boolean isDefault,
+
+        Double latitude,
+
+        Double longitude
 ) {}

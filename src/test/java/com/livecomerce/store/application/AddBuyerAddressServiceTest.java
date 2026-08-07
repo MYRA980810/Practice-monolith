@@ -30,7 +30,7 @@ class AddBuyerAddressServiceTest {
     void add_withIsDefaultFalse_savesWithoutClearingDefault() {
         when(buyerAddressPort.save(any())).thenAnswer(inv -> inv.getArgument(0));
         var cmd = new AddBuyerAddressCommand(
-                USER_ID, "Calle", "1", null, "Col", "CDMX", "Ciudad", "01000", "MX", false
+                USER_ID, "Calle", "1", null, "Col", "CDMX", "Ciudad", "01000", "MX", false, null, null
         );
 
         sut.add(cmd);
@@ -46,7 +46,7 @@ class AddBuyerAddressServiceTest {
     void add_withIsDefaultTrue_clearsDefaultFirstThenSavesAsDefault() {
         when(buyerAddressPort.save(any())).thenAnswer(inv -> inv.getArgument(0));
         var cmd = new AddBuyerAddressCommand(
-                USER_ID, "Calle", "1", null, "Col", "CDMX", "Ciudad", "01000", "MX", true
+                USER_ID, "Calle", "1", null, "Col", "CDMX", "Ciudad", "01000", "MX", true, null, null
         );
 
         sut.add(cmd);
@@ -56,5 +56,21 @@ class AddBuyerAddressServiceTest {
         var captor = ArgumentCaptor.forClass(BuyerAddress.class);
         orderVerifier.verify(buyerAddressPort).save(captor.capture());
         assertThat(captor.getValue().isDefault()).isTrue();
+    }
+
+    @Test
+    void add_withCoordinates_persistsLatitudeAndLongitude() {
+        when(buyerAddressPort.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        var cmd = new AddBuyerAddressCommand(
+                USER_ID, "Calle", "1", null, "Col", "CDMX", "Ciudad", "01000", "MX", false,
+                -34.6037, -58.3816
+        );
+
+        sut.add(cmd);
+
+        var captor = ArgumentCaptor.forClass(BuyerAddress.class);
+        verify(buyerAddressPort).save(captor.capture());
+        assertThat(captor.getValue().getLatitude()).isEqualTo(-34.6037);
+        assertThat(captor.getValue().getLongitude()).isEqualTo(-58.3816);
     }
 }

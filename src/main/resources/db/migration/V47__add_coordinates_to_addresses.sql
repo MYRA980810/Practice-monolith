@@ -1,0 +1,7 @@
+ALTER TABLE seller_addresses
+    ADD COLUMN latitude  DOUBLE PRECISION,
+    ADD COLUMN longitude DOUBLE PRECISION;
+
+ALTER TABLE buyer_addresses
+    ADD COLUMN latitude  DOUBLE PRECISION,
+    ADD COLUMN longitude DOUBLE PRECISION;

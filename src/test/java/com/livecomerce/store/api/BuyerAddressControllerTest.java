@@ -86,7 +86,7 @@ class BuyerAddressControllerTest {
 
     private BuyerAddress buildAddress() {
         return BuyerAddress.create(USER_ID, "Av. Corrientes", "1234", null,
-                "San Nicolás", "Buenos Aires", "CABA", "C1043", "AR");
+                "San Nicolás", "Buenos Aires", "CABA", "C1043", "AR", -34.6037, -58.3816);
     }
 
     // --- POST /api/buyer/addresses ---
@@ -105,12 +105,16 @@ class BuyerAddressControllerTest {
                                   "state": "CABA",
                                   "zipCode": "C1043",
                                   "country": "AR",
-                                  "isDefault": false
+                                  "isDefault": false,
+                                  "latitude": -34.6037,
+                                  "longitude": -58.3816
                                 }
                                 """))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.street").value("Av. Corrientes"))
-                .andExpect(jsonPath("$.city").value("Buenos Aires"));
+                .andExpect(jsonPath("$.city").value("Buenos Aires"))
+                .andExpect(jsonPath("$.latitude").value(-34.6037))
+                .andExpect(jsonPath("$.longitude").value(-58.3816));
     }
 
     @Test

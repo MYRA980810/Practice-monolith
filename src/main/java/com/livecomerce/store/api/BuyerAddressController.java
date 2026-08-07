@@ -42,7 +42,9 @@ class BuyerAddressController {
                 request.state(),
                 request.zipCode(),
                 request.country(),
-                request.isDefault()
+                request.isDefault(),
+                request.latitude(),
+                request.longitude()
         ));
         return ResponseEntity.status(HttpStatus.CREATED).body(BuyerAddressResponse.from(address));
     }

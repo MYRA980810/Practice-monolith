@@ -27,7 +27,7 @@ class SetDefaultBuyerAddressServiceTest {
     private static final UUID OTHER_USER = UUID.randomUUID();
 
     private BuyerAddress addressOwnedBy(UUID ownerId) {
-        return BuyerAddress.create(ownerId, "Calle", "1", null, "Col", "CDMX", "Ciudad", "01000", "MX");
+        return BuyerAddress.create(ownerId, "Calle", "1", null, "Col", "CDMX", "Ciudad", "01000", "MX", null, null);
     }
 
     @Test

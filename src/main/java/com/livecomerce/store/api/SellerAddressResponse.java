@@ -14,7 +14,9 @@ public record SellerAddressResponse(
         String state,
         String zipCode,
         String country,
-        boolean isDefault
+        boolean isDefault,
+        Double latitude,
+        Double longitude
 ) {
     public static SellerAddressResponse from(SellerAddress a) {
         return new SellerAddressResponse(
@@ -27,7 +29,9 @@ public record SellerAddressResponse(
                 a.getState(),
                 a.getZipCode(),
                 a.getCountry(),
-                a.isDefault()
+                a.isDefault(),
+                a.getLatitude(),
+                a.getLongitude()
         );
     }
 }

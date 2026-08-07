@@ -45,6 +45,12 @@ public class SellerAddress implements Persistable<UUID> {
     @Column(nullable = false, length = 3)
     private String country;
 
+    @Column(name = "latitude")
+    private Double latitude;
+
+    @Column(name = "longitude")
+    private Double longitude;
+
     @Column(name = "is_default", nullable = false)
     private boolean isDefault = false;
 
@@ -66,7 +72,7 @@ public class SellerAddress implements Persistable<UUID> {
 
     public static SellerAddress create(UUID userId, String street, String extNumber,
             String intNumber, String neighborhood, String city, String state,
-            String zipCode, String country) {
+            String zipCode, String country, Double latitude, Double longitude) {
         var address = new SellerAddress();
         address.id           = UUID.randomUUID();
         address.isNew        = true;
@@ -79,6 +85,8 @@ public class SellerAddress implements Persistable<UUID> {
         address.state        = state;
         address.zipCode      = zipCode;
         address.country      = country;
+        address.latitude     = latitude;
+        address.longitude    = longitude;
         address.isDefault    = false;
         address.createdAt    = OffsetDateTime.now();
         return address;

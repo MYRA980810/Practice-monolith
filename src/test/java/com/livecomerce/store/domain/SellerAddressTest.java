@@ -15,7 +15,8 @@ class SellerAddressTest {
                 USER_ID,
                 "Av. Corrientes", "1234", null,
                 "San Nicolás", "Buenos Aires", "CABA",
-                "C1043", "AR"
+                "C1043", "AR",
+                -34.6037, -58.3816
         );
     }
 
@@ -33,8 +34,24 @@ class SellerAddressTest {
         assertThat(address.getState()).isEqualTo("CABA");
         assertThat(address.getZipCode()).isEqualTo("C1043");
         assertThat(address.getCountry()).isEqualTo("AR");
+        assertThat(address.getLatitude()).isEqualTo(-34.6037);
+        assertThat(address.getLongitude()).isEqualTo(-58.3816);
         assertThat(address.isDefault()).isFalse();
         assertThat(address.getCreatedAt()).isNotNull();
+    }
+
+    @Test
+    void create_withoutCoordinates_leavesLatitudeAndLongitudeNull() {
+        var address = SellerAddress.create(
+                USER_ID,
+                "Av. Corrientes", "1234", null,
+                "San Nicolás", "Buenos Aires", "CABA",
+                "C1043", "AR",
+                null, null
+        );
+
+        assertThat(address.getLatitude()).isNull();
+        assertThat(address.getLongitude()).isNull();
     }
 
     @Test

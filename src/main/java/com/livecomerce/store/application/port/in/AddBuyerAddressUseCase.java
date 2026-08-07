@@ -16,7 +16,9 @@ public interface AddBuyerAddressUseCase {
             String state,
             String zipCode,
             String country,
-            boolean isDefault
+            boolean isDefault,
+            Double latitude,
+            Double longitude
     ) {}
 
     BuyerAddress add(AddBuyerAddressCommand cmd);

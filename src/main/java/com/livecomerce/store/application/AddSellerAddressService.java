@@ -25,7 +25,8 @@ public class AddSellerAddressService implements AddSellerAddressUseCase {
 
         var address = SellerAddress.create(
                 cmd.userId(), cmd.street(), cmd.extNumber(), cmd.intNumber(),
-                cmd.neighborhood(), cmd.city(), cmd.state(), cmd.zipCode(), cmd.country()
+                cmd.neighborhood(), cmd.city(), cmd.state(), cmd.zipCode(), cmd.country(),
+                cmd.latitude(), cmd.longitude()
         );
 
         if (cmd.isDefault()) {
