@@ -19,7 +19,7 @@ public class DeleteBuyerAddressService implements DeleteBuyerAddressUseCase {
     @Override
     public void delete(UUID userId, UUID addressId) {
         var address = buyerAddressPort.loadById(addressId)
-                .orElseThrow(() -> new IllegalArgumentException("Address not found: " + addressId));
+                .orElseThrow(() -> new AddressNotFoundException(addressId));
 
         if (!address.getUserId().equals(userId)) {
             throw new AccessDeniedException("Address does not belong to user");

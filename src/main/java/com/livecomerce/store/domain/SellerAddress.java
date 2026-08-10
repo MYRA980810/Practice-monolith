@@ -54,6 +54,10 @@ public class SellerAddress implements Persistable<UUID> {
     @Column(name = "is_default", nullable = false)
     private boolean isDefault = false;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "address_type", nullable = false, length = 20)
+    private AddressType addressType;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private OffsetDateTime createdAt;
 
@@ -72,7 +76,8 @@ public class SellerAddress implements Persistable<UUID> {
 
     public static SellerAddress create(UUID userId, String street, String extNumber,
             String intNumber, String neighborhood, String city, String state,
-            String zipCode, String country, Double latitude, Double longitude) {
+            String zipCode, String country, Double latitude, Double longitude,
+            AddressType addressType) {
         var address = new SellerAddress();
         address.id           = UUID.randomUUID();
         address.isNew        = true;
@@ -88,6 +93,7 @@ public class SellerAddress implements Persistable<UUID> {
         address.latitude     = latitude;
         address.longitude    = longitude;
         address.isDefault    = false;
+        address.addressType  = addressType;
         address.createdAt    = OffsetDateTime.now();
         return address;
     }
@@ -98,5 +104,21 @@ public class SellerAddress implements Persistable<UUID> {
 
     public void removeDefault() {
         this.isDefault = false;
+    }
+
+    public void updateDetails(String street, String extNumber, String intNumber, String neighborhood,
+            String city, String state, String zipCode, String country, Double latitude, Double longitude,
+            AddressType addressType) {
+        this.street       = street;
+        this.extNumber    = extNumber;
+        this.intNumber    = intNumber;
+        this.neighborhood = neighborhood;
+        this.city         = city;
+        this.state        = state;
+        this.zipCode      = zipCode;
+        this.country      = country;
+        this.latitude     = latitude;
+        this.longitude    = longitude;
+        this.addressType  = addressType;
     }
 }

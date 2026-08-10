@@ -1,5 +1,6 @@
 package com.livecomerce.store.api;
 
+import com.livecomerce.store.domain.AddressType;
 import com.livecomerce.store.domain.SellerAddress;
 
 import java.util.UUID;
@@ -16,7 +17,8 @@ public record SellerAddressResponse(
         String country,
         boolean isDefault,
         Double latitude,
-        Double longitude
+        Double longitude,
+        AddressType addressType
 ) {
     public static SellerAddressResponse from(SellerAddress a) {
         return new SellerAddressResponse(
@@ -31,7 +33,8 @@ public record SellerAddressResponse(
                 a.getCountry(),
                 a.isDefault(),
                 a.getLatitude(),
-                a.getLongitude()
+                a.getLongitude(),
+                a.getAddressType()
         );
     }
 }

@@ -5,6 +5,8 @@ import com.livecomerce.store.application.port.in.AddBuyerAddressUseCase;
 import com.livecomerce.store.application.port.in.DeleteBuyerAddressUseCase;
 import com.livecomerce.store.application.port.in.GetBuyerAddressesUseCase;
 import com.livecomerce.store.application.port.in.SetDefaultBuyerAddressUseCase;
+import com.livecomerce.store.application.port.in.UpdateBuyerAddressUseCase;
+import com.livecomerce.store.domain.AddressType;
 import com.livecomerce.store.domain.BuyerAddress;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -61,6 +63,7 @@ class BuyerAddressControllerTest {
     @Autowired MockMvc mvc;
 
     @MockitoBean AddBuyerAddressUseCase addBuyerAddressUseCase;
+    @MockitoBean UpdateBuyerAddressUseCase updateBuyerAddressUseCase;
     @MockitoBean GetBuyerAddressesUseCase getBuyerAddressesUseCase;
     @MockitoBean SetDefaultBuyerAddressUseCase setDefaultBuyerAddressUseCase;
     @MockitoBean DeleteBuyerAddressUseCase deleteBuyerAddressUseCase;
@@ -86,7 +89,8 @@ class BuyerAddressControllerTest {
 
     private BuyerAddress buildAddress() {
         return BuyerAddress.create(USER_ID, "Av. Corrientes", "1234", null,
-                "San Nicolás", "Buenos Aires", "CABA", "C1043", "AR", -34.6037, -58.3816);
+                "San Nicolás", "Buenos Aires", "CABA", "C1043", "AR", -34.6037, -58.3816,
+                AddressType.APARTMENT);
     }
 
     // --- POST /api/buyer/addresses ---
@@ -107,7 +111,8 @@ class BuyerAddressControllerTest {
                                   "country": "AR",
                                   "isDefault": false,
                                   "latitude": -34.6037,
-                                  "longitude": -58.3816
+                                  "longitude": -58.3816,
+                                  "addressType": "APARTMENT"
                                 }
                                 """))
                 .andExpect(status().isCreated())
@@ -120,6 +125,98 @@ class BuyerAddressControllerTest {
     @Test
     void addAddress_withMissingRequiredField_returns400() throws Exception {
         mvc.perform(post("/api/buyer/addresses")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "extNumber": "1234"
+                                }
+                                """))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void addAddress_withMissingAddressType_returns400() throws Exception {
+        mvc.perform(post("/api/buyer/addresses")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "street": "Av. Corrientes",
+                                  "extNumber": "1234",
+                                  "city": "Buenos Aires",
+                                  "state": "CABA",
+                                  "zipCode": "C1043",
+                                  "country": "AR",
+                                  "isDefault": false
+                                }
+                                """))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void addAddress_withMissingExtNumber_returns400() throws Exception {
+        mvc.perform(post("/api/buyer/addresses")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "street": "Av. Corrientes",
+                                  "city": "Buenos Aires",
+                                  "state": "CABA",
+                                  "zipCode": "C1043",
+                                  "country": "AR",
+                                  "isDefault": false,
+                                  "addressType": "APARTMENT"
+                                }
+                                """))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void addAddress_withInvalidAddressType_returns400() throws Exception {
+        mvc.perform(post("/api/buyer/addresses")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "street": "Av. Corrientes",
+                                  "city": "Buenos Aires",
+                                  "state": "CABA",
+                                  "zipCode": "C1043",
+                                  "country": "AR",
+                                  "isDefault": false,
+                                  "addressType": "GARAGE"
+                                }
+                                """))
+                .andExpect(status().isBadRequest());
+    }
+
+    // --- PUT /api/buyer/addresses/{id} ---
+
+    @Test
+    void updateAddress_withValidRequest_returns200() throws Exception {
+        when(updateBuyerAddressUseCase.update(any())).thenReturn(buildAddress());
+
+        mvc.perform(put("/api/buyer/addresses/{id}", ADDRESS_ID)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "street": "Av. Corrientes",
+                                  "extNumber": "1234",
+                                  "city": "Buenos Aires",
+                                  "state": "CABA",
+                                  "zipCode": "C1043",
+                                  "country": "AR",
+                                  "latitude": -34.6037,
+                                  "longitude": -58.3816,
+                                  "addressType": "APARTMENT"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.street").value("Av. Corrientes"))
+                .andExpect(jsonPath("$.city").value("Buenos Aires"));
+    }
+
+    @Test
+    void updateAddress_withMissingRequiredField_returns400() throws Exception {
+        mvc.perform(put("/api/buyer/addresses/{id}", ADDRESS_ID)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {

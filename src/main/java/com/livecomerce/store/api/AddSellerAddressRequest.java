@@ -1,6 +1,8 @@
 package com.livecomerce.store.api;
 
+import com.livecomerce.store.domain.AddressType;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
 public record AddSellerAddressRequest(
@@ -8,7 +10,7 @@ public record AddSellerAddressRequest(
         @NotBlank @Size(max = 255)
         String street,
 
-        @Size(max = 20)
+        @NotBlank @Size(max = 20)
         String extNumber,
 
         @Size(max = 20)
@@ -33,5 +35,8 @@ public record AddSellerAddressRequest(
 
         Double latitude,
 
-        Double longitude
+        Double longitude,
+
+        @NotNull
+        AddressType addressType
 ) {}

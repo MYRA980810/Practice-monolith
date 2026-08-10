@@ -1,14 +1,15 @@
 package com.livecomerce.store.application.port.in;
 
 import com.livecomerce.store.domain.AddressType;
-import com.livecomerce.store.domain.BuyerAddress;
+import com.livecomerce.store.domain.SellerAddress;
 
 import java.util.UUID;
 
-public interface AddBuyerAddressUseCase {
+public interface UpdateSellerAddressUseCase {
 
-    record AddBuyerAddressCommand(
+    record UpdateSellerAddressCommand(
             UUID userId,
+            UUID addressId,
             String street,
             String extNumber,
             String intNumber,
@@ -17,11 +18,10 @@ public interface AddBuyerAddressUseCase {
             String state,
             String zipCode,
             String country,
-            boolean isDefault,
             Double latitude,
             Double longitude,
             AddressType addressType
     ) {}
 
-    BuyerAddress add(AddBuyerAddressCommand cmd);
+    SellerAddress update(UpdateSellerAddressCommand cmd);
 }

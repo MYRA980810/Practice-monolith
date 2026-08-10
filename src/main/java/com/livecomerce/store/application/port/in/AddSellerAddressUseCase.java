@@ -1,5 +1,6 @@
 package com.livecomerce.store.application.port.in;
 
+import com.livecomerce.store.domain.AddressType;
 import com.livecomerce.store.domain.SellerAddress;
 
 import java.util.UUID;
@@ -18,7 +19,8 @@ public interface AddSellerAddressUseCase {
             String country,
             boolean isDefault,
             Double latitude,
-            Double longitude
+            Double longitude,
+            AddressType addressType
     ) {}
 
     SellerAddress add(AddSellerAddressCommand cmd);

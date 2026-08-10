@@ -3,6 +3,7 @@ package com.livecomerce.store.application;
 import com.livecomerce.store.SellerAddressAddedEvent;
 import com.livecomerce.store.application.port.in.AddSellerAddressUseCase.AddSellerAddressCommand;
 import com.livecomerce.store.application.port.out.SellerAddressPort;
+import com.livecomerce.store.domain.AddressType;
 import com.livecomerce.store.domain.SellerAddress;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -32,7 +33,8 @@ class AddSellerAddressServiceTest {
     void add_whenLimitExceeded_throwsAndNeverSaves() {
         when(sellerAddressPort.countByUserId(USER_ID)).thenReturn(6);
         var cmd = new AddSellerAddressCommand(
-                USER_ID, "Calle", "1", null, "Col", "CDMX", "Ciudad", "01000", "MX", false, null, null
+                USER_ID, "Calle", "1", null, "Col", "CDMX", "Ciudad", "01000", "MX", false, null, null,
+                AddressType.OTHER
         );
 
         assertThatThrownBy(() -> sut.add(cmd))
@@ -47,7 +49,8 @@ class AddSellerAddressServiceTest {
         when(sellerAddressPort.countByUserId(USER_ID)).thenReturn(0);
         when(sellerAddressPort.save(any())).thenAnswer(inv -> inv.getArgument(0));
         var cmd = new AddSellerAddressCommand(
-                USER_ID, "Calle", "1", null, "Col", "CDMX", "Ciudad", "01000", "MX", true, null, null
+                USER_ID, "Calle", "1", null, "Col", "CDMX", "Ciudad", "01000", "MX", true, null, null,
+                AddressType.OTHER
         );
 
         sut.add(cmd);
@@ -67,7 +70,8 @@ class AddSellerAddressServiceTest {
         when(sellerAddressPort.save(any())).thenAnswer(inv -> inv.getArgument(0));
         var cmd = new AddSellerAddressCommand(
                 USER_ID, "Calle", "1", null, "Col", "CDMX", "Ciudad", "01000", "MX", false,
-                -34.6037, -58.3816
+                -34.6037, -58.3816,
+                AddressType.STORE
         );
 
         var captor = ArgumentCaptor.forClass(SellerAddress.class);

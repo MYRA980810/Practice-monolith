@@ -1,6 +1,7 @@
 package com.livecomerce.store.application;
 
 import com.livecomerce.store.application.port.out.BuyerAddressPort;
+import com.livecomerce.store.domain.AddressType;
 import com.livecomerce.store.domain.BuyerAddress;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -27,7 +28,8 @@ class SetDefaultBuyerAddressServiceTest {
     private static final UUID OTHER_USER = UUID.randomUUID();
 
     private BuyerAddress addressOwnedBy(UUID ownerId) {
-        return BuyerAddress.create(ownerId, "Calle", "1", null, "Col", "CDMX", "Ciudad", "01000", "MX", null, null);
+        return BuyerAddress.create(ownerId, "Calle", "1", null, "Col", "CDMX", "Ciudad", "01000", "MX", null, null,
+                AddressType.OTHER);
     }
 
     @Test
@@ -57,10 +59,10 @@ class SetDefaultBuyerAddressServiceTest {
     }
 
     @Test
-    void setDefault_whenAddressNotFound_throwsIllegalArgumentException() {
+    void setDefault_whenAddressNotFound_throwsAddressNotFoundException() {
         when(buyerAddressPort.loadById(ADDRESS_ID)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> sut.setDefault(USER_ID, ADDRESS_ID))
-                .isInstanceOf(IllegalArgumentException.class);
+                .isInstanceOf(AddressNotFoundException.class);
     }
 }

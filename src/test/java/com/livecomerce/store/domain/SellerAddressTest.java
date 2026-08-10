@@ -16,7 +16,8 @@ class SellerAddressTest {
                 "Av. Corrientes", "1234", null,
                 "San Nicolás", "Buenos Aires", "CABA",
                 "C1043", "AR",
-                -34.6037, -58.3816
+                -34.6037, -58.3816,
+                AddressType.STORE
         );
     }
 
@@ -47,7 +48,8 @@ class SellerAddressTest {
                 "Av. Corrientes", "1234", null,
                 "San Nicolás", "Buenos Aires", "CABA",
                 "C1043", "AR",
-                null, null
+                null, null,
+                AddressType.OTHER
         );
 
         assertThat(address.getLatitude()).isNull();
@@ -75,5 +77,36 @@ class SellerAddressTest {
 
         address.removeDefault();
         assertThat(address.isDefault()).isFalse();
+    }
+
+    @Test
+    void updateDetails_mutatesContentFieldsButLeavesIdentityFieldsUnchanged() {
+        var address = buildAddress();
+        var originalId        = address.getId();
+        var originalUserId    = address.getUserId();
+        var originalIsDefault = address.isDefault();
+        var originalCreatedAt = address.getCreatedAt();
+
+        address.updateDetails(
+                "Av. Nueva", "5678", "Depto 2", "Palermo", "Rosario", "Santa Fe",
+                "S2000", "AR", -32.9468, -60.6393, AddressType.OTHER
+        );
+
+        assertThat(address.getStreet()).isEqualTo("Av. Nueva");
+        assertThat(address.getExtNumber()).isEqualTo("5678");
+        assertThat(address.getIntNumber()).isEqualTo("Depto 2");
+        assertThat(address.getNeighborhood()).isEqualTo("Palermo");
+        assertThat(address.getCity()).isEqualTo("Rosario");
+        assertThat(address.getState()).isEqualTo("Santa Fe");
+        assertThat(address.getZipCode()).isEqualTo("S2000");
+        assertThat(address.getCountry()).isEqualTo("AR");
+        assertThat(address.getLatitude()).isEqualTo(-32.9468);
+        assertThat(address.getLongitude()).isEqualTo(-60.6393);
+        assertThat(address.getAddressType()).isEqualTo(AddressType.OTHER);
+
+        assertThat(address.getId()).isEqualTo(originalId);
+        assertThat(address.getUserId()).isEqualTo(originalUserId);
+        assertThat(address.isDefault()).isEqualTo(originalIsDefault);
+        assertThat(address.getCreatedAt()).isEqualTo(originalCreatedAt);
     }
 }

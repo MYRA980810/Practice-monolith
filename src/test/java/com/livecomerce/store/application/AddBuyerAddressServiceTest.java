@@ -2,6 +2,7 @@ package com.livecomerce.store.application;
 
 import com.livecomerce.store.application.port.in.AddBuyerAddressUseCase.AddBuyerAddressCommand;
 import com.livecomerce.store.application.port.out.BuyerAddressPort;
+import com.livecomerce.store.domain.AddressType;
 import com.livecomerce.store.domain.BuyerAddress;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -30,7 +31,8 @@ class AddBuyerAddressServiceTest {
     void add_withIsDefaultFalse_savesWithoutClearingDefault() {
         when(buyerAddressPort.save(any())).thenAnswer(inv -> inv.getArgument(0));
         var cmd = new AddBuyerAddressCommand(
-                USER_ID, "Calle", "1", null, "Col", "CDMX", "Ciudad", "01000", "MX", false, null, null
+                USER_ID, "Calle", "1", null, "Col", "CDMX", "Ciudad", "01000", "MX", false, null, null,
+                AddressType.OTHER
         );
 
         sut.add(cmd);
@@ -46,7 +48,8 @@ class AddBuyerAddressServiceTest {
     void add_withIsDefaultTrue_clearsDefaultFirstThenSavesAsDefault() {
         when(buyerAddressPort.save(any())).thenAnswer(inv -> inv.getArgument(0));
         var cmd = new AddBuyerAddressCommand(
-                USER_ID, "Calle", "1", null, "Col", "CDMX", "Ciudad", "01000", "MX", true, null, null
+                USER_ID, "Calle", "1", null, "Col", "CDMX", "Ciudad", "01000", "MX", true, null, null,
+                AddressType.OTHER
         );
 
         sut.add(cmd);
@@ -63,7 +66,8 @@ class AddBuyerAddressServiceTest {
         when(buyerAddressPort.save(any())).thenAnswer(inv -> inv.getArgument(0));
         var cmd = new AddBuyerAddressCommand(
                 USER_ID, "Calle", "1", null, "Col", "CDMX", "Ciudad", "01000", "MX", false,
-                -34.6037, -58.3816
+                -34.6037, -58.3816,
+                AddressType.APARTMENT
         );
 
         sut.add(cmd);

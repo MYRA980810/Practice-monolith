@@ -13,6 +13,7 @@ import com.livecomerce.store.application.port.in.ReactivateStoreUseCase;
 import com.livecomerce.store.application.port.in.ReopenStoreUseCase;
 import com.livecomerce.store.application.port.in.UnfollowStoreUseCase;
 import com.livecomerce.store.application.port.in.UpdateStoreUseCase;
+import com.livecomerce.store.domain.AddressType;
 import com.livecomerce.shared.Plan;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -105,6 +106,14 @@ class StoreController {
                 .map(PlanResponse::from)
                 .toList();
         return ResponseEntity.ok(plans);
+    }
+
+    @GetMapping("/address-types")
+    ResponseEntity<List<AddressTypeResponse>> getAddressTypes() {
+        var types = Arrays.stream(AddressType.values())
+                .map(AddressTypeResponse::from)
+                .toList();
+        return ResponseEntity.ok(types);
     }
 
     @DeleteMapping("/me")

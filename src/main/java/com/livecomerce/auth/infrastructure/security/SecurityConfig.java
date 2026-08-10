@@ -52,7 +52,7 @@ class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/**", "/actuator/health", "/error").permitAll()
                         .requestMatchers("/oauth2/**", "/login/oauth2/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/stores", "/api/stores/plans", "/api/stores/{slug}").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/stores", "/api/stores/plans", "/api/stores/address-types", "/api/stores/{slug}").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/products", "/api/products/{id}").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/categories").permitAll()
                         .requestMatchers("/api/billing/webhook/**").permitAll()

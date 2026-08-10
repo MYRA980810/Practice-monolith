@@ -5,6 +5,7 @@ import com.livecomerce.store.application.port.in.AddSellerAddressUseCase;
 import com.livecomerce.store.application.port.in.DeleteSellerAddressUseCase;
 import com.livecomerce.store.application.port.in.GetSellerAddressesUseCase;
 import com.livecomerce.store.application.port.in.SetDefaultSellerAddressUseCase;
+import com.livecomerce.store.application.port.in.UpdateSellerAddressUseCase;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -23,6 +24,7 @@ import java.util.UUID;
 class SellerAddressController {
 
     private final AddSellerAddressUseCase addSellerAddressUseCase;
+    private final UpdateSellerAddressUseCase updateSellerAddressUseCase;
     private final GetSellerAddressesUseCase getSellerAddressesUseCase;
     private final SetDefaultSellerAddressUseCase setDefaultSellerAddressUseCase;
     private final DeleteSellerAddressUseCase deleteSellerAddressUseCase;
@@ -44,9 +46,25 @@ class SellerAddressController {
                 request.country(),
                 request.isDefault(),
                 request.latitude(),
-                request.longitude()
+                request.longitude(),
+                request.addressType()
         ));
         return ResponseEntity.status(HttpStatus.CREATED).body(SellerAddressResponse.from(address));
+    }
+
+    @PutMapping("/{addressId}")
+    ResponseEntity<SellerAddressResponse> updateAddress(
+            @PathVariable UUID addressId,
+            @Valid @RequestBody UpdateSellerAddressRequest request,
+            @AuthenticationPrincipal UserPrincipal principal) {
+
+        var address = updateSellerAddressUseCase.update(new UpdateSellerAddressUseCase.UpdateSellerAddressCommand(
+                principal.getUserId(), addressId,
+                request.street(), request.extNumber(), request.intNumber(), request.neighborhood(),
+                request.city(), request.state(), request.zipCode(), request.country(),
+                request.latitude(), request.longitude(), request.addressType()
+        ));
+        return ResponseEntity.ok(SellerAddressResponse.from(address));
     }
 
     @GetMapping

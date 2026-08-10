@@ -5,6 +5,7 @@ import com.livecomerce.store.application.port.in.AddBuyerAddressUseCase;
 import com.livecomerce.store.application.port.in.DeleteBuyerAddressUseCase;
 import com.livecomerce.store.application.port.in.GetBuyerAddressesUseCase;
 import com.livecomerce.store.application.port.in.SetDefaultBuyerAddressUseCase;
+import com.livecomerce.store.application.port.in.UpdateBuyerAddressUseCase;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -23,6 +24,7 @@ import java.util.UUID;
 class BuyerAddressController {
 
     private final AddBuyerAddressUseCase addBuyerAddressUseCase;
+    private final UpdateBuyerAddressUseCase updateBuyerAddressUseCase;
     private final GetBuyerAddressesUseCase getBuyerAddressesUseCase;
     private final SetDefaultBuyerAddressUseCase setDefaultBuyerAddressUseCase;
     private final DeleteBuyerAddressUseCase deleteBuyerAddressUseCase;
@@ -44,9 +46,25 @@ class BuyerAddressController {
                 request.country(),
                 request.isDefault(),
                 request.latitude(),
-                request.longitude()
+                request.longitude(),
+                request.addressType()
         ));
         return ResponseEntity.status(HttpStatus.CREATED).body(BuyerAddressResponse.from(address));
+    }
+
+    @PutMapping("/{addressId}")
+    ResponseEntity<BuyerAddressResponse> updateAddress(
+            @PathVariable UUID addressId,
+            @Valid @RequestBody UpdateBuyerAddressRequest request,
+            @AuthenticationPrincipal UserPrincipal principal) {
+
+        var address = updateBuyerAddressUseCase.update(new UpdateBuyerAddressUseCase.UpdateBuyerAddressCommand(
+                principal.getUserId(), addressId,
+                request.street(), request.extNumber(), request.intNumber(), request.neighborhood(),
+                request.city(), request.state(), request.zipCode(), request.country(),
+                request.latitude(), request.longitude(), request.addressType()
+        ));
+        return ResponseEntity.ok(BuyerAddressResponse.from(address));
     }
 
     @GetMapping

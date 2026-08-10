@@ -1,0 +1,7 @@
+ALTER TABLE seller_addresses
+    ADD COLUMN address_type VARCHAR(20) NOT NULL DEFAULT 'OTHER'
+        CHECK (address_type IN ('RESIDENTIAL_BUILDING', 'STORE', 'APARTMENT', 'HOTEL', 'OFFICE', 'OTHER'));
+
+ALTER TABLE buyer_addresses
+    ADD COLUMN address_type VARCHAR(20) NOT NULL DEFAULT 'OTHER'
+        CHECK (address_type IN ('RESIDENTIAL_BUILDING', 'STORE', 'APARTMENT', 'HOTEL', 'OFFICE', 'OTHER'));

@@ -5,7 +5,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
-public record AddBuyerAddressRequest(
+public record UpdateSellerAddressRequest(
 
         @NotBlank @Size(max = 255)
         String street,
@@ -30,8 +30,6 @@ public record AddBuyerAddressRequest(
 
         @NotBlank @Size(max = 3)
         String country,
-
-        boolean isDefault,
 
         Double latitude,
 
