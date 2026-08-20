@@ -14,6 +14,9 @@ import com.livecomerce.auth.application.port.in.UpdateUserAliasUseCase;
 import com.livecomerce.auth.application.port.in.UpdateUserAliasUseCase.UpdateUserAliasCommand;
 import com.livecomerce.auth.application.port.in.UpdateUserAvatarUseCase;
 import com.livecomerce.auth.application.port.in.UpdateUserAvatarUseCase.UpdateUserAvatarCommand;
+import com.livecomerce.auth.application.port.in.ChangePasswordUseCase;
+import com.livecomerce.auth.application.port.in.VerifyChangePasswordOtpUseCase;
+import com.livecomerce.auth.application.port.in.VerifyCurrentPasswordUseCase;
 import com.livecomerce.auth.application.port.in.VerifyOtpUseCase;
 import com.livecomerce.auth.application.port.in.VerifyResetCodeUseCase;
 import com.livecomerce.shared.UserPrincipal;
@@ -56,6 +59,9 @@ class AuthController {
     private final RefreshAccessTokenUseCase refreshAccessTokenUseCase;
     private final LogoutUseCase logoutUseCase;
     private final GetCurrentUserUseCase getCurrentUserUseCase;
+    private final VerifyCurrentPasswordUseCase verifyCurrentPasswordUseCase;
+    private final VerifyChangePasswordOtpUseCase verifyChangePasswordOtpUseCase;
+    private final ChangePasswordUseCase changePasswordUseCase;
 
     @Value("${jwt.refresh-expiration-ms:2592000000}")
     private long refreshExpirationMs;
@@ -159,6 +165,35 @@ class AuthController {
     ResponseEntity<UserProfileResponse> getCurrentUser(@AuthenticationPrincipal UserPrincipal principal) {
         var profile = getCurrentUserUseCase.getCurrentUser(principal.getUserId());
         return ResponseEntity.ok(UserProfileResponse.from(profile));
+    }
+
+    @PostMapping("/me/password/verify-current")
+    ResponseEntity<VerificationInitiatedResponse> verifyCurrentPassword(
+            @Valid @RequestBody VerifyCurrentPasswordRequest request,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        var result = verifyCurrentPasswordUseCase.verifyCurrentPassword(
+                new VerifyCurrentPasswordUseCase.VerifyCurrentPasswordCommand(principal.getUserId(), request.currentPassword()));
+        return ResponseEntity.accepted().body(VerificationInitiatedResponse.from(result));
+    }
+
+    @PostMapping("/me/password/verify-otp")
+    ResponseEntity<ChangePasswordTokenResponse> verifyChangePasswordOtp(
+            @Valid @RequestBody VerifyChangePasswordOtpRequest request,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        var result = verifyChangePasswordOtpUseCase.verify(
+                new VerifyChangePasswordOtpUseCase.VerifyChangePasswordOtpCommand(principal.getUserId(), request.pendingToken(), request.code()));
+        return ResponseEntity.ok(new ChangePasswordTokenResponse(result.changePasswordToken()));
+    }
+
+    @PostMapping("/me/password")
+    ResponseEntity<Void> changePassword(
+            @Valid @RequestBody ChangePasswordRequest request,
+            @AuthenticationPrincipal UserPrincipal principal,
+            @CookieValue(name = REFRESH_COOKIE_NAME, required = false) String refreshCookie) {
+        changePasswordUseCase.changePassword(
+                new ChangePasswordUseCase.ChangePasswordCommand(principal.getUserId(), request.changePasswordToken(),
+                        request.newPassword(), request.confirmPassword(), refreshCookie));
+        return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/refresh")

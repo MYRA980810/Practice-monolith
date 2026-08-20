@@ -8,6 +8,8 @@ import com.livecomerce.auth.application.RefreshTokenInvalidException;
 import com.livecomerce.auth.application.RefreshTokenReuseException;
 import com.livecomerce.auth.application.port.in.AuthResult;
 import com.livecomerce.auth.application.port.in.AuthenticateUserUseCase;
+import com.livecomerce.auth.application.port.in.ChangePasswordTokenResult;
+import com.livecomerce.auth.application.port.in.ChangePasswordUseCase;
 import com.livecomerce.auth.application.port.in.ExchangeOAuthCodeUseCase;
 import com.livecomerce.auth.application.port.in.ForgotPasswordUseCase;
 import com.livecomerce.auth.application.port.in.GetCurrentUserUseCase;
@@ -21,6 +23,8 @@ import com.livecomerce.auth.application.port.in.ResetPasswordUseCase;
 import com.livecomerce.auth.application.port.in.ResetTokenResult;
 import com.livecomerce.auth.application.port.in.ResendOtpUseCase;
 import com.livecomerce.auth.application.port.in.UpdateUserAliasUseCase;
+import com.livecomerce.auth.application.port.in.VerifyChangePasswordOtpUseCase;
+import com.livecomerce.auth.application.port.in.VerifyCurrentPasswordUseCase;
 import com.livecomerce.auth.application.port.in.VerifyOtpUseCase;
 import com.livecomerce.auth.application.port.in.VerifyResetCodeUseCase;
 import com.livecomerce.auth.domain.Role;
@@ -94,6 +98,9 @@ class AuthControllerTest {
     @MockitoBean RefreshAccessTokenUseCase refreshAccessTokenUseCase;
     @MockitoBean LogoutUseCase logoutUseCase;
     @MockitoBean GetCurrentUserUseCase getCurrentUserUseCase;
+    @MockitoBean VerifyCurrentPasswordUseCase verifyCurrentPasswordUseCase;
+    @MockitoBean VerifyChangePasswordOtpUseCase verifyChangePasswordOtpUseCase;
+    @MockitoBean ChangePasswordUseCase changePasswordUseCase;
 
     private static final UUID USER_ID = UUID.randomUUID();
 
@@ -580,5 +587,128 @@ class AuthControllerTest {
                 .andExpect(jsonPath("$.alias").value("jane-doe"))
                 .andExpect(jsonPath("$.avatarUrl").value("https://res.cloudinary.com/test/avatar.jpg"))
                 .andExpect(jsonPath("$.profileComplete").value(true));
+    }
+
+    // --- POST /me/password/verify-current ---
+
+    @Test
+    void verifyCurrentPassword_withCorrectPassword_returns202WithPendingToken() throws Exception {
+        when(verifyCurrentPasswordUseCase.verifyCurrentPassword(any()))
+                .thenReturn(new PendingVerificationResult("change-password-pending-jwt", VerificationChannel.EMAIL));
+
+        mvc.perform(post("/api/auth/me/password/verify-current")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"currentPassword":"currentPass123"}
+                                """))
+                .andExpect(status().isAccepted())
+                .andExpect(jsonPath("$.pendingToken").value("change-password-pending-jwt"))
+                .andExpect(jsonPath("$.channel").value("EMAIL"));
+    }
+
+    @Test
+    void verifyCurrentPassword_withBlankCurrentPassword_returns400() throws Exception {
+        mvc.perform(post("/api/auth/me/password/verify-current")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"currentPassword":""}
+                                """))
+                .andExpect(status().isBadRequest());
+    }
+
+    // --- POST /me/password/verify-otp ---
+
+    @Test
+    void verifyChangePasswordOtp_withValidCode_returns200WithChangePasswordToken() throws Exception {
+        when(verifyChangePasswordOtpUseCase.verify(any()))
+                .thenReturn(new ChangePasswordTokenResult("change-password-jwt"));
+
+        mvc.perform(post("/api/auth/me/password/verify-otp")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"pendingToken":"change-password-pending-jwt","code":"123456"}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.changePasswordToken").value("change-password-jwt"));
+    }
+
+    @Test
+    void verifyChangePasswordOtp_withBlankPendingToken_returns400() throws Exception {
+        mvc.perform(post("/api/auth/me/password/verify-otp")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"pendingToken":"","code":"123456"}
+                                """))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void verifyChangePasswordOtp_withBlankCode_returns400() throws Exception {
+        mvc.perform(post("/api/auth/me/password/verify-otp")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"pendingToken":"change-password-pending-jwt","code":""}
+                                """))
+                .andExpect(status().isBadRequest());
+    }
+
+    // --- POST /me/password ---
+
+    @Test
+    void changePassword_withMatchingPasswords_returns204() throws Exception {
+        doNothing().when(changePasswordUseCase).changePassword(any());
+
+        mvc.perform(post("/api/auth/me/password")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "changePasswordToken":"change-password-jwt",
+                                  "newPassword":"newPass123",
+                                  "confirmPassword":"newPass123"
+                                }
+                                """))
+                .andExpect(status().isNoContent());
+    }
+
+    @Test
+    void changePassword_withBlankChangePasswordToken_returns400() throws Exception {
+        mvc.perform(post("/api/auth/me/password")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "changePasswordToken":"",
+                                  "newPassword":"newPass123",
+                                  "confirmPassword":"newPass123"
+                                }
+                                """))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void changePassword_withTooShortNewPassword_returns400() throws Exception {
+        mvc.perform(post("/api/auth/me/password")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "changePasswordToken":"change-password-jwt",
+                                  "newPassword":"short",
+                                  "confirmPassword":"short"
+                                }
+                                """))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void changePassword_withBlankConfirmPassword_returns400() throws Exception {
+        mvc.perform(post("/api/auth/me/password")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "changePasswordToken":"change-password-jwt",
+                                  "newPassword":"newPass123",
+                                  "confirmPassword":""
+                                }
+                                """))
+                .andExpect(status().isBadRequest());
     }
 }
