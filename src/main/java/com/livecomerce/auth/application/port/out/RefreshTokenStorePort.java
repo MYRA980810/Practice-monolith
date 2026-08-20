@@ -12,4 +12,6 @@ public interface RefreshTokenStorePort {
     Optional<RefreshToken> loadByTokenHash(String tokenHash);
 
     void revokeFamily(UUID familyId);
+
+    void revokeAllForUserExcept(UUID userId, UUID exceptFamilyId);
 }

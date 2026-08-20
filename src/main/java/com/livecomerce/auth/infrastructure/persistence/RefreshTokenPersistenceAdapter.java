@@ -37,6 +37,11 @@ class RefreshTokenPersistenceAdapter implements RefreshTokenStorePort, IssueRefr
     }
 
     @Override
+    public void revokeAllForUserExcept(UUID userId, UUID exceptFamilyId) {
+        repository.revokeAllByUserIdExceptFamily(userId, exceptFamilyId);
+    }
+
+    @Override
     public String issueForUser(UUID userId) {
         var rawToken = refreshTokenHasher.generateRawToken();
         var hash = refreshTokenHasher.hash(rawToken);
