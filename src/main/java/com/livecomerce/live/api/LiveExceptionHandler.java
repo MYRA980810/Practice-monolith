@@ -12,6 +12,7 @@ import com.livecomerce.live.domain.LiveSubscriptionNotForSellerException;
 import com.livecomerce.live.domain.VideoProviderUnavailableException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
@@ -88,6 +89,14 @@ class LiveExceptionHandler {
     ProblemDetail handleVideoProviderUnavailable(VideoProviderUnavailableException e) {
         var detail = ProblemDetail.forStatusAndDetail(HttpStatus.SERVICE_UNAVAILABLE, e.getMessage());
         detail.setType(URI.create("https://livecomerce.com/errors/video-provider-unavailable"));
+        return detail;
+    }
+
+    @ExceptionHandler(ObjectOptimisticLockingFailureException.class)
+    ProblemDetail handleConcurrentModification(ObjectOptimisticLockingFailureException e) {
+        var detail = ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT,
+                "This live was modified by another request at the same time. Please retry.");
+        detail.setType(URI.create("https://livecomerce.com/errors/live-concurrent-modification"));
         return detail;
     }
 }

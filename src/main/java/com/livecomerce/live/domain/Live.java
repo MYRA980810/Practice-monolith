@@ -82,6 +82,10 @@ public class Live implements Persistable<UUID> {
     @Column(name = "updated_at", nullable = false)
     private OffsetDateTime updatedAt;
 
+    @Version
+    @Column(name = "version", nullable = false)
+    private Long version;
+
     @Transient
     private boolean isNew = false;
 
