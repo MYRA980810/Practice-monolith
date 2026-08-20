@@ -117,4 +117,20 @@ class JwtServiceTest {
         assertThatThrownBy(() -> jwtService.extractUserIdFromPasswordResetToken(wrongToken))
                 .isInstanceOf(io.jsonwebtoken.JwtException.class);
     }
+
+    @Test
+    void generateChangePasswordPendingToken_producesTokenWithChangePasswordPendingType() {
+        var user = User.create("x@x.com", "hash", "X", "X", null, Role.BUYER);
+        var token = jwtService.generateChangePasswordPendingToken(user);
+        var claims = jwtService.validateAndExtract(token);
+        assertThat(claims.get("type", String.class)).isEqualTo("change-password-pending");
+    }
+
+    @Test
+    void generateChangePasswordToken_producesTokenWithChangePasswordType() {
+        var user = User.create("x@x.com", "hash", "X", "X", null, Role.BUYER);
+        var token = jwtService.generateChangePasswordToken(user);
+        var claims = jwtService.validateAndExtract(token);
+        assertThat(claims.get("type", String.class)).isEqualTo("change-password");
+    }
 }

@@ -21,6 +21,8 @@ class JwtService implements TokenGeneratorPort {
     private static final String TYPE_OAUTH_PENDING  = "oauth-pending";
     private static final String TYPE_RESET_PENDING  = "reset-pending";
     private static final String TYPE_PASSWORD_RESET = "password-reset";
+    private static final String TYPE_CHANGE_PASSWORD_PENDING = "change-password-pending";
+    private static final String TYPE_CHANGE_PASSWORD         = "change-password";
 
     private final JwtProperties properties;
     private final SecretKey key;
@@ -88,6 +90,26 @@ class JwtService implements TokenGeneratorPort {
     @Override
     public UUID extractUserIdFromPasswordResetToken(String token) {
         return extractUserIdFromTypedToken(token, TYPE_PASSWORD_RESET);
+    }
+
+    @Override
+    public String generateChangePasswordPendingToken(User user) {
+        return generateTypedToken(user.getId(), TYPE_CHANGE_PASSWORD_PENDING, 5L * 60 * 1000);
+    }
+
+    @Override
+    public UUID extractUserIdFromChangePasswordPendingToken(String token) {
+        return extractUserIdFromTypedToken(token, TYPE_CHANGE_PASSWORD_PENDING);
+    }
+
+    @Override
+    public String generateChangePasswordToken(User user) {
+        return generateTypedToken(user.getId(), TYPE_CHANGE_PASSWORD, 15L * 60 * 1000);
+    }
+
+    @Override
+    public UUID extractUserIdFromChangePasswordToken(String token) {
+        return extractUserIdFromTypedToken(token, TYPE_CHANGE_PASSWORD);
     }
 
     Claims validateAndExtract(String token) {

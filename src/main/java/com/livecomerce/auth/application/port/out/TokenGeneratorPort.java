@@ -14,4 +14,8 @@ public interface TokenGeneratorPort {
     UUID extractUserIdFromResetPendingToken(String token);
     String generatePasswordResetToken(User user);
     UUID extractUserIdFromPasswordResetToken(String token);
+    String generateChangePasswordPendingToken(User user);
+    UUID extractUserIdFromChangePasswordPendingToken(String token);
+    String generateChangePasswordToken(User user);
+    UUID extractUserIdFromChangePasswordToken(String token);
 }
