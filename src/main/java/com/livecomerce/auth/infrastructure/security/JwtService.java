@@ -12,6 +12,7 @@ import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 @Component
@@ -23,6 +24,9 @@ class JwtService implements TokenGeneratorPort {
     private static final String TYPE_PASSWORD_RESET = "password-reset";
     private static final String TYPE_CHANGE_PASSWORD_PENDING = "change-password-pending";
     private static final String TYPE_CHANGE_PASSWORD         = "change-password";
+
+    private static final Set<String> RESENDABLE_PENDING_TYPES =
+            Set.of(TYPE_OTP_PENDING, TYPE_RESET_PENDING, TYPE_CHANGE_PASSWORD_PENDING);
 
     private final JwtProperties properties;
     private final SecretKey key;
@@ -60,6 +64,16 @@ class JwtService implements TokenGeneratorPort {
     @Override
     public UUID extractUserIdFromPendingToken(String token) {
         return extractUserIdFromTypedToken(token, TYPE_OTP_PENDING);
+    }
+
+    @Override
+    public UUID extractUserIdFromAnyPendingToken(String token) {
+        var claims = validateAndExtract(token);
+        var type = claims.get("type", String.class);
+        if (type == null || !RESENDABLE_PENDING_TYPES.contains(type)) {
+            throw new JwtException("Token type not eligible for resend: '%s'".formatted(type));
+        }
+        return UUID.fromString(claims.getSubject());
     }
 
     @Override

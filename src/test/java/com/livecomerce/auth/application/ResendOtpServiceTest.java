@@ -37,7 +37,7 @@ class ResendOtpServiceTest {
     @Test
     void resend_withPhone_sendsWhatsAppVerification() {
         var user = User.create("u@test.com", "hash", "A", "B", "+5491111", Role.BUYER);
-        when(tokenGeneratorPort.extractUserIdFromPendingToken(PENDING_TOKEN)).thenReturn(USER_ID);
+        when(tokenGeneratorPort.extractUserIdFromAnyPendingToken(PENDING_TOKEN)).thenReturn(USER_ID);
         when(loadUserPort.loadById(USER_ID)).thenReturn(Optional.of(user));
 
         service.resend(new ResendCommand(PENDING_TOKEN));
@@ -52,7 +52,7 @@ class ResendOtpServiceTest {
     @Test
     void resend_withoutPhone_sendsEmailVerification() {
         var user = User.create("u@test.com", "hash", "A", "B", null, Role.BUYER);
-        when(tokenGeneratorPort.extractUserIdFromPendingToken(PENDING_TOKEN)).thenReturn(USER_ID);
+        when(tokenGeneratorPort.extractUserIdFromAnyPendingToken(PENDING_TOKEN)).thenReturn(USER_ID);
         when(loadUserPort.loadById(USER_ID)).thenReturn(Optional.of(user));
 
         service.resend(new ResendCommand(PENDING_TOKEN));
@@ -66,7 +66,7 @@ class ResendOtpServiceTest {
 
     @Test
     void resend_withInvalidToken_throwsPendingTokenInvalid() {
-        when(tokenGeneratorPort.extractUserIdFromPendingToken(PENDING_TOKEN))
+        when(tokenGeneratorPort.extractUserIdFromAnyPendingToken(PENDING_TOKEN))
                 .thenThrow(new JwtException("bad"));
 
         assertThatThrownBy(() -> service.resend(new ResendCommand(PENDING_TOKEN)))

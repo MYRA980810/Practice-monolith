@@ -31,7 +31,7 @@ public class ResendOtpService implements ResendOtpUseCase {
 
     private UUID extractUserId(String pendingToken) {
         try {
-            return tokenGeneratorPort.extractUserIdFromPendingToken(pendingToken);
+            return tokenGeneratorPort.extractUserIdFromAnyPendingToken(pendingToken);
         } catch (Exception e) {
             throw new PendingTokenInvalidException();
         }

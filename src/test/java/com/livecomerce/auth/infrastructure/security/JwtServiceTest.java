@@ -133,4 +133,58 @@ class JwtServiceTest {
         var claims = jwtService.validateAndExtract(token);
         assertThat(claims.get("type", String.class)).isEqualTo("change-password");
     }
+
+    @Test
+    void extractUserIdFromAnyPendingToken_acceptsOtpPendingToken() {
+        var user = User.create("x@x.com", "hash", "X", "X", null, Role.BUYER);
+        var token = jwtService.generatePendingToken(user);
+        assertThat(jwtService.extractUserIdFromAnyPendingToken(token)).isEqualTo(user.getId());
+    }
+
+    @Test
+    void extractUserIdFromAnyPendingToken_acceptsResetPendingToken() {
+        var user = User.create("x@x.com", "hash", "X", "X", null, Role.BUYER);
+        var token = jwtService.generateResetPendingToken(user);
+        assertThat(jwtService.extractUserIdFromAnyPendingToken(token)).isEqualTo(user.getId());
+    }
+
+    @Test
+    void extractUserIdFromAnyPendingToken_acceptsChangePasswordPendingToken() {
+        var user = User.create("x@x.com", "hash", "X", "X", null, Role.BUYER);
+        var token = jwtService.generateChangePasswordPendingToken(user);
+        assertThat(jwtService.extractUserIdFromAnyPendingToken(token)).isEqualTo(user.getId());
+    }
+
+    @Test
+    void extractUserIdFromAnyPendingToken_withOAuthPendingToken_throwsJwtException() {
+        var user = User.create("x@x.com", "hash", "X", "X", null, Role.BUYER);
+        var token = jwtService.generateOAuthPendingToken(user);
+        assertThatThrownBy(() -> jwtService.extractUserIdFromAnyPendingToken(token))
+                .isInstanceOf(io.jsonwebtoken.JwtException.class);
+    }
+
+    @Test
+    void extractUserIdFromAnyPendingToken_withPasswordResetToken_throwsJwtException() {
+        var user = User.create("x@x.com", "hash", "X", "X", null, Role.BUYER);
+        var token = jwtService.generatePasswordResetToken(user);
+        assertThatThrownBy(() -> jwtService.extractUserIdFromAnyPendingToken(token))
+                .isInstanceOf(io.jsonwebtoken.JwtException.class);
+    }
+
+    @Test
+    void extractUserIdFromAnyPendingToken_withChangePasswordToken_throwsJwtException() {
+        var user = User.create("x@x.com", "hash", "X", "X", null, Role.BUYER);
+        var token = jwtService.generateChangePasswordToken(user);
+        assertThatThrownBy(() -> jwtService.extractUserIdFromAnyPendingToken(token))
+                .isInstanceOf(io.jsonwebtoken.JwtException.class);
+    }
+
+    @Test
+    void extractUserIdFromAnyPendingToken_withTokenMissingTypeClaim_throwsJwtExceptionNotNpe() {
+        var user = User.create("x@x.com", "hash", "X", "X", null, Role.SELLER);
+        var fullAccessToken = jwtService.generate(user);
+        assertThatThrownBy(() -> jwtService.extractUserIdFromAnyPendingToken(fullAccessToken))
+                .isInstanceOf(io.jsonwebtoken.JwtException.class)
+                .isNotInstanceOf(NullPointerException.class);
+    }
 }
