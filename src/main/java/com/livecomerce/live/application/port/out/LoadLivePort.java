@@ -2,6 +2,8 @@ package com.livecomerce.live.application.port.out;
 
 import com.livecomerce.live.domain.Live;
 import com.livecomerce.live.domain.LiveStatus;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 import java.util.List;
 import java.util.Optional;
@@ -22,4 +24,6 @@ public interface LoadLivePort {
     List<Live> loadByStoreId(UUID storeId);
 
     List<Live> loadByStoreIdAndStatus(UUID storeId, LiveStatus status);
+
+    Page<Live> loadByStatus(LiveStatus status, Pageable pageable);
 }

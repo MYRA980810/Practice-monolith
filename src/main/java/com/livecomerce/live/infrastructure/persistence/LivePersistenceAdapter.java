@@ -5,6 +5,8 @@ import com.livecomerce.live.application.port.out.SaveLivePort;
 import com.livecomerce.live.domain.Live;
 import com.livecomerce.live.domain.LiveStatus;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -57,5 +59,10 @@ class LivePersistenceAdapter implements SaveLivePort, LoadLivePort {
     @Override
     public List<Live> loadByStoreIdAndStatus(UUID storeId, LiveStatus status) {
         return repository.findByStoreIdAndStatus(storeId, status);
+    }
+
+    @Override
+    public Page<Live> loadByStatus(LiveStatus status, Pageable pageable) {
+        return repository.findByStatus(status, pageable);
     }
 }

@@ -2,6 +2,7 @@ package com.livecomerce.live.api;
 
 import com.livecomerce.live.application.port.in.*;
 import com.livecomerce.live.application.port.out.LoadLivePort;
+import com.livecomerce.live.application.port.out.ViewerCountPort;
 import com.livecomerce.live.domain.Live;
 import com.livecomerce.live.domain.LiveContext;
 import com.livecomerce.live.domain.LiveStatus;
@@ -17,6 +18,9 @@ import org.springframework.boot.autoconfigure.security.servlet.SecurityFilterAut
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Import;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -33,6 +37,8 @@ import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -66,6 +72,7 @@ class LiveControllerTest {
     @MockitoBean CancelLiveUseCase cancelLiveUseCase;
     @MockitoBean RecordViewerHeartbeatUseCase recordViewerHeartbeatUseCase;
     @MockitoBean LoadLivePort loadLivePort;
+    @MockitoBean ViewerCountPort viewerCountPort;
 
     private static final UUID SELLER_ID = UUID.randomUUID();
     private static final UUID LIVE_ID   = UUID.randomUUID();
@@ -255,6 +262,92 @@ class LiveControllerTest {
         mvc.perform(get("/api/lives/{id}", LIVE_ID))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.type").value("https://livecomerce.com/errors/live-not-found"));
+    }
+
+    // --- GET /api/lives/active ---
+
+    @Test
+    void listActiveLives_whenEmpty_returns200EmptyPage() throws Exception {
+        when(loadLivePort.loadByStatus(eq(LiveStatus.LIVE), any()))
+                .thenReturn(new PageImpl<>(List.of()));
+
+        mvc.perform(get("/api/lives/active"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content").isArray())
+                .andExpect(jsonPath("$.content").isEmpty())
+                .andExpect(jsonPath("$.totalElements").value(0));
+    }
+
+    @Test
+    void listActiveLives_onlyQueriesLiveStatus_notSellerOrStoreScoped() throws Exception {
+        var live = buildLive();
+        live.start();
+        when(loadLivePort.loadByStatus(eq(LiveStatus.LIVE), any()))
+                .thenReturn(new PageImpl<>(List.of(live)));
+        when(viewerCountPort.get(any())).thenReturn(0L);
+
+        mvc.perform(get("/api/lives/active"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].title").value("Test Live"));
+
+        verify(loadLivePort, never()).loadBySellerId(any());
+        verify(loadLivePort, never()).loadByStoreId(any());
+    }
+
+    @Test
+    void listActiveLives_respectsPaginationDefaults() throws Exception {
+        when(loadLivePort.loadByStatus(
+                eq(LiveStatus.LIVE),
+                eq(PageRequest.of(0, 20, Sort.by(Sort.Direction.DESC, "startedAt")))))
+                .thenReturn(new PageImpl<>(List.of()));
+
+        mvc.perform(get("/api/lives/active"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void listActiveLives_withNullThumbnail_doesNotThrow() throws Exception {
+        var live = buildLive();
+        live.start();
+        when(loadLivePort.loadByStatus(eq(LiveStatus.LIVE), any()))
+                .thenReturn(new PageImpl<>(List.of(live)));
+        when(viewerCountPort.get(any())).thenReturn(3L);
+
+        mvc.perform(get("/api/lives/active"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].thumbnailUrl").doesNotExist())
+                .andExpect(jsonPath("$.content[0].currentViewers").value(3));
+    }
+
+    @Test
+    void listActiveLives_withNoRedisEntryYet_defaultsViewerCountToZero() throws Exception {
+        var live = buildLive();
+        live.start();
+        when(loadLivePort.loadByStatus(eq(LiveStatus.LIVE), any()))
+                .thenReturn(new PageImpl<>(List.of(live)));
+        when(viewerCountPort.get(any())).thenReturn(0L);
+
+        mvc.perform(get("/api/lives/active"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].currentViewers").value(0));
+    }
+
+    @Test
+    void listActiveLives_neverExposesPlaybackOrBroadcastCredentials() throws Exception {
+        var live = buildLive();
+        live.start();
+        live.setStreamToken("agora-rtc-token");
+        live.setIvsChannel("channel-arn", "rtmps://ingest.example", "key-arn", "sk_secret_value", "https://playback.example");
+        when(loadLivePort.loadByStatus(eq(LiveStatus.LIVE), any()))
+                .thenReturn(new PageImpl<>(List.of(live)));
+        when(viewerCountPort.get(any())).thenReturn(1L);
+
+        mvc.perform(get("/api/lives/active"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].ivsPlaybackUrl").doesNotExist())
+                .andExpect(jsonPath("$.content[0].streamToken").doesNotExist())
+                .andExpect(jsonPath("$.content[0].ivsStreamKeyValue").doesNotExist())
+                .andExpect(jsonPath("$.content[0].agoraChannelId").doesNotExist());
     }
 
     // --- GET /api/lives?sellerId= ---

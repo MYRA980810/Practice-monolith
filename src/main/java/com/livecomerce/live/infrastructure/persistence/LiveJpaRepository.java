@@ -2,6 +2,8 @@ package com.livecomerce.live.infrastructure.persistence;
 
 import com.livecomerce.live.domain.Live;
 import com.livecomerce.live.domain.LiveStatus;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
@@ -21,4 +23,6 @@ interface LiveJpaRepository extends JpaRepository<Live, UUID> {
     List<Live> findByStoreId(UUID storeId);
 
     List<Live> findByStoreIdAndStatus(UUID storeId, LiveStatus status);
+
+    Page<Live> findByStatus(LiveStatus status, Pageable pageable);
 }

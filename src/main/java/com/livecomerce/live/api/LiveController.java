@@ -6,11 +6,16 @@ import com.livecomerce.live.application.port.in.EndLiveUseCase;
 import com.livecomerce.live.application.port.in.RecordViewerHeartbeatUseCase;
 import com.livecomerce.live.application.port.in.StartLiveUseCase;
 import com.livecomerce.live.application.port.out.LoadLivePort;
+import com.livecomerce.live.application.port.out.ViewerCountPort;
 import com.livecomerce.live.domain.LiveNotFoundException;
 import com.livecomerce.live.domain.LiveStatus;
 import com.livecomerce.shared.UserPrincipal;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -31,6 +36,7 @@ class LiveController {
     private final CancelLiveUseCase cancelLiveUseCase;
     private final RecordViewerHeartbeatUseCase recordViewerHeartbeatUseCase;
     private final LoadLivePort loadLivePort;
+    private final ViewerCountPort viewerCountPort;
 
     @PostMapping("/api/lives")
     @PreAuthorize("hasRole('SELLER')")
@@ -99,6 +105,15 @@ class LiveController {
                 .map(LiveResponse::from)
                 .map(ResponseEntity::ok)
                 .orElseThrow(() -> new LiveNotFoundException(id));
+    }
+
+    @GetMapping("/api/lives/active")
+    ResponseEntity<Page<LiveFeedCardResponse>> listActiveLives(
+            @PageableDefault(size = 20, sort = "startedAt", direction = Sort.Direction.DESC) Pageable pageable) {
+
+        var page = loadLivePort.loadByStatus(LiveStatus.LIVE, pageable)
+                .map(live -> LiveFeedCardResponse.from(live, viewerCountPort.get(live.getId())));
+        return ResponseEntity.ok(page);
     }
 
     @GetMapping("/api/lives")
