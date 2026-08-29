@@ -8,6 +8,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Component;
 
+import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -31,6 +33,12 @@ class StorePersistenceAdapter implements LoadStorePort, SaveStorePort {
     @SuppressWarnings("null")
     public Optional<Store> loadById(UUID storeId) {
         return repository.findById(storeId);
+    }
+
+    @Override
+    @SuppressWarnings("null")
+    public List<Store> loadByIds(Collection<UUID> storeIds) {
+        return repository.findAllById(storeIds);
     }
 
     @Override

@@ -6,6 +6,8 @@ import com.livecomerce.auth.domain.User;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
+import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -28,6 +30,12 @@ class UserPersistenceAdapter implements LoadUserPort, SaveUserPort {
     @Override
     public Optional<User> loadById(UUID id) {
         return repository.findById(id);
+    }
+
+    @Override
+    @SuppressWarnings("null")
+    public List<User> loadByIds(Collection<UUID> ids) {
+        return repository.findAllById(ids);
     }
 
     @Override

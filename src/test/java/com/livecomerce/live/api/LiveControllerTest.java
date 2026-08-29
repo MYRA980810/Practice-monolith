@@ -1,5 +1,7 @@
 package com.livecomerce.live.api;
 
+import com.livecomerce.live.LoadSellerNamesPort;
+import com.livecomerce.live.LoadStoreNamesPort;
 import com.livecomerce.live.application.port.in.*;
 import com.livecomerce.live.application.port.out.LoadLivePort;
 import com.livecomerce.live.application.port.out.ViewerCountPort;
@@ -32,12 +34,15 @@ import org.springframework.web.method.support.HandlerMethodArgumentResolver;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -73,6 +78,8 @@ class LiveControllerTest {
     @MockitoBean RecordViewerHeartbeatUseCase recordViewerHeartbeatUseCase;
     @MockitoBean LoadLivePort loadLivePort;
     @MockitoBean ViewerCountPort viewerCountPort;
+    @MockitoBean LoadStoreNamesPort loadStoreNamesPort;
+    @MockitoBean LoadSellerNamesPort loadSellerNamesPort;
 
     private static final UUID SELLER_ID = UUID.randomUUID();
     private static final UUID LIVE_ID   = UUID.randomUUID();
@@ -418,6 +425,82 @@ class LiveControllerTest {
                 .andExpect(jsonPath("$.content[0].startedAt").doesNotExist())
                 .andExpect(jsonPath("$.content[0].streamToken").doesNotExist())
                 .andExpect(jsonPath("$.content[0].agoraChannelId").doesNotExist());
+    }
+
+    @Test
+    void listActiveLives_withStore_resolvesSellerNameFromStoreName() throws Exception {
+        var live = buildLiveWithStore(STORE_ID);
+        live.start();
+        when(loadLivePort.loadByStatus(eq(LiveStatus.LIVE), any()))
+                .thenReturn(new PageImpl<>(List.of(live)));
+        when(viewerCountPort.get(any())).thenReturn(0L);
+        when(loadStoreNamesPort.loadNames(Set.of(STORE_ID))).thenReturn(Map.of(STORE_ID, "Mi Tienda"));
+
+        mvc.perform(get("/api/lives/active"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].sellerName").value("Mi Tienda"));
+
+        verify(loadSellerNamesPort, never()).loadNames(any());
+    }
+
+    @Test
+    void listActiveLives_withoutStore_resolvesSellerNameFromUserDisplayName() throws Exception {
+        var live = buildLive();
+        live.start();
+        when(loadLivePort.loadByStatus(eq(LiveStatus.LIVE), any()))
+                .thenReturn(new PageImpl<>(List.of(live)));
+        when(viewerCountPort.get(any())).thenReturn(0L);
+        when(loadSellerNamesPort.loadNames(Set.of(SELLER_ID)))
+                .thenReturn(Map.of(SELLER_ID, "Jane Doe"));
+
+        mvc.perform(get("/api/lives/active"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].sellerName").value("Jane Doe"));
+
+        verify(loadStoreNamesPort, never()).loadNames(any());
+    }
+
+    @Test
+    void listActiveLives_withMultipleCardsFromSameStore_batchesStoreLookupOnce() throws Exception {
+        var live1 = buildLiveWithStore(STORE_ID);
+        var live2 = buildLiveWithStore(STORE_ID);
+        live1.start();
+        live2.start();
+        when(loadLivePort.loadByStatus(eq(LiveStatus.LIVE), any()))
+                .thenReturn(new PageImpl<>(List.of(live1, live2)));
+        when(viewerCountPort.get(any())).thenReturn(0L);
+        when(loadStoreNamesPort.loadNames(Set.of(STORE_ID))).thenReturn(Map.of(STORE_ID, "Mi Tienda"));
+
+        mvc.perform(get("/api/lives/active"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].sellerName").value("Mi Tienda"))
+                .andExpect(jsonPath("$.content[1].sellerName").value("Mi Tienda"));
+
+        verify(loadStoreNamesPort, times(1)).loadNames(any());
+    }
+
+    @Test
+    void listUpcomingLives_withStore_resolvesSellerNameFromStoreName() throws Exception {
+        var live = Live.create(SELLER_ID, STORE_ID, LiveContext.STORE, "Store Upcoming Live",
+                null, java.time.Instant.now().plusSeconds(3600), 60);
+        when(loadLivePort.loadUpcoming(any())).thenReturn(new PageImpl<>(List.of(live)));
+        when(loadStoreNamesPort.loadNames(Set.of(STORE_ID))).thenReturn(Map.of(STORE_ID, "Mi Tienda"));
+
+        mvc.perform(get("/api/lives/upcoming"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].sellerName").value("Mi Tienda"));
+    }
+
+    @Test
+    void listUpcomingLives_withoutStore_resolvesSellerNameFromUserDisplayName() throws Exception {
+        var live = buildScheduledLive(java.time.Instant.now().plusSeconds(3600));
+        when(loadLivePort.loadUpcoming(any())).thenReturn(new PageImpl<>(List.of(live)));
+        when(loadSellerNamesPort.loadNames(Set.of(SELLER_ID)))
+                .thenReturn(Map.of(SELLER_ID, "Jane Doe"));
+
+        mvc.perform(get("/api/lives/upcoming"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].sellerName").value("Jane Doe"));
     }
 
     // --- GET /api/lives?sellerId= ---
