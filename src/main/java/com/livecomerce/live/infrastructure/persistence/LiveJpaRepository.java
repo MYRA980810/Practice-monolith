@@ -25,4 +25,6 @@ interface LiveJpaRepository extends JpaRepository<Live, UUID> {
     List<Live> findByStoreIdAndStatus(UUID storeId, LiveStatus status);
 
     Page<Live> findByStatus(LiveStatus status, Pageable pageable);
+
+    Page<Live> findByStatusAndScheduledAtIsNotNull(LiveStatus status, Pageable pageable);
 }

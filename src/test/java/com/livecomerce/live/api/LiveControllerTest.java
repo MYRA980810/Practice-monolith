@@ -105,6 +105,10 @@ class LiveControllerTest {
         return Live.create(SELLER_ID, storeId, LiveContext.SELLER_PROFILE, "Store Live", null, null, 60);
     }
 
+    private static Live buildScheduledLive(java.time.Instant scheduledAt) {
+        return Live.create(SELLER_ID, null, LiveContext.SELLER_PROFILE, "Upcoming Live", null, scheduledAt, 60);
+    }
+
     // --- POST /api/lives ---
 
     @Test
@@ -347,6 +351,72 @@ class LiveControllerTest {
                 .andExpect(jsonPath("$.content[0].ivsPlaybackUrl").doesNotExist())
                 .andExpect(jsonPath("$.content[0].streamToken").doesNotExist())
                 .andExpect(jsonPath("$.content[0].ivsStreamKeyValue").doesNotExist())
+                .andExpect(jsonPath("$.content[0].agoraChannelId").doesNotExist());
+    }
+
+    // --- GET /api/lives/upcoming ---
+
+    @Test
+    void listUpcomingLives_whenEmpty_returns200EmptyPage() throws Exception {
+        when(loadLivePort.loadUpcoming(any()))
+                .thenReturn(new PageImpl<>(List.of()));
+
+        mvc.perform(get("/api/lives/upcoming"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content").isArray())
+                .andExpect(jsonPath("$.content").isEmpty())
+                .andExpect(jsonPath("$.totalElements").value(0));
+    }
+
+    @Test
+    void listUpcomingLives_onlyQueriesUpcoming_notSellerOrStoreScoped() throws Exception {
+        var live = buildScheduledLive(java.time.Instant.now().plusSeconds(3600));
+        when(loadLivePort.loadUpcoming(any()))
+                .thenReturn(new PageImpl<>(List.of(live)));
+
+        mvc.perform(get("/api/lives/upcoming"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].title").value("Upcoming Live"));
+
+        verify(loadLivePort, never()).loadBySellerId(any());
+        verify(loadLivePort, never()).loadByStoreId(any());
+        verify(viewerCountPort, never()).get(any());
+    }
+
+    @Test
+    void listUpcomingLives_respectsPaginationDefaults() throws Exception {
+        when(loadLivePort.loadUpcoming(
+                eq(PageRequest.of(0, 20, Sort.by(Sort.Direction.ASC, "scheduledAt")))))
+                .thenReturn(new PageImpl<>(List.of()));
+
+        mvc.perform(get("/api/lives/upcoming"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void listUpcomingLives_withNullThumbnail_doesNotThrow() throws Exception {
+        var live = buildScheduledLive(java.time.Instant.now().plusSeconds(3600));
+        when(loadLivePort.loadUpcoming(any()))
+                .thenReturn(new PageImpl<>(List.of(live)));
+
+        mvc.perform(get("/api/lives/upcoming"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].thumbnailUrl").doesNotExist())
+                .andExpect(jsonPath("$.content[0].scheduledAt").exists());
+    }
+
+    @Test
+    void listUpcomingLives_neverExposesCurrentViewersOrBroadcastCredentials() throws Exception {
+        var live = buildScheduledLive(java.time.Instant.now().plusSeconds(3600));
+        live.setStreamToken("agora-rtc-token");
+        when(loadLivePort.loadUpcoming(any()))
+                .thenReturn(new PageImpl<>(List.of(live)));
+
+        mvc.perform(get("/api/lives/upcoming"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].currentViewers").doesNotExist())
+                .andExpect(jsonPath("$.content[0].startedAt").doesNotExist())
+                .andExpect(jsonPath("$.content[0].streamToken").doesNotExist())
                 .andExpect(jsonPath("$.content[0].agoraChannelId").doesNotExist());
     }
 

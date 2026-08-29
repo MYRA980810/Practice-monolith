@@ -116,6 +116,15 @@ class LiveController {
         return ResponseEntity.ok(page);
     }
 
+    @GetMapping("/api/lives/upcoming")
+    ResponseEntity<Page<LiveUpcomingCardResponse>> listUpcomingLives(
+            @PageableDefault(size = 20, sort = "scheduledAt", direction = Sort.Direction.ASC) Pageable pageable) {
+
+        var page = loadLivePort.loadUpcoming(pageable)
+                .map(LiveUpcomingCardResponse::from);
+        return ResponseEntity.ok(page);
+    }
+
     @GetMapping("/api/lives")
     ResponseEntity<List<LiveResponse>> listBySeller(
             @RequestParam UUID sellerId,

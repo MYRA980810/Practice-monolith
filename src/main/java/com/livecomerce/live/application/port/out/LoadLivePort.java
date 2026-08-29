@@ -26,4 +26,6 @@ public interface LoadLivePort {
     List<Live> loadByStoreIdAndStatus(UUID storeId, LiveStatus status);
 
     Page<Live> loadByStatus(LiveStatus status, Pageable pageable);
+
+    Page<Live> loadUpcoming(Pageable pageable);
 }
