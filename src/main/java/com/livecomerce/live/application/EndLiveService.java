@@ -40,6 +40,19 @@ public class EndLiveService implements EndLiveUseCase {
                 .orElseThrow(() -> new LiveNotFoundException(command.liveId()));
 
         verifySeller(live, command.sellerId());
+        return close(live);
+    }
+
+    /**
+     * System-triggered close, skipping the seller-ownership check — used by
+     * the stale-live reconciliation job when a live's IVS stream disconnected
+     * and never came back within the grace period.
+     */
+    public Live endStaleLive(Live live) {
+        return close(live);
+    }
+
+    private Live close(Live live) {
         live.end();
 
         var saved = saveLivePort.save(live);

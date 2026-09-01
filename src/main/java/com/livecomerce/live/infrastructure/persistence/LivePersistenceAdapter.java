@@ -9,6 +9,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -69,5 +70,10 @@ class LivePersistenceAdapter implements SaveLivePort, LoadLivePort {
     @Override
     public Page<Live> loadUpcoming(Pageable pageable) {
         return repository.findByStatusAndScheduledAtIsNotNull(LiveStatus.SCHEDULED, pageable);
+    }
+
+    @Override
+    public List<Live> loadStaleLive(Instant cutoff) {
+        return repository.findByStatusAndStreamEndedAtLessThanEqual(LiveStatus.LIVE, cutoff);
     }
 }

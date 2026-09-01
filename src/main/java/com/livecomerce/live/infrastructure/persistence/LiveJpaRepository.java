@@ -6,6 +6,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -27,4 +28,6 @@ interface LiveJpaRepository extends JpaRepository<Live, UUID> {
     Page<Live> findByStatus(LiveStatus status, Pageable pageable);
 
     Page<Live> findByStatusAndScheduledAtIsNotNull(LiveStatus status, Pageable pageable);
+
+    List<Live> findByStatusAndStreamEndedAtLessThanEqual(LiveStatus status, Instant cutoff);
 }

@@ -1,0 +1,1 @@
+ALTER TABLE lives ADD COLUMN stream_ended_at TIMESTAMPTZ;

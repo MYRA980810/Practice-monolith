@@ -107,6 +107,23 @@ class EndLiveServiceTest {
     }
 
     @Test
+    void endStaleLive_transitionsToEnded_withoutSellerCheck() {
+        var live = liveLive();
+        when(saveLivePort.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        var result = sut.endStaleLive(live);
+
+        assertThat(result.getStatus()).isEqualTo(LiveStatus.ENDED);
+        verify(agoraRtmMessagePort).sendChannelMessage(
+                eq("live-chat:" + live.getId()),
+                contains("\"type\":\"live-ended\""));
+        var captor = ArgumentCaptor.forClass(LiveEndedEvent.class);
+        verify(eventPublisher).publishEvent(captor.capture());
+        assertThat(captor.getValue().liveId()).isEqualTo(live.getId());
+        verifyNoInteractions(loadLivePort);
+    }
+
+    @Test
     void endLive_wrongSeller_throwsLiveNotOwned() {
         var live        = liveLive();
         var wrongSeller = UUID.randomUUID();

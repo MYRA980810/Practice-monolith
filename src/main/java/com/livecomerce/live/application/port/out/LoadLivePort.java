@@ -5,6 +5,7 @@ import com.livecomerce.live.domain.LiveStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -28,4 +29,7 @@ public interface LoadLivePort {
     Page<Live> loadByStatus(LiveStatus status, Pageable pageable);
 
     Page<Live> loadUpcoming(Pageable pageable);
+
+    /** Lives still marked LIVE whose stream-ended signal is older than {@code cutoff}. */
+    List<Live> loadStaleLive(Instant cutoff);
 }

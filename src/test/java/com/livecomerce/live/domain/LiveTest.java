@@ -134,6 +134,48 @@ class LiveTest {
                 .isInstanceOf(InvalidLiveStateException.class);
     }
 
+    // ── Stream-ended signal ──────────────────────────────────────────────────
+
+    @Test
+    void markStreamEnded_whileLive_setsStreamEndedAt() {
+        var live = Live.create(SELLER_ID, STORE_ID, LiveContext.STORE, "My Live", null, null, 60);
+        live.start();
+        var at = Instant.now();
+
+        live.markStreamEnded(at);
+
+        assertThat(live.getStreamEndedAt()).isEqualTo(at);
+    }
+
+    @Test
+    void markStreamEnded_whileNotLive_isNoOp() {
+        var live = Live.create(SELLER_ID, STORE_ID, LiveContext.STORE, "My Live", null, null, 60);
+
+        live.markStreamEnded(Instant.now());
+
+        assertThat(live.getStreamEndedAt()).isNull();
+    }
+
+    @Test
+    void clearStreamEndedSignal_afterMarked_clearsIt() {
+        var live = Live.create(SELLER_ID, STORE_ID, LiveContext.STORE, "My Live", null, null, 60);
+        live.start();
+        live.markStreamEnded(Instant.now());
+
+        live.clearStreamEndedSignal();
+
+        assertThat(live.getStreamEndedAt()).isNull();
+    }
+
+    @Test
+    void clearStreamEndedSignal_whenNotMarked_isNoOp() {
+        var live = Live.create(SELLER_ID, STORE_ID, LiveContext.STORE, "My Live", null, null, 60);
+        live.start();
+
+        assertThatCode(live::clearStreamEndedSignal).doesNotThrowAnyException();
+        assertThat(live.getStreamEndedAt()).isNull();
+    }
+
     @Test
     void setStreamToken_setsToken() {
         var live = Live.create(SELLER_ID, STORE_ID, LiveContext.STORE, "My Live", null, null, 60);

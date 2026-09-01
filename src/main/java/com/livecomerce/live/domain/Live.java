@@ -70,6 +70,9 @@ public class Live implements Persistable<UUID> {
     @Column(name = "ended_at")
     private Instant endedAt;
 
+    @Column(name = "stream_ended_at")
+    private Instant streamEndedAt;
+
     @Column(name = "peak_viewers", nullable = false)
     private int peakViewers = 0;
 
@@ -146,6 +149,27 @@ public class Live implements Persistable<UUID> {
         }
         this.status    = LiveStatus.CANCELLED;
         this.updatedAt = OffsetDateTime.now();
+    }
+
+    /**
+     * Records that the underlying IVS stream reported a disconnect. Does not
+     * end the live — a brief reconnect would otherwise look like a false
+     * end. The stale-live reconciliation job is what actually ends a live
+     * whose stream-ended signal outlives the grace period.
+     */
+    public void markStreamEnded(Instant at) {
+        if (this.status == LiveStatus.LIVE) {
+            this.streamEndedAt = at;
+            this.updatedAt     = OffsetDateTime.now();
+        }
+    }
+
+    /** Cancels a pending stream-ended signal — the seller reconnected. */
+    public void clearStreamEndedSignal() {
+        if (this.streamEndedAt != null) {
+            this.streamEndedAt = null;
+            this.updatedAt     = OffsetDateTime.now();
+        }
     }
 
     public void setStreamToken(String token) {
