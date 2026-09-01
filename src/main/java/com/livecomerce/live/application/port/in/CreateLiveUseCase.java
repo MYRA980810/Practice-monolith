@@ -16,7 +16,7 @@ public interface CreateLiveUseCase {
             @Nullable UUID storeId,
             LiveContext context,
             String title,
-            @Nullable String thumbnailUrl,
+            String thumbnailUrl,
             @Nullable Instant scheduledAt,
             int displayDurationSeconds
     ) {}

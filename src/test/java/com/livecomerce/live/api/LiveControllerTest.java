@@ -127,7 +127,8 @@ class LiveControllerTest {
                         .content("""
                                 {
                                   "context": "SELLER_PROFILE",
-                                  "title": "My Test Live"
+                                  "title": "My Test Live",
+                                  "thumbnailUrl": "https://cdn.example.com/thumb.jpg"
                                 }
                                 """))
                 .andExpect(status().isCreated())
@@ -140,7 +141,17 @@ class LiveControllerTest {
         mvc.perform(post("/api/lives")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"context": "SELLER_PROFILE"}
+                                {"context": "SELLER_PROFILE", "thumbnailUrl": "https://cdn.example.com/thumb.jpg"}
+                                """))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void createLive_withMissingThumbnailUrl_returns400() throws Exception {
+        mvc.perform(post("/api/lives")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"context": "SELLER_PROFILE", "title": "My Test Live"}
                                 """))
                 .andExpect(status().isBadRequest());
     }

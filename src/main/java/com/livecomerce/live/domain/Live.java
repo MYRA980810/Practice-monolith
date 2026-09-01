@@ -103,7 +103,7 @@ public class Live implements Persistable<UUID> {
     }
 
     public static Live create(UUID sellerId, @Nullable UUID storeId, LiveContext context,
-                              String title, @Nullable String thumbnailUrl, @Nullable Instant scheduledAt,
+                              String title, String thumbnailUrl, @Nullable Instant scheduledAt,
                               int displayDurationSeconds) {
         var live = new Live();
         live.id                      = UUID.randomUUID();

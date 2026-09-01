@@ -14,7 +14,7 @@ public record CreateLiveRequest(
         @NotNull LiveContext context,
         @Nullable UUID storeId,
         @NotBlank String title,
-        @Nullable String thumbnailUrl,
+        @NotBlank String thumbnailUrl,
         @Nullable Instant scheduledAt,
         @Nullable @Min(15) @Max(120) Integer displayDurationSeconds
 ) {}
