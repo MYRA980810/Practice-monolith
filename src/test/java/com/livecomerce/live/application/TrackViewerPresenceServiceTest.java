@@ -61,6 +61,7 @@ class TrackViewerPresenceServiceTest {
         String channelId = live.getAgoraChannelId();
 
         when(viewerCountPort.increment(live.getId())).thenReturn(5L);
+        when(viewerCountPort.shouldBroadcast(live.getId(), 5L)).thenReturn(true);
         when(loadLivePort.loadByAgoraChannelId(channelId)).thenReturn(Optional.of(live));
         when(saveLivePort.save(any())).thenReturn(live);
 
@@ -78,6 +79,7 @@ class TrackViewerPresenceServiceTest {
         String channelId = live.getAgoraChannelId();
 
         when(viewerCountPort.decrement(live.getId())).thenReturn(3L);
+        when(viewerCountPort.shouldBroadcast(live.getId(), 3L)).thenReturn(true);
         when(loadLivePort.loadByAgoraChannelId(channelId)).thenReturn(Optional.of(live));
 
         sut.handleLeave(channelId);
@@ -121,6 +123,7 @@ class TrackViewerPresenceServiceTest {
         String channelId = live.getAgoraChannelId();
 
         when(viewerCountPort.increment(live.getId())).thenReturn(1L);
+        when(viewerCountPort.shouldBroadcast(live.getId(), 1L)).thenReturn(true);
         when(loadLivePort.loadByAgoraChannelId(channelId)).thenReturn(Optional.of(live));
         when(saveLivePort.save(any())).thenReturn(live);
         doThrow(new RuntimeException("RTM error")).when(agoraRtmMessagePort)
@@ -138,6 +141,7 @@ class TrackViewerPresenceServiceTest {
 
         when(loadLivePort.loadById(live.getId())).thenReturn(Optional.of(live));
         when(viewerCountPort.heartbeat(live.getId(), viewerId)).thenReturn(4L);
+        when(viewerCountPort.shouldBroadcast(live.getId(), 4L)).thenReturn(true);
         when(saveLivePort.save(any())).thenReturn(live);
 
         long count = sut.recordHeartbeat(new RecordViewerHeartbeatUseCase.RecordHeartbeatCommand(live.getId(), viewerId));
@@ -147,6 +151,21 @@ class TrackViewerPresenceServiceTest {
         var captor = ArgumentCaptor.forClass(String.class);
         verify(agoraRtmMessagePort).sendChannelMessage(eq("live-chat:" + live.getId()), captor.capture());
         assertThat(captor.getValue()).contains("\"type\":\"viewer-count\"").contains("\"count\":4");
+    }
+
+    @Test
+    void recordHeartbeat_whenCountUnchanged_skipsBroadcast() {
+        var live = startedLive();
+        String viewerId = "viewer-abc";
+
+        when(loadLivePort.loadById(live.getId())).thenReturn(Optional.of(live));
+        when(viewerCountPort.heartbeat(live.getId(), viewerId)).thenReturn(4L);
+        when(viewerCountPort.shouldBroadcast(live.getId(), 4L)).thenReturn(false);
+
+        long count = sut.recordHeartbeat(new RecordViewerHeartbeatUseCase.RecordHeartbeatCommand(live.getId(), viewerId));
+
+        assertThat(count).isEqualTo(4L);
+        verify(agoraRtmMessagePort, never()).sendChannelMessage(any(), any());
     }
 
     @Test

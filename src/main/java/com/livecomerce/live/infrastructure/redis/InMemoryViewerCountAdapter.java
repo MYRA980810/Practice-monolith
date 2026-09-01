@@ -17,6 +17,7 @@ class InMemoryViewerCountAdapter implements ViewerCountPort {
 
     private final ConcurrentHashMap<UUID, AtomicLong> store = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<UUID, ConcurrentHashMap<String, Instant>> heartbeats = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<UUID, AtomicLong> lastBroadcast = new ConcurrentHashMap<>();
 
     @Override
     public long increment(UUID liveId) {
@@ -48,5 +49,11 @@ class InMemoryViewerCountAdapter implements ViewerCountPort {
         viewers.values().removeIf(seenAt -> seenAt.isBefore(cutoff));
 
         return viewers.size();
+    }
+
+    @Override
+    public boolean shouldBroadcast(UUID liveId, long count) {
+        var previous = lastBroadcast.computeIfAbsent(liveId, k -> new AtomicLong(-1));
+        return previous.getAndSet(count) != count;
     }
 }

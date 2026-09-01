@@ -69,4 +69,34 @@ class InMemoryViewerCountAdapterTest {
 
         assertThat(result).isEqualTo(1L);
     }
+
+    // --- shouldBroadcast ---
+
+    @Test
+    void shouldBroadcast_firstCall_returnsTrue() {
+        assertThat(adapter.shouldBroadcast(LIVE_ID, 5L)).isTrue();
+    }
+
+    @Test
+    void shouldBroadcast_countChanged_returnsTrue() {
+        adapter.shouldBroadcast(LIVE_ID, 5L);
+
+        assertThat(adapter.shouldBroadcast(LIVE_ID, 6L)).isTrue();
+    }
+
+    @Test
+    void shouldBroadcast_countUnchanged_returnsFalse() {
+        adapter.shouldBroadcast(LIVE_ID, 5L);
+
+        assertThat(adapter.shouldBroadcast(LIVE_ID, 5L)).isFalse();
+    }
+
+    @Test
+    void shouldBroadcast_differentLives_areIsolated() {
+        var otherLiveId = UUID.randomUUID();
+
+        adapter.shouldBroadcast(LIVE_ID, 5L);
+
+        assertThat(adapter.shouldBroadcast(otherLiveId, 5L)).isTrue();
+    }
 }

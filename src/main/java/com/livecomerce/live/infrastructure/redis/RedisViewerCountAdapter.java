@@ -65,4 +65,16 @@ class RedisViewerCountAdapter implements ViewerCountPort {
     private static String heartbeatKey(UUID liveId) {
         return "live:" + liveId + ":viewers:heartbeat";
     }
+
+    @Override
+    public boolean shouldBroadcast(UUID liveId, long count) {
+        String key = lastBroadcastKey(liveId);
+        String previous = redisTemplate.opsForValue().getAndSet(key, String.valueOf(count));
+        redisTemplate.expire(key, Duration.ofSeconds(120));
+        return previous == null || !previous.equals(String.valueOf(count));
+    }
+
+    private static String lastBroadcastKey(UUID liveId) {
+        return "live:" + liveId + ":viewers:last-broadcast";
+    }
 }

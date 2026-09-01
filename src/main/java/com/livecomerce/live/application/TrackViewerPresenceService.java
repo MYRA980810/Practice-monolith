@@ -94,6 +94,9 @@ public class TrackViewerPresenceService implements RecordViewerHeartbeatUseCase 
     }
 
     private void broadcastViewerCount(UUID liveId, long count) {
+        if (!viewerCountPort.shouldBroadcast(liveId, count)) {
+            return;
+        }
         try {
             String payload = objectMapper.writeValueAsString(
                     Map.of("type", "viewer-count", "count", count));

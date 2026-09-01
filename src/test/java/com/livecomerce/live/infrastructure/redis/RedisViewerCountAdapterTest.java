@@ -29,6 +29,7 @@ class RedisViewerCountAdapterTest {
     private static final UUID LIVE_ID = UUID.randomUUID();
     private static final String KEY    = "live:" + LIVE_ID + ":viewers";
     private static final String HEARTBEAT_KEY = "live:" + LIVE_ID + ":viewers:heartbeat";
+    private static final String LAST_BROADCAST_KEY = "live:" + LIVE_ID + ":viewers:last-broadcast";
 
     @BeforeEach
     void setUp() {
@@ -121,5 +122,47 @@ class RedisViewerCountAdapterTest {
         adapter.heartbeat(LIVE_ID, "viewer-1");
 
         verify(redisTemplate).expire(eq(HEARTBEAT_KEY), eq(Duration.ofSeconds(120)));
+    }
+
+    // --- shouldBroadcast ---
+
+    @Test
+    void shouldBroadcast_countChanged_returnsTrue() {
+        when(redisTemplate.opsForValue()).thenReturn(valueOps);
+        when(valueOps.getAndSet(LAST_BROADCAST_KEY, "5")).thenReturn("3");
+
+        boolean result = adapter.shouldBroadcast(LIVE_ID, 5L);
+
+        assertThat(result).isTrue();
+    }
+
+    @Test
+    void shouldBroadcast_countUnchanged_returnsFalse() {
+        when(redisTemplate.opsForValue()).thenReturn(valueOps);
+        when(valueOps.getAndSet(LAST_BROADCAST_KEY, "5")).thenReturn("5");
+
+        boolean result = adapter.shouldBroadcast(LIVE_ID, 5L);
+
+        assertThat(result).isFalse();
+    }
+
+    @Test
+    void shouldBroadcast_firstCall_returnsTrue() {
+        when(redisTemplate.opsForValue()).thenReturn(valueOps);
+        when(valueOps.getAndSet(LAST_BROADCAST_KEY, "5")).thenReturn(null);
+
+        boolean result = adapter.shouldBroadcast(LIVE_ID, 5L);
+
+        assertThat(result).isTrue();
+    }
+
+    @Test
+    void shouldBroadcast_setsTtl() {
+        when(redisTemplate.opsForValue()).thenReturn(valueOps);
+        when(valueOps.getAndSet(LAST_BROADCAST_KEY, "5")).thenReturn("3");
+
+        adapter.shouldBroadcast(LIVE_ID, 5L);
+
+        verify(redisTemplate).expire(eq(LAST_BROADCAST_KEY), eq(Duration.ofSeconds(120)));
     }
 }
