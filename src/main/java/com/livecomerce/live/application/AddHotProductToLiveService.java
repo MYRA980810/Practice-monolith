@@ -40,7 +40,8 @@ public class AddHotProductToLiveService implements AddHotProductUseCase {
     }
 
     private void verifyLiveActiveForProducts(Live live) {
-        if (live.getStatus() != LiveStatus.SCHEDULED && live.getStatus() != LiveStatus.LIVE) {
+        if (live.getStatus() != LiveStatus.SCHEDULED && live.getStatus() != LiveStatus.LIVE
+                && live.getStatus() != LiveStatus.RECONNECTING) {
             throw new IllegalStateException(
                     "Cannot add products to live in status: " + live.getStatus());
         }

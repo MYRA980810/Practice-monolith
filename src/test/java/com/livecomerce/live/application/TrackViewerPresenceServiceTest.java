@@ -184,6 +184,22 @@ class TrackViewerPresenceServiceTest {
     }
 
     @Test
+    void recordHeartbeat_liveReconnecting_succeeds() {
+        var live = startedLive();
+        live.beginReconnecting();
+        String viewerId = "viewer-abc";
+
+        when(loadLivePort.loadById(live.getId())).thenReturn(Optional.of(live));
+        when(viewerCountPort.heartbeat(live.getId(), viewerId)).thenReturn(4L);
+        when(viewerCountPort.shouldBroadcast(live.getId(), 4L)).thenReturn(true);
+        when(saveLivePort.save(any())).thenReturn(live);
+
+        long count = sut.recordHeartbeat(new RecordViewerHeartbeatUseCase.RecordHeartbeatCommand(live.getId(), viewerId));
+
+        assertThat(count).isEqualTo(4L);
+    }
+
+    @Test
     void recordHeartbeat_liveNotFound_throwsLiveNotFound() {
         var liveId = UUID.randomUUID();
         when(loadLivePort.loadById(liveId)).thenReturn(Optional.empty());

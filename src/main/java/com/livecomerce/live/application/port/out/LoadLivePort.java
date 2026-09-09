@@ -32,4 +32,7 @@ public interface LoadLivePort {
 
     /** Lives still marked LIVE whose stream-ended signal is older than {@code cutoff}. */
     List<Live> loadStaleLive(Instant cutoff);
+
+    /** Lives in RECONNECTING whose reconnection window has expired — second timeout. */
+    List<Live> loadStaleReconnecting(Instant cutoff);
 }

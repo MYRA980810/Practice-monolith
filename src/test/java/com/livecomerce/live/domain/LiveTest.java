@@ -97,6 +97,58 @@ class LiveTest {
     }
 
     @Test
+    void end_fromReconnecting_transitionsToEnded() {
+        var live = Live.create(SELLER_ID, STORE_ID, LiveContext.STORE, "My Live", null, null, 60);
+        live.start();
+        live.beginReconnecting();
+
+        live.end();
+
+        assertThat(live.getStatus()).isEqualTo(LiveStatus.ENDED);
+        assertThat(live.getEndedAt()).isNotNull();
+    }
+
+    @Test
+    void beginReconnecting_fromLive_transitionsToReconnecting_andRestampsStreamEndedAt() {
+        var live = Live.create(SELLER_ID, STORE_ID, LiveContext.STORE, "My Live", null, null, 60);
+        live.start();
+
+        live.beginReconnecting();
+
+        assertThat(live.getStatus()).isEqualTo(LiveStatus.RECONNECTING);
+        assertThat(live.getStreamEndedAt()).isNotNull();
+    }
+
+    @Test
+    void beginReconnecting_fromNonLive_throwsInvalidLiveState() {
+        var live = Live.create(SELLER_ID, STORE_ID, LiveContext.STORE, "My Live", null, null, 60);
+
+        assertThatThrownBy(live::beginReconnecting)
+                .isInstanceOf(InvalidLiveStateException.class);
+    }
+
+    @Test
+    void revive_fromReconnecting_transitionsToLive_andClearsStreamEndedAt() {
+        var live = Live.create(SELLER_ID, STORE_ID, LiveContext.STORE, "My Live", null, null, 60);
+        live.start();
+        live.beginReconnecting();
+
+        live.revive();
+
+        assertThat(live.getStatus()).isEqualTo(LiveStatus.LIVE);
+        assertThat(live.getStreamEndedAt()).isNull();
+    }
+
+    @Test
+    void revive_fromNonReconnecting_throwsInvalidLiveState() {
+        var live = Live.create(SELLER_ID, STORE_ID, LiveContext.STORE, "My Live", null, null, 60);
+        live.start();
+
+        assertThatThrownBy(live::revive)
+                .isInstanceOf(InvalidLiveStateException.class);
+    }
+
+    @Test
     void cancel_fromScheduled_transitionsToCancelled() {
         var live = Live.create(SELLER_ID, STORE_ID, LiveContext.STORE, "My Live", null, null, 60);
 

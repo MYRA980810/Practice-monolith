@@ -2,6 +2,7 @@ package com.livecomerce.live.application;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.livecomerce.live.LiveEndedEvent;
+import com.livecomerce.live.LiveReconnectingEvent;
 import com.livecomerce.live.application.port.in.EndLiveUseCase.EndLiveCommand;
 import com.livecomerce.live.application.port.out.AgoraRtmMessagePort;
 import com.livecomerce.live.application.port.out.LoadLivePort;
@@ -120,6 +121,71 @@ class EndLiveServiceTest {
         var captor = ArgumentCaptor.forClass(LiveEndedEvent.class);
         verify(eventPublisher).publishEvent(captor.capture());
         assertThat(captor.getValue().liveId()).isEqualTo(live.getId());
+        verifyNoInteractions(loadLivePort);
+    }
+
+    @Test
+    void beginReconnecting_fromLiveStatus_transitionsToReconnecting() {
+        var live = liveLive();
+        when(saveLivePort.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        var result = sut.beginReconnecting(live);
+
+        assertThat(result.getStatus()).isEqualTo(LiveStatus.RECONNECTING);
+        assertThat(result.getStreamEndedAt()).isNotNull();
+    }
+
+    @Test
+    void beginReconnecting_publishesLiveReconnectingEvent() {
+        var live = liveLive();
+        when(saveLivePort.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        sut.beginReconnecting(live);
+
+        var captor = ArgumentCaptor.forClass(LiveReconnectingEvent.class);
+        verify(eventPublisher).publishEvent(captor.capture());
+        var event = captor.getValue();
+        assertThat(event.liveId()).isEqualTo(live.getId());
+        assertThat(event.sellerId()).isEqualTo(SELLER_ID);
+        assertThat(event.reason()).isEqualTo("stream_disconnected");
+    }
+
+    @Test
+    void beginReconnecting_sendsAgoraRtmChannelMessage_withReasonField() {
+        var live = liveLive();
+        when(saveLivePort.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        sut.beginReconnecting(live);
+
+        verify(agoraRtmMessagePort).sendChannelMessage(
+                eq("live-chat:" + live.getId()),
+                contains("\"type\":\"live-reconnecting\""));
+        verify(agoraRtmMessagePort).sendChannelMessage(
+                eq("live-chat:" + live.getId()),
+                contains("\"reason\":\"stream_disconnected\""));
+    }
+
+    @Test
+    void beginReconnecting_rtmFailure_isSwallowed() {
+        var live = liveLive();
+        when(saveLivePort.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        doThrow(new RuntimeException("RTM error")).when(agoraRtmMessagePort)
+                .sendChannelMessage(any(), any());
+
+        var result = sut.beginReconnecting(live);
+
+        assertThat(result.getStatus()).isEqualTo(LiveStatus.RECONNECTING);
+    }
+
+    @Test
+    void endStaleLive_fromReconnectingStatus_transitionsToEnded_withoutSellerCheck() {
+        var live = liveLive();
+        live.beginReconnecting();
+        when(saveLivePort.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        var result = sut.endStaleLive(live);
+
+        assertThat(result.getStatus()).isEqualTo(LiveStatus.ENDED);
         verifyNoInteractions(loadLivePort);
     }
 

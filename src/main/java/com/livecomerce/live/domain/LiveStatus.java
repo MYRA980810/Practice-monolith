@@ -8,6 +8,7 @@ import java.util.Arrays;
 public enum LiveStatus {
     SCHEDULED("SCHEDULED"),
     LIVE("LIVE"),
+    RECONNECTING("RECONNECTING"),
     ENDED("ENDED"),
     CANCELLED("CANCELLED");
 

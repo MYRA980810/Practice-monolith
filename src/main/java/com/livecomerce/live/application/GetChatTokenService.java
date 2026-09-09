@@ -25,7 +25,7 @@ public class GetChatTokenService implements GetChatTokenUseCase {
         var live = loadLivePort.loadById(command.liveId())
                 .orElseThrow(() -> new LiveNotFoundException(command.liveId()));
 
-        if (live.getStatus() != LiveStatus.LIVE) {
+        if (live.getStatus() != LiveStatus.LIVE && live.getStatus() != LiveStatus.RECONNECTING) {
             throw new LiveNotLiveException(live.getId());
         }
 

@@ -2,6 +2,7 @@ package com.livecomerce.notification.application;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.livecomerce.live.LiveCancelledEvent;
+import com.livecomerce.live.LiveReconnectingEvent;
 import com.livecomerce.live.LiveStartedEvent;
 import com.livecomerce.notification.application.port.out.SaveNotificationPort;
 import com.livecomerce.notification.application.port.out.SendRtmPeerMessagePort;
@@ -97,5 +98,24 @@ class LiveEventListenerTest {
 
         verify(saveNotificationPort, never()).save(any());
         verify(sendRtmPeerMessagePort, never()).sendPeerMessage(anyString(), anyString());
+    }
+
+    @Test
+    @SuppressWarnings("null")
+    void onLiveReconnecting_savesNotificationAndSendsPeerMessageToSeller() {
+        var sellerId = UUID.randomUUID();
+        var event = new LiveReconnectingEvent(LIVE_ID, sellerId, "stream_disconnected");
+        when(saveNotificationPort.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        sut.on(event);
+
+        var captor = ArgumentCaptor.forClass(Notification.class);
+        verify(saveNotificationPort).save(captor.capture());
+        var notification = captor.getValue();
+        assertThat(notification.getType()).isEqualTo("live-reconnecting");
+        assertThat(notification.getLiveId()).isEqualTo(LIVE_ID);
+        assertThat(notification.getUserId()).isEqualTo(sellerId);
+
+        verify(sendRtmPeerMessagePort).sendPeerMessage(eq(sellerId.toString()), anyString());
     }
 }

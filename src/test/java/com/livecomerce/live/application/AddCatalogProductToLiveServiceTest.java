@@ -78,6 +78,22 @@ class AddCatalogProductToLiveServiceTest {
     }
 
     @Test
+    void addCatalogProduct_toReconnectingLive_succeeds() {
+        var live = Live.create(SELLER_ID, STORE_ID, LiveContext.STORE, "Live", null, null, 60);
+        live.start();
+        live.beginReconnecting();
+        when(loadLivePort.loadById(live.getId())).thenReturn(Optional.of(live));
+        when(saveLiveProductPort.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        var cmd = new AddCatalogProductCommand(
+                live.getId(), SELLER_ID, PRODUCT_ID, VARIANT_ID,
+                "T-Shirt", new BigDecimal("199.00"), "MXN", 50, null);
+        var result = sut.addCatalogProduct(cmd);
+
+        assertThat(result.getProductNameSnapshot()).isEqualTo("T-Shirt");
+    }
+
+    @Test
     void addCatalogProduct_wrongSeller_throwsLiveNotOwned() {
         var live = Live.create(SELLER_ID, STORE_ID, LiveContext.STORE, "Live", null, null, 60);
         when(loadLivePort.loadById(live.getId())).thenReturn(Optional.of(live));

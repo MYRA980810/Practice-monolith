@@ -2,6 +2,7 @@ package com.livecomerce.live.application;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.livecomerce.live.LiveEndedEvent;
+import com.livecomerce.live.LiveReconnectingEvent;
 import com.livecomerce.live.application.port.in.EndLiveUseCase;
 import com.livecomerce.live.application.port.out.AgoraRtmMessagePort;
 import com.livecomerce.live.application.port.out.LoadLivePort;
@@ -27,6 +28,8 @@ public class EndLiveService implements EndLiveUseCase {
 
     private static final Logger log = LoggerFactory.getLogger(EndLiveService.class);
 
+    private static final String REASON_STREAM_DISCONNECTED = "stream_disconnected";
+
     private final LoadLivePort              loadLivePort;
     private final SaveLivePort              saveLivePort;
     private final AgoraRtmMessagePort       agoraRtmMessagePort;
@@ -50,6 +53,32 @@ public class EndLiveService implements EndLiveUseCase {
      */
     public Live endStaleLive(Live live) {
         return close(live);
+    }
+
+    /**
+     * Escalates a live whose IVS stream disconnected into RECONNECTING,
+     * opening the second timeout window before {@link #endStaleLive} closes
+     * it for good.
+     */
+    public Live beginReconnecting(Live live) {
+        live.beginReconnecting();
+
+        var saved = saveLivePort.save(live);
+
+        eventPublisher.publishEvent(new LiveReconnectingEvent(saved.getId(), saved.getSellerId(), REASON_STREAM_DISCONNECTED));
+
+        try {
+            String payload = objectMapper.writeValueAsString(Map.of(
+                    "type",   "live-reconnecting",
+                    "liveId", saved.getId(),
+                    "reason", REASON_STREAM_DISCONNECTED
+            ));
+            agoraRtmMessagePort.sendChannelMessage("live-chat:" + saved.getId(), payload);
+        } catch (Exception e) {
+            log.warn("Agora RTM live-reconnecting failed: {}", e.getMessage());
+        }
+
+        return saved;
     }
 
     private Live close(Live live) {

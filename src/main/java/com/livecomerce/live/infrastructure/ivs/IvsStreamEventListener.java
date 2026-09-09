@@ -3,6 +3,7 @@ package com.livecomerce.live.infrastructure.ivs;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.livecomerce.live.application.port.out.LoadLivePort;
 import com.livecomerce.live.application.port.out.SaveLivePort;
+import com.livecomerce.live.domain.LiveStatus;
 import io.awspring.cloud.sqs.annotation.SqsListener;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
@@ -62,7 +63,11 @@ class IvsStreamEventListener {
 
             switch (eventName) {
                 case "Stream Start" -> {
-                    live.clearStreamEndedSignal();
+                    if (live.getStatus() == LiveStatus.RECONNECTING) {
+                        live.revive();
+                    } else {
+                        live.clearStreamEndedSignal();
+                    }
                     saveLivePort.save(live);
                     log.info("IVS stream started: liveId={}, channelArn={}, streamId={}",
                             live.getId(), channelArn, streamId);

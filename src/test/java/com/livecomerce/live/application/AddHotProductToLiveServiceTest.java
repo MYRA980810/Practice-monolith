@@ -45,6 +45,21 @@ class AddHotProductToLiveServiceTest {
     }
 
     @Test
+    void addHotProduct_toReconnectingLive_succeeds() {
+        var live = Live.create(SELLER_ID, STORE_ID, LiveContext.STORE, "Live", null, null, 60);
+        live.start();
+        live.beginReconnecting();
+        when(loadLivePort.loadById(live.getId())).thenReturn(Optional.of(live));
+        when(saveLiveProductPort.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        var cmd = new AddHotProductCommand(
+                live.getId(), SELLER_ID, "Mystery Box", new BigDecimal("99.00"), "MXN", 20, "https://example.com/image.jpg");
+        var result = sut.addHotProduct(cmd);
+
+        assertThat(result.getProductNameSnapshot()).isEqualTo("Mystery Box");
+    }
+
+    @Test
     void addHotProduct_zeroStock_throwsAtDomainLevel() {
         var live = Live.create(SELLER_ID, STORE_ID, LiveContext.STORE, "Live", null, null, 60);
         when(loadLivePort.loadById(live.getId())).thenReturn(Optional.of(live));

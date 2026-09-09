@@ -5,6 +5,7 @@ import com.livecomerce.live.application.port.out.LoadLivePort;
 import com.livecomerce.live.application.port.out.SaveLivePort;
 import com.livecomerce.live.domain.Live;
 import com.livecomerce.live.domain.LiveContext;
+import com.livecomerce.live.domain.LiveStatus;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -83,6 +84,37 @@ class IvsStreamEventListenerTest {
 
         assertThat(live.getStreamEndedAt()).isNull();
         verify(saveLivePort).save(live);
+    }
+
+    @Test
+    void streamStart_whenReconnecting_revivesLiveToLive() {
+        var live = buildLive();
+        live.start();
+        live.beginReconnecting();
+        when(loadLivePort.loadActiveByIvsChannelArn(CHANNEL_ARN)).thenReturn(Optional.of(live));
+
+        var listener = new IvsStreamEventListener(loadLivePort, saveLivePort, objectMapper);
+        var json = streamStateEventJson("Stream Start", CHANNEL_ARN);
+
+        listener.onStreamStateEvent(json);
+
+        assertThat(live.getStatus()).isEqualTo(LiveStatus.LIVE);
+        verify(saveLivePort).save(live);
+    }
+
+    @Test
+    void streamStart_whenReconnecting_clearsStreamEndedAt() {
+        var live = buildLive();
+        live.start();
+        live.beginReconnecting();
+        when(loadLivePort.loadActiveByIvsChannelArn(CHANNEL_ARN)).thenReturn(Optional.of(live));
+
+        var listener = new IvsStreamEventListener(loadLivePort, saveLivePort, objectMapper);
+        var json = streamStateEventJson("Stream Start", CHANNEL_ARN);
+
+        listener.onStreamStateEvent(json);
+
+        assertThat(live.getStreamEndedAt()).isNull();
     }
 
     @Test

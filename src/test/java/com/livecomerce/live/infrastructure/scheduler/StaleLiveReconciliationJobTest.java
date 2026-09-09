@@ -17,6 +17,7 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -35,15 +36,15 @@ class StaleLiveReconciliationJobTest {
     }
 
     @Test
-    void closeStaleLives_endsEachStaleLive() {
+    void closeStaleLives_beginsReconnectingForEachStaleLive() {
         var live1 = liveLive();
         var live2 = liveLive();
         when(loadLivePort.loadStaleLive(any())).thenReturn(List.of(live1, live2));
 
         sut.closeStaleLives();
 
-        verify(endLiveService).endStaleLive(live1);
-        verify(endLiveService).endStaleLive(live2);
+        verify(endLiveService).beginReconnecting(live1);
+        verify(endLiveService).beginReconnecting(live2);
     }
 
     @Test
@@ -53,6 +54,19 @@ class StaleLiveReconciliationJobTest {
         sut.closeStaleLives();
 
         verifyNoInteractions(endLiveService);
+    }
+
+    @Test
+    void closeStaleLives_oneItemFails_stillProcessesRemaining() {
+        var live1 = liveLive();
+        var live2 = liveLive();
+        when(loadLivePort.loadStaleLive(any())).thenReturn(List.of(live1, live2));
+        doThrow(new RuntimeException("boom")).when(endLiveService).beginReconnecting(live1);
+
+        sut.closeStaleLives();
+
+        verify(endLiveService).beginReconnecting(live1);
+        verify(endLiveService).beginReconnecting(live2);
     }
 
     @Test
@@ -68,6 +82,56 @@ class StaleLiveReconciliationJobTest {
 
         var captor = ArgumentCaptor.forClass(Instant.class);
         verify(loadLivePort).loadStaleLive(captor.capture());
+        assertThat(captor.getValue()).isBetween(before, after);
+    }
+
+    @Test
+    void closeStaleReconnectingLives_endsEachStaleReconnectingLive() {
+        var live1 = liveLive();
+        var live2 = liveLive();
+        when(loadLivePort.loadStaleReconnecting(any())).thenReturn(List.of(live1, live2));
+
+        sut.closeStaleReconnectingLives();
+
+        verify(endLiveService).endStaleLive(live1);
+        verify(endLiveService).endStaleLive(live2);
+    }
+
+    @Test
+    void closeStaleReconnectingLives_noneStale_doesNothing() {
+        when(loadLivePort.loadStaleReconnecting(any())).thenReturn(List.of());
+
+        sut.closeStaleReconnectingLives();
+
+        verifyNoInteractions(endLiveService);
+    }
+
+    @Test
+    void closeStaleReconnectingLives_oneItemFails_stillProcessesRemaining() {
+        var live1 = liveLive();
+        var live2 = liveLive();
+        when(loadLivePort.loadStaleReconnecting(any())).thenReturn(List.of(live1, live2));
+        doThrow(new RuntimeException("boom")).when(endLiveService).endStaleLive(live1);
+
+        sut.closeStaleReconnectingLives();
+
+        verify(endLiveService).endStaleLive(live1);
+        verify(endLiveService).endStaleLive(live2);
+    }
+
+    @Test
+    void closeStaleReconnectingLives_usesReconnectTimeoutConfiguredCutoff() throws Exception {
+        var field = StaleLiveReconciliationJob.class.getDeclaredField("reconnectTimeoutSeconds");
+        field.setAccessible(true);
+        field.set(sut, 600);
+        when(loadLivePort.loadStaleReconnecting(any())).thenReturn(List.of());
+
+        var before = Instant.now().minusSeconds(600);
+        sut.closeStaleReconnectingLives();
+        var after = Instant.now().minusSeconds(600);
+
+        var captor = ArgumentCaptor.forClass(Instant.class);
+        verify(loadLivePort).loadStaleReconnecting(captor.capture());
         assertThat(captor.getValue()).isBetween(before, after);
     }
 }

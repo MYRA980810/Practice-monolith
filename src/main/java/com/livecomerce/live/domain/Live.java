@@ -34,7 +34,7 @@ public class Live implements Persistable<UUID> {
     private String title;
 
     @Convert(converter = com.livecomerce.live.infrastructure.persistence.LiveStatusConverter.class)
-    @Column(nullable = false, length = 10)
+    @Column(nullable = false, length = 12)
     private LiveStatus status;
 
     @Column(name = "agora_channel_id", unique = true, length = 255)
@@ -133,13 +133,41 @@ public class Live implements Persistable<UUID> {
     }
 
     public void end() {
-        if (this.status != LiveStatus.LIVE) {
+        if (this.status != LiveStatus.LIVE && this.status != LiveStatus.RECONNECTING) {
             throw new InvalidLiveStateException(
                     "Cannot end live in status: " + this.status);
         }
         this.status    = LiveStatus.ENDED;
         this.endedAt   = Instant.now();
         this.updatedAt = OffsetDateTime.now();
+    }
+
+    /**
+     * Opens the reconnection window after IVS reports a disconnect. Re-stamps
+     * {@code streamEndedAt} (previously "stream disconnected within the grace
+     * period") to mark the start of the second, longer timeout — the two
+     * timers never run at once, so the field's meaning shifts with the state
+     * rather than needing a second column.
+     */
+    public void beginReconnecting() {
+        if (this.status != LiveStatus.LIVE) {
+            throw new InvalidLiveStateException(
+                    "Cannot begin reconnecting from status: " + this.status);
+        }
+        this.status        = LiveStatus.RECONNECTING;
+        this.streamEndedAt = Instant.now();
+        this.updatedAt     = OffsetDateTime.now();
+    }
+
+    /** Seller reconnected within the RECONNECTING window — back to LIVE. */
+    public void revive() {
+        if (this.status != LiveStatus.RECONNECTING) {
+            throw new InvalidLiveStateException(
+                    "Cannot revive live from status: " + this.status);
+        }
+        this.status        = LiveStatus.LIVE;
+        this.streamEndedAt = null;
+        this.updatedAt     = OffsetDateTime.now();
     }
 
     public void cancel() {

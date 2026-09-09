@@ -45,6 +45,22 @@ class GetChatTokenServiceTest {
     }
 
     @Test
+    void getChatToken_reconnectingLive_returnsToken() {
+        var live = Live.create(SELLER_ID, STORE_ID, LiveContext.STORE, "Test Live", null, null, 60);
+        live.start();
+        live.beginReconnecting();
+
+        when(loadLivePort.loadById(live.getId())).thenReturn(Optional.of(live));
+        when(agoraTokenPort.generateRtmToken(USER_ID.toString(), 3600)).thenReturn("007token");
+        when(agoraTokenPort.getAppId()).thenReturn("test-app-id");
+
+        var cmd    = new GetChatTokenCommand(live.getId(), USER_ID);
+        var result = sut.getChatToken(cmd);
+
+        assertThat(result.token()).isEqualTo("007token");
+    }
+
+    @Test
     void getChatToken_liveNotFound_throwsLiveNotFoundException() {
         var liveId = UUID.randomUUID();
         when(loadLivePort.loadById(liveId)).thenReturn(Optional.empty());

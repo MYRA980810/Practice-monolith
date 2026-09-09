@@ -3,6 +3,7 @@ package com.livecomerce.notification.application;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.livecomerce.live.LiveCancelledEvent;
+import com.livecomerce.live.LiveReconnectingEvent;
 import com.livecomerce.live.LiveStartedEvent;
 import com.livecomerce.notification.application.port.out.SaveNotificationPort;
 import com.livecomerce.notification.application.port.out.SendRtmPeerMessagePort;
@@ -55,6 +56,16 @@ public class LiveEventListener {
         for (UUID subscriberId : event.subscriberIds()) {
             notifySubscriber(subscriberId, "live-cancelled", event.liveId(), payload);
         }
+    }
+
+    @ApplicationModuleListener
+    public void on(LiveReconnectingEvent event) {
+        var payload = Map.<String, Object>of(
+                "type",   "live-reconnecting",
+                "liveId", event.liveId().toString(),
+                "reason", event.reason()
+        );
+        notifySubscriber(event.sellerId(), "live-reconnecting", event.liveId(), payload);
     }
 
     private void notifySubscriber(UUID subscriberId, String type, UUID liveId,

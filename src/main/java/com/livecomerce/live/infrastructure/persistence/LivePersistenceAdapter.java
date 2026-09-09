@@ -39,7 +39,8 @@ class LivePersistenceAdapter implements SaveLivePort, LoadLivePort {
 
     @Override
     public Optional<Live> loadActiveByIvsChannelArn(String ivsChannelArn) {
-        return repository.findByIvsChannelArnAndStatus(ivsChannelArn, LiveStatus.LIVE);
+        return repository.findByIvsChannelArnAndStatusIn(
+                ivsChannelArn, List.of(LiveStatus.LIVE, LiveStatus.RECONNECTING));
     }
 
     @Override
@@ -75,5 +76,10 @@ class LivePersistenceAdapter implements SaveLivePort, LoadLivePort {
     @Override
     public List<Live> loadStaleLive(Instant cutoff) {
         return repository.findByStatusAndStreamEndedAtLessThanEqual(LiveStatus.LIVE, cutoff);
+    }
+
+    @Override
+    public List<Live> loadStaleReconnecting(Instant cutoff) {
+        return repository.findByStatusAndStreamEndedAtLessThanEqual(LiveStatus.RECONNECTING, cutoff);
     }
 }

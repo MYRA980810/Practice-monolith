@@ -7,6 +7,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.time.Instant;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -19,7 +20,7 @@ interface LiveJpaRepository extends JpaRepository<Live, UUID> {
 
     Optional<Live> findByAgoraChannelId(String agoraChannelId);
 
-    Optional<Live> findByIvsChannelArnAndStatus(String ivsChannelArn, LiveStatus status);
+    Optional<Live> findByIvsChannelArnAndStatusIn(String ivsChannelArn, Collection<LiveStatus> statuses);
 
     List<Live> findByStoreId(UUID storeId);
 
