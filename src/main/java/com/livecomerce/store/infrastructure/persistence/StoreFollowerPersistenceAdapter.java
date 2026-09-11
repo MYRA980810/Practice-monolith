@@ -6,7 +6,10 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Component
@@ -40,5 +43,17 @@ class StoreFollowerPersistenceAdapter implements StoreFollowerPort {
     @Override
     public List<UUID> findFollowedStoreIds(UUID userId) {
         return repository.findStoreIdsByUserId(userId);
+    }
+
+    @Override
+    public Map<UUID, Long> countFollowersByStoreIds(Collection<UUID> storeIds) {
+        if (storeIds.isEmpty()) {
+            return Map.of();
+        }
+        Map<UUID, Long> counts = new HashMap<>();
+        for (Object[] row : repository.countByStoreIds(storeIds)) {
+            counts.put((UUID) row[0], ((Number) row[1]).longValue());
+        }
+        return counts;
     }
 }

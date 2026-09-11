@@ -2,7 +2,9 @@ package com.livecomerce.store.application.port.out;
 
 import com.livecomerce.store.domain.StoreFollower;
 
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 public interface StoreFollowerPort {
@@ -16,4 +18,6 @@ public interface StoreFollowerPort {
     long countFollowers(UUID storeId);
 
     List<UUID> findFollowedStoreIds(UUID userId);
+
+    Map<UUID, Long> countFollowersByStoreIds(Collection<UUID> storeIds);
 }

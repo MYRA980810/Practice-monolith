@@ -21,6 +21,8 @@ public record ProductView(
         List<ImageInfo> images,
         List<OptionInfo> options,
         List<VariantView> variants,
+        double averageRating,
+        long reviewCount,
         OffsetDateTime createdAt,
         OffsetDateTime updatedAt
 ) {

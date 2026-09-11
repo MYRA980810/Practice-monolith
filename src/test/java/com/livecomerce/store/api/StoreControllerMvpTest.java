@@ -1,6 +1,7 @@
 package com.livecomerce.store.api;
 
 import com.livecomerce.shared.UserPrincipal;
+import com.livecomerce.store.LoadStoreRatingPort;
 import com.livecomerce.store.application.StoreCannotBeReactivatedException;
 import com.livecomerce.store.application.StoreNotFoundException;
 import com.livecomerce.store.application.port.in.ChangePlanUseCase;
@@ -39,11 +40,13 @@ import org.springframework.web.method.support.HandlerMethodArgumentResolver;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -82,6 +85,7 @@ class StoreControllerMvpTest {
     @MockitoBean FollowStoreUseCase followStoreUseCase;
     @MockitoBean UnfollowStoreUseCase unfollowStoreUseCase;
     @MockitoBean GetStoreFollowersUseCase getStoreFollowersUseCase;
+    @MockitoBean LoadStoreRatingPort loadStoreRatingPort;
 
     private static final UUID USER_ID = UUID.randomUUID();
 
@@ -93,6 +97,7 @@ class StoreControllerMvpTest {
         );
         var auth = new UsernamePasswordAuthenticationToken(principal, null, principal.getAuthorities());
         SecurityContextHolder.getContext().setAuthentication(auth);
+        lenient().when(loadStoreRatingPort.loadSummaries(any())).thenReturn(Map.of());
     }
 
     @AfterEach

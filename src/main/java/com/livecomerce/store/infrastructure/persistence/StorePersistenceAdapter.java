@@ -47,6 +47,11 @@ class StorePersistenceAdapter implements LoadStorePort, SaveStorePort {
     }
 
     @Override
+    public List<UUID> loadAllActiveIds() {
+        return repository.findActiveIds();
+    }
+
+    @Override
     @SuppressWarnings("null")
     public Store save(Store store) {
         return repository.save(store);

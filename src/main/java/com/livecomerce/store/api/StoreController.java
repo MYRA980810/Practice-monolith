@@ -1,6 +1,7 @@
 package com.livecomerce.store.api;
 
 import com.livecomerce.shared.UserPrincipal;
+import com.livecomerce.store.LoadStoreRatingPort;
 import com.livecomerce.store.application.port.in.ChangePlanUseCase;
 import com.livecomerce.store.application.port.in.CloseStoreTemporarilyUseCase;
 import com.livecomerce.store.application.port.in.CreateStoreUseCase;
@@ -14,6 +15,7 @@ import com.livecomerce.store.application.port.in.ReopenStoreUseCase;
 import com.livecomerce.store.application.port.in.UnfollowStoreUseCase;
 import com.livecomerce.store.application.port.in.UpdateStoreUseCase;
 import com.livecomerce.store.domain.AddressType;
+import com.livecomerce.store.domain.Store;
 import com.livecomerce.shared.Plan;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -29,7 +31,9 @@ import org.springframework.data.web.PageableDefault;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/stores")
@@ -48,12 +52,15 @@ class StoreController {
     private final FollowStoreUseCase followStoreUseCase;
     private final UnfollowStoreUseCase unfollowStoreUseCase;
     private final GetStoreFollowersUseCase getStoreFollowersUseCase;
+    private final LoadStoreRatingPort loadStoreRatingPort;
 
     @GetMapping
     ResponseEntity<Page<StoreCardResponse>> listStores(
             @PageableDefault(size = 20) Pageable pageable) {
-        var page = listStoresUseCase.listActive(pageable).map(StoreCardResponse::from);
-        return ResponseEntity.ok(page);
+        var page = listStoresUseCase.listActive(pageable);
+        var ratings = loadStoreRatingPort.loadSummaries(
+                page.getContent().stream().map(Store::getId).collect(Collectors.toSet()));
+        return ResponseEntity.ok(page.map(store -> StoreCardResponse.from(store, ratings.get(store.getId()))));
     }
 
     @PostMapping
@@ -82,7 +89,8 @@ class StoreController {
     @GetMapping("/{slug}")
     ResponseEntity<StoreCardResponse> getBySlug(@PathVariable String slug) {
         var store = getStoreUseCase.getBySlug(slug);
-        return ResponseEntity.ok(StoreCardResponse.from(store));
+        var rating = loadStoreRatingPort.loadSummaries(Set.of(store.getId())).get(store.getId());
+        return ResponseEntity.ok(StoreCardResponse.from(store, rating));
     }
 
     @PutMapping("/me")

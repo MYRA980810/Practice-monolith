@@ -20,4 +20,6 @@ public interface LoadStorePort {
     List<Store> loadByIds(Collection<UUID> storeIds);
 
     Page<Store> loadAllActive(Pageable pageable);
+
+    List<UUID> loadAllActiveIds();
 }

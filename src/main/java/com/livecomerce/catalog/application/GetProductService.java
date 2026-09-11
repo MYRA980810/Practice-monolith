@@ -1,5 +1,7 @@
 package com.livecomerce.catalog.application;
 
+import com.livecomerce.catalog.LoadProductRatingPort;
+import com.livecomerce.catalog.LoadProductRatingPort.ProductRatingSummary;
 import com.livecomerce.catalog.application.port.in.GetProductUseCase;
 import com.livecomerce.catalog.application.port.in.ProductFilter;
 import com.livecomerce.catalog.application.port.out.LoadCategoryPort;
@@ -16,7 +18,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -25,29 +30,37 @@ public class GetProductService implements GetProductUseCase {
 
     private final LoadProductPort loadProductPort;
     private final LoadCategoryPort loadCategoryPort;
+    private final LoadProductRatingPort loadProductRatingPort;
 
     @Override
     public ProductView getById(UUID productId) {
         var product = loadProductPort.loadById(productId)
                 .orElseThrow(() -> new ProductNotFoundException(productId));
-        return toView(product);
+        var ratings = loadProductRatingPort.loadSummaries(Set.of(productId));
+        return toView(product, ratings);
     }
 
     @Override
     public List<ProductView> getByStoreId(UUID storeId) {
-        return loadProductPort.loadByStoreId(storeId).stream()
-                .map(this::toView)
+        var products = loadProductPort.loadByStoreId(storeId);
+        var ratings = loadProductRatingPort.loadSummaries(
+                products.stream().map(Product::getId).collect(Collectors.toSet()));
+        return products.stream()
+                .map(p -> toView(p, ratings))
                 .toList();
     }
 
     @Override
     public List<ProductView> listWithFilters(ProductFilter filter) {
-        return loadProductPort.loadByFilter(filter).stream()
-                .map(this::toView)
+        var products = loadProductPort.loadByFilter(filter);
+        var ratings = loadProductRatingPort.loadSummaries(
+                products.stream().map(Product::getId).collect(Collectors.toSet()));
+        return products.stream()
+                .map(p -> toView(p, ratings))
                 .toList();
     }
 
-    private ProductView toView(Product product) {
+    private ProductView toView(Product product, Map<UUID, ProductRatingSummary> ratings) {
         var category = product.getCategoryId() != null
                 ? loadCategoryPort.loadById(product.getCategoryId()).orElse(null)
                 : null;
@@ -62,6 +75,8 @@ public class GetProductService implements GetProductUseCase {
         var variantViews = product.getVariants().stream()
                 .map(v -> toVariantView(v, product.getBasePrice()))
                 .toList();
+
+        var rating = ratings.get(product.getId());
 
         return new ProductView(
                 product.getId(),
@@ -81,6 +96,8 @@ public class GetProductService implements GetProductUseCase {
                         .toList(),
                 optionInfos,
                 variantViews,
+                rating != null ? rating.averageRating() : 0.0,
+                rating != null ? rating.reviewCount() : 0L,
                 product.getCreatedAt(),
                 product.getUpdatedAt()
         );

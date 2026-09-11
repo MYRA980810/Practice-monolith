@@ -9,6 +9,9 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+import java.util.UUID;
+
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -19,5 +22,10 @@ public class ListStoresService implements ListStoresUseCase {
     @Override
     public Page<Store> listActive(Pageable pageable) {
         return loadStorePort.loadAllActive(pageable);
+    }
+
+    @Override
+    public List<UUID> listActiveIds() {
+        return loadStorePort.loadAllActiveIds();
     }
 }
