@@ -23,6 +23,7 @@ class OrderController {
     private final FinalizeOrderUseCase finalizeOrderUseCase;
     private final GetOrderUseCase getOrderUseCase;
     private final ShipOrderUseCase shipOrderUseCase;
+    private final DeliverOrderUseCase deliverOrderUseCase;
 
     @PostMapping("/items")
     @PreAuthorize("hasRole('BUYER')")
@@ -70,8 +71,10 @@ class OrderController {
     }
 
     @GetMapping("/{id}")
-    ResponseEntity<OrderResponse> getById(@PathVariable UUID id) {
-        return ResponseEntity.ok(OrderResponse.from(getOrderUseCase.getById(id)));
+    ResponseEntity<OrderResponse> getById(
+            @PathVariable UUID id,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        return ResponseEntity.ok(OrderResponse.from(getOrderUseCase.getById(id, principal.getUserId())));
     }
 
     @GetMapping
@@ -94,6 +97,17 @@ class OrderController {
             @Valid @RequestBody ShipOrderRequest request) {
 
         var order = shipOrderUseCase.ship(new ShipOrderUseCase.ShipOrderCommand(id, request.trackingNumber()));
+        return ResponseEntity.ok(OrderResponse.from(order));
+    }
+
+    @PostMapping("/{id}/deliver")
+    @PreAuthorize("hasRole('BUYER')")
+    ResponseEntity<OrderResponse> deliver(
+            @PathVariable UUID id,
+            @AuthenticationPrincipal UserPrincipal principal) {
+
+        var order = deliverOrderUseCase.deliver(
+                new DeliverOrderUseCase.DeliverOrderCommand(id, principal.getUserId()));
         return ResponseEntity.ok(OrderResponse.from(order));
     }
 }

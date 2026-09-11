@@ -9,7 +9,12 @@ import java.util.UUID;
 
 public interface GetOrderUseCase {
 
-    Order getById(UUID orderId);
+    /**
+     * {@code callerId} is the authenticated user id (JWT) — the caller must be either the
+     * order's buyer or the seller of the store that owns the order, otherwise
+     * {@link org.springframework.security.access.AccessDeniedException} is thrown.
+     */
+    Order getById(UUID orderId, UUID callerId);
 
     Optional<Order> getActiveOrder(UUID buyerId, UUID liveSessionId);
 

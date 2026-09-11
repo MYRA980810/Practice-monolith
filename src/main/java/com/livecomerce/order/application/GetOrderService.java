@@ -6,6 +6,7 @@ import com.livecomerce.order.application.port.out.LoadOrderPort;
 import com.livecomerce.order.application.port.out.LoadStoreIdPort;
 import com.livecomerce.order.domain.Order;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,9 +25,21 @@ public class GetOrderService implements GetOrderUseCase {
     private final LoadStoreIdPort loadStoreIdPort;
 
     @Override
-    public Order getById(UUID orderId) {
-        return loadOrderPort.loadById(orderId)
+    public Order getById(UUID orderId, UUID callerId) {
+        var order = loadOrderPort.loadById(orderId)
                 .orElseThrow(() -> new OrderNotFoundException(orderId));
+
+        boolean isBuyer = order.getBuyerId().equals(callerId);
+        if (!isBuyer) {
+            boolean isSeller = loadStoreIdPort.findStoreIdByUserId(callerId)
+                    .map(sellerStoreId -> sellerStoreId.equals(order.getStoreId()))
+                    .orElse(false);
+            if (!isSeller) {
+                throw new AccessDeniedException("Order does not belong to user");
+            }
+        }
+
+        return order;
     }
 
     @Override

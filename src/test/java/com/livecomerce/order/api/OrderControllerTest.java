@@ -2,6 +2,7 @@ package com.livecomerce.order.api;
 
 import com.livecomerce.order.application.InvalidOrderStateException;
 import com.livecomerce.order.application.OrderNotFoundException;
+import com.livecomerce.order.application.OrderNotOwnedByBuyerException;
 import com.livecomerce.order.application.port.in.*;
 import com.livecomerce.order.application.port.in.GetOrderUseCase.ReadyToShipResult;
 import com.livecomerce.order.domain.Order;
@@ -20,6 +21,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -64,6 +66,7 @@ class OrderControllerTest {
     @MockitoBean FinalizeOrderUseCase finalizeOrderUseCase;
     @MockitoBean GetOrderUseCase getOrderUseCase;
     @MockitoBean ShipOrderUseCase shipOrderUseCase;
+    @MockitoBean DeliverOrderUseCase deliverOrderUseCase;
 
     private static final UUID BUYER_ID  = UUID.randomUUID();
     private static final UUID STORE_ID  = UUID.randomUUID();
@@ -181,7 +184,7 @@ class OrderControllerTest {
 
     @Test
     void getById_whenOrderExists_returns200() throws Exception {
-        when(getOrderUseCase.getById(ORDER_ID)).thenReturn(buildOrder());
+        when(getOrderUseCase.getById(ORDER_ID, BUYER_ID)).thenReturn(buildOrder());
 
         mvc.perform(get("/api/orders/{id}", ORDER_ID))
                 .andExpect(status().isOk())
@@ -190,11 +193,33 @@ class OrderControllerTest {
 
     @Test
     void getById_whenNotFound_returns404() throws Exception {
-        when(getOrderUseCase.getById(ORDER_ID)).thenThrow(new OrderNotFoundException(ORDER_ID));
+        when(getOrderUseCase.getById(ORDER_ID, BUYER_ID)).thenThrow(new OrderNotFoundException(ORDER_ID));
 
         mvc.perform(get("/api/orders/{id}", ORDER_ID))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.type").value("https://livecomerce.com/errors/order-not-found"));
+    }
+
+    @Test
+    void getById_whenNotOwner_returns403() throws Exception {
+        var strangerId = UUID.randomUUID();
+        setPrincipal(strangerId, "ROLE_BUYER");
+        when(getOrderUseCase.getById(ORDER_ID, strangerId))
+                .thenThrow(new AccessDeniedException("Order does not belong to user"));
+
+        mvc.perform(get("/api/orders/{id}", ORDER_ID))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void getById_asOwningSeller_returns200() throws Exception {
+        var sellerId = UUID.randomUUID();
+        setPrincipal(sellerId, "ROLE_SELLER");
+        when(getOrderUseCase.getById(ORDER_ID, sellerId)).thenReturn(buildOrder());
+
+        mvc.perform(get("/api/orders/{id}", ORDER_ID))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.storeId").value(STORE_ID.toString()));
     }
 
     // --- GET /api/orders?liveSessionId= (SELLER, JWT-scoped storeId) ---
@@ -271,5 +296,37 @@ class OrderControllerTest {
                                 {"trackingNumber":"MX123456789"}
                                 """))
                 .andExpect(status().isOk());
+    }
+
+    // --- POST /api/orders/{id}/deliver (BUYER) ---
+
+    @Test
+    void deliver_returns200() throws Exception {
+        var delivered = buildOrder();
+        when(deliverOrderUseCase.deliver(any())).thenReturn(delivered);
+
+        mvc.perform(post("/api/orders/{id}/deliver", ORDER_ID))
+                .andExpect(status().isOk());
+
+        verify(deliverOrderUseCase).deliver(new DeliverOrderUseCase.DeliverOrderCommand(ORDER_ID, BUYER_ID));
+    }
+
+    @Test
+    void deliver_whenNotOwned_returns403() throws Exception {
+        when(deliverOrderUseCase.deliver(any()))
+                .thenThrow(new OrderNotOwnedByBuyerException(ORDER_ID, BUYER_ID));
+
+        mvc.perform(post("/api/orders/{id}/deliver", ORDER_ID))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void deliver_whenWrongStatus_returns409() throws Exception {
+        when(deliverOrderUseCase.deliver(any()))
+                .thenThrow(new InvalidOrderStateException(ORDER_ID, OrderStatus.PAID, "deliver"));
+
+        mvc.perform(post("/api/orders/{id}/deliver", ORDER_ID))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.type").value("https://livecomerce.com/errors/invalid-order-state"));
     }
 }
