@@ -6,10 +6,23 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.OffsetDateTime;
+import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 
 interface SalesMetricsRepository extends JpaRepository<OrderSalesEntity, UUID> {
+
+    @Query(value = """
+            SELECT o.store_id AS storeId, COALESCE(SUM(oi.subtotal), 0) AS volume
+            FROM orders o
+            JOIN order_items oi ON oi.order_id = o.id AND oi.status = 'PAID'
+            WHERE o.store_id IN :storeIds
+              AND o.created_at >= :from AND o.created_at < :to
+            GROUP BY o.store_id
+            """, nativeQuery = true)
+    List<Object[]> findRecentSalesVolumeByStores(@Param("storeIds") Collection<UUID> storeIds,
+                                                  @Param("from") OffsetDateTime from,
+                                                  @Param("to") OffsetDateTime to);
 
     @Query(value = """
             SELECT COALESCE(SUM(oi.subtotal), 0) AS total_revenue,

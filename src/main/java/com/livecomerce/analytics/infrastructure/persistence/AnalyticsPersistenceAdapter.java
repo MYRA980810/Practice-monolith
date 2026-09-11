@@ -2,6 +2,7 @@ package com.livecomerce.analytics.infrastructure.persistence;
 
 import com.livecomerce.analytics.application.port.out.LoadChannelMetricsPort;
 import com.livecomerce.analytics.application.port.out.LoadProductMetricsPort;
+import com.livecomerce.analytics.application.port.out.LoadRecentSalesVolumePort;
 import com.livecomerce.analytics.application.port.out.LoadSalesMetricsPort;
 import com.livecomerce.analytics.application.port.out.LoadStockMetricsPort;
 import com.livecomerce.analytics.domain.ChannelComparison;
@@ -22,13 +23,16 @@ import java.math.RoundingMode;
 import java.sql.Timestamp;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Component
 @RequiredArgsConstructor
 class AnalyticsPersistenceAdapter implements LoadSalesMetricsPort, LoadChannelMetricsPort,
-        LoadProductMetricsPort, LoadStockMetricsPort {
+        LoadProductMetricsPort, LoadStockMetricsPort, LoadRecentSalesVolumePort {
 
     private final SalesMetricsRepository salesMetricsRepository;
     private final ChannelMetricsRepository channelMetricsRepository;
@@ -191,6 +195,20 @@ class AnalyticsPersistenceAdapter implements LoadSalesMetricsPort, LoadChannelMe
                         (String) row[5]
                 ))
                 .toList();
+    }
+
+    // --- Ranking ---
+
+    @Override
+    public Map<UUID, BigDecimal> loadRecentSalesVolume(Collection<UUID> storeIds, OffsetDateTime from, OffsetDateTime to) {
+        if (storeIds.isEmpty()) {
+            return Map.of();
+        }
+        Map<UUID, BigDecimal> volumes = new HashMap<>();
+        for (Object[] row : salesMetricsRepository.findRecentSalesVolumeByStores(storeIds, from, to)) {
+            volumes.put((UUID) row[0], toBigDecimal(row[1]));
+        }
+        return volumes;
     }
 
     // --- Helpers ---
