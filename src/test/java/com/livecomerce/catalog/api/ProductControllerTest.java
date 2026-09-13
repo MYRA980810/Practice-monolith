@@ -13,6 +13,7 @@ import com.livecomerce.catalog.application.port.in.DeactivateProductUseCase;
 import com.livecomerce.catalog.application.port.in.GetProductUseCase;
 import com.livecomerce.catalog.application.port.in.ListCategoriesUseCase;
 import com.livecomerce.catalog.application.port.in.PauseProductUseCase;
+import com.livecomerce.catalog.application.port.in.ProductFilter;
 import com.livecomerce.catalog.application.port.in.RemoveProductImageUseCase;
 import com.livecomerce.catalog.application.port.in.ResumeProductUseCase;
 import com.livecomerce.catalog.application.port.in.UpdateProductImageUseCase;
@@ -277,6 +278,24 @@ class ProductControllerTest {
         mvc.perform(get("/api/products").param("storeId", STORE_ID.toString()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(2));
+    }
+
+    @Test
+    void getByStore_withCategoryId_filtersByCategoryUsingListWithFilters() throws Exception {
+        var categoryId = UUID.randomUUID();
+        when(getProductUseCase.listWithFilters(any())).thenReturn(List.of(buildProductView()));
+
+        mvc.perform(get("/api/products")
+                        .param("storeId", STORE_ID.toString())
+                        .param("categoryId", categoryId.toString()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1));
+
+        var filterCaptor = ArgumentCaptor.forClass(ProductFilter.class);
+        verify(getProductUseCase).listWithFilters(filterCaptor.capture());
+        assertThat(filterCaptor.getValue().storeId()).isEqualTo(STORE_ID);
+        assertThat(filterCaptor.getValue().categoryId()).isEqualTo(categoryId);
+        verify(getProductUseCase, org.mockito.Mockito.never()).getByStoreId(any());
     }
 
     // --- POST /api/products/{id}/variants/{variantId}/stock ---

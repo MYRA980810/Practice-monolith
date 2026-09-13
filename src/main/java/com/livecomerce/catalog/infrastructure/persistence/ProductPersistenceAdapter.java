@@ -39,7 +39,8 @@ class ProductPersistenceAdapter implements LoadProductPort, SaveProductPort {
     @Override
     public List<Product> loadByFilter(ProductFilter filter) {
         Specification<Product> spec = ProductSpecification.hasStoreId(filter.storeId())
-                .and(ProductSpecification.isActive());
+                .and(ProductSpecification.isActive())
+                .and(ProductSpecification.isNotPaused());
 
         if (filter.categoryId() != null)
             spec = spec.and(ProductSpecification.hasCategoryId(filter.categoryId()));

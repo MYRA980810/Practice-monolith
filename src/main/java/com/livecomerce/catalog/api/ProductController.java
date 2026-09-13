@@ -109,8 +109,13 @@ class ProductController {
     }
 
     @GetMapping
-    ResponseEntity<List<ProductView>> getByStore(@RequestParam UUID storeId) {
-        return ResponseEntity.ok(getProductUseCase.getByStoreId(storeId));
+    ResponseEntity<List<ProductView>> getByStore(
+            @RequestParam UUID storeId,
+            @RequestParam(required = false) UUID categoryId) {
+        if (categoryId == null) {
+            return ResponseEntity.ok(getProductUseCase.getByStoreId(storeId));
+        }
+        return ResponseEntity.ok(getProductUseCase.listWithFilters(new ProductFilter(storeId, categoryId, null, null)));
     }
 
     @GetMapping("/me")
