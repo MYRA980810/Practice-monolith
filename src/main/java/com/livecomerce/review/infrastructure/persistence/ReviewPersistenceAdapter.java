@@ -1,5 +1,6 @@
 package com.livecomerce.review.infrastructure.persistence;
 
+import com.livecomerce.review.application.port.out.LoadProductReviewsPort;
 import com.livecomerce.review.application.port.out.ReviewPersistencePort;
 import com.livecomerce.review.domain.Review;
 import lombok.RequiredArgsConstructor;
@@ -14,7 +15,7 @@ import java.util.UUID;
 
 @Component
 @RequiredArgsConstructor
-class ReviewPersistenceAdapter implements ReviewPersistencePort {
+class ReviewPersistenceAdapter implements ReviewPersistencePort, LoadProductReviewsPort {
 
     private final ReviewJpaRepository repository;
 
@@ -49,5 +50,10 @@ class ReviewPersistenceAdapter implements ReviewPersistencePort {
     @Override
     public Page<Review> findByStoreId(UUID storeId, Pageable pageable) {
         return repository.findByStoreId(storeId, pageable);
+    }
+
+    @Override
+    public Page<Review> findByProductId(UUID productId, Pageable pageable) {
+        return repository.findByProductId(productId, pageable);
     }
 }

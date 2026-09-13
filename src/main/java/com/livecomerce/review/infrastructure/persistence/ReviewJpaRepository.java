@@ -22,4 +22,11 @@ interface ReviewJpaRepository extends JpaRepository<Review, UUID> {
             GROUP BY r.storeId
             """)
     List<Object[]> aggregateByStoreIds(@Param("storeIds") Collection<UUID> storeIds);
+
+    @Query("""
+            SELECT DISTINCT r FROM Review r
+            JOIN r.productRatings pr
+            WHERE pr.productId = :productId
+            """)
+    Page<Review> findByProductId(@Param("productId") UUID productId, Pageable pageable);
 }

@@ -5,6 +5,7 @@ import com.livecomerce.review.application.OrderNotEligibleForReviewException;
 import com.livecomerce.review.application.ReviewAlreadyExistsException;
 import com.livecomerce.review.application.ReviewOrderNotFoundException;
 import com.livecomerce.review.application.ReviewOrderNotOwnedException;
+import com.livecomerce.review.application.port.in.ListProductReviewsUseCase;
 import com.livecomerce.review.application.port.in.ListStoreReviewsUseCase;
 import com.livecomerce.review.application.port.in.SubmitReviewUseCase;
 import com.livecomerce.review.application.query.ReviewView;
@@ -64,11 +65,13 @@ class ReviewControllerTest {
 
     @MockitoBean SubmitReviewUseCase submitReviewUseCase;
     @MockitoBean ListStoreReviewsUseCase listStoreReviewsUseCase;
+    @MockitoBean ListProductReviewsUseCase listProductReviewsUseCase;
 
     private static final UUID BUYER_ID      = UUID.randomUUID();
     private static final UUID STORE_ID      = UUID.randomUUID();
     private static final UUID ORDER_ID      = UUID.randomUUID();
     private static final UUID ORDER_ITEM_ID = UUID.randomUUID();
+    private static final UUID PRODUCT_ID    = UUID.randomUUID();
 
     @BeforeEach
     void setUpPrincipal() {
@@ -207,6 +210,33 @@ class ReviewControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content[0].orderId").doesNotExist())
                 .andExpect(jsonPath("$.content[0].storeId").value(STORE_ID.toString()));
+    }
+
+    // --- GET /api/products/{id}/reviews ---
+
+    @Test
+    void listProductReviews_returns200WithPage() throws Exception {
+        var view = new ReviewView(ORDER_ID, STORE_ID, "Comprador verificado", 5, 4, 5, 5,
+                new java.math.BigDecimal("4.75"), "Todo perfecto", true,
+                List.of(), List.of(new ReviewView.ProductRatingInfo(PRODUCT_ID, 5)), OffsetDateTime.now());
+        when(listProductReviewsUseCase.listByProduct(eq(PRODUCT_ID), any())).thenReturn(new PageImpl<>(List.of(view)));
+
+        mvc.perform(get("/api/products/{id}/reviews", PRODUCT_ID))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].buyerDisplayName").value("Comprador verificado"))
+                .andExpect(jsonPath("$.content[0].productRatings[0].productId").value(PRODUCT_ID.toString()));
+    }
+
+    @Test
+    void listProductReviews_neverLeaksOrderId() throws Exception {
+        var view = new ReviewView(ORDER_ID, STORE_ID, "Comprador verificado", 5, 4, 5, 5,
+                new java.math.BigDecimal("4.75"), "Todo perfecto", true,
+                List.of(), List.of(new ReviewView.ProductRatingInfo(PRODUCT_ID, 5)), OffsetDateTime.now());
+        when(listProductReviewsUseCase.listByProduct(eq(PRODUCT_ID), any())).thenReturn(new PageImpl<>(List.of(view)));
+
+        mvc.perform(get("/api/products/{id}/reviews", PRODUCT_ID))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].orderId").doesNotExist());
     }
 
     @Test

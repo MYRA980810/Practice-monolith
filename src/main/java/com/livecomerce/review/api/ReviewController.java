@@ -1,5 +1,6 @@
 package com.livecomerce.review.api;
 
+import com.livecomerce.review.application.port.in.ListProductReviewsUseCase;
 import com.livecomerce.review.application.port.in.ListStoreReviewsUseCase;
 import com.livecomerce.review.application.port.in.SubmitReviewUseCase;
 import com.livecomerce.shared.UserPrincipal;
@@ -22,6 +23,7 @@ class ReviewController {
 
     private final SubmitReviewUseCase submitReviewUseCase;
     private final ListStoreReviewsUseCase listStoreReviewsUseCase;
+    private final ListProductReviewsUseCase listProductReviewsUseCase;
 
     @PostMapping("/api/orders/{orderId}/review")
     @PreAuthorize("hasRole('BUYER')")
@@ -54,5 +56,12 @@ class ReviewController {
             @PathVariable UUID storeId,
             @PageableDefault(size = 20) Pageable pageable) {
         return ResponseEntity.ok(listStoreReviewsUseCase.listByStore(storeId, pageable).map(StoreReviewResponse::from));
+    }
+
+    @GetMapping("/api/products/{id}/reviews")
+    ResponseEntity<Page<ProductReviewResponse>> listProductReviews(
+            @PathVariable UUID id,
+            @PageableDefault(size = 20) Pageable pageable) {
+        return ResponseEntity.ok(listProductReviewsUseCase.listByProduct(id, pageable).map(ProductReviewResponse::from));
     }
 }
