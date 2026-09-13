@@ -16,6 +16,7 @@ import com.livecomerce.store.application.port.in.UnfollowStoreUseCase;
 import com.livecomerce.store.application.port.in.UpdateStoreUseCase;
 import com.livecomerce.store.application.port.in.FollowStoreUseCase;
 import com.livecomerce.store.application.port.in.GetStoreFollowersUseCase;
+import com.livecomerce.store.application.port.out.LoadStoreRankPort;
 import com.livecomerce.store.domain.Store;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -86,6 +87,7 @@ class StoreControllerMvpTest {
     @MockitoBean UnfollowStoreUseCase unfollowStoreUseCase;
     @MockitoBean GetStoreFollowersUseCase getStoreFollowersUseCase;
     @MockitoBean LoadStoreRatingPort loadStoreRatingPort;
+    @MockitoBean LoadStoreRankPort loadStoreRankPort;
 
     private static final UUID USER_ID = UUID.randomUUID();
 
@@ -98,6 +100,8 @@ class StoreControllerMvpTest {
         var auth = new UsernamePasswordAuthenticationToken(principal, null, principal.getAuthorities());
         SecurityContextHolder.getContext().setAuthentication(auth);
         lenient().when(loadStoreRatingPort.loadSummaries(any())).thenReturn(Map.of());
+        lenient().when(loadStoreRankPort.loadRanks(any())).thenReturn(Map.of());
+        lenient().when(getStoreFollowersUseCase.getFollowerCounts(any())).thenReturn(Map.of());
     }
 
     @AfterEach
@@ -139,6 +143,47 @@ class StoreControllerMvpTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content[0].slug").value("tienda-a"))
                 .andExpect(jsonPath("$.totalElements").value(1));
+    }
+
+    @Test
+    void listStores_includesRankingPositionAndFollowerCount() throws Exception {
+        var store = Store.create(UUID.randomUUID(), "Tienda A", "tienda-a", "Descripción", null);
+        var page = new PageImpl<>(List.of(store), PageRequest.of(0, 20), 1);
+        when(listStoresUseCase.listActive(any())).thenReturn(page);
+        when(loadStoreRankPort.loadRanks(any())).thenReturn(Map.of(store.getId(), 3));
+        when(getStoreFollowersUseCase.getFollowerCounts(any())).thenReturn(Map.of(store.getId(), 7L));
+
+        mvc.perform(get("/api/stores"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].rankingPosition").value(3))
+                .andExpect(jsonPath("$.content[0].followerCount").value(7));
+    }
+
+    @Test
+    void listStores_whenNotRankedOrFollowed_defaultsRankingNullAndFollowerCountZero() throws Exception {
+        var store = Store.create(UUID.randomUUID(), "Tienda A", "tienda-a", "Descripción", null);
+        var page = new PageImpl<>(List.of(store), PageRequest.of(0, 20), 1);
+        when(listStoresUseCase.listActive(any())).thenReturn(page);
+
+        mvc.perform(get("/api/stores"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].rankingPosition").doesNotExist())
+                .andExpect(jsonPath("$.content[0].followerCount").value(0));
+    }
+
+    @Test
+    void listStores_whenRankLoaderThrows_stillReturns200WithOtherFieldsPopulated() throws Exception {
+        var store = Store.create(UUID.randomUUID(), "Tienda A", "tienda-a", "Descripción", null);
+        var page = new PageImpl<>(List.of(store), PageRequest.of(0, 20), 1);
+        when(listStoresUseCase.listActive(any())).thenReturn(page);
+        when(loadStoreRankPort.loadRanks(any())).thenThrow(new RuntimeException("rank service unavailable"));
+        when(getStoreFollowersUseCase.getFollowerCounts(any())).thenReturn(Map.of(store.getId(), 7L));
+
+        mvc.perform(get("/api/stores"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].slug").value("tienda-a"))
+                .andExpect(jsonPath("$.content[0].rankingPosition").doesNotExist())
+                .andExpect(jsonPath("$.content[0].followerCount").value(7));
     }
 
     @Test

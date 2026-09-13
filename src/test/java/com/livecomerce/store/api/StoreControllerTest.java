@@ -18,6 +18,7 @@ import com.livecomerce.store.application.port.in.UnfollowStoreUseCase;
 import com.livecomerce.store.application.port.in.UpdateStoreUseCase;
 import com.livecomerce.store.application.port.in.FollowStoreUseCase;
 import com.livecomerce.store.application.port.in.GetStoreFollowersUseCase;
+import com.livecomerce.store.application.port.out.LoadStoreRankPort;
 import com.livecomerce.store.domain.Store;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -86,6 +87,7 @@ class StoreControllerTest {
     @MockitoBean UnfollowStoreUseCase unfollowStoreUseCase;
     @MockitoBean GetStoreFollowersUseCase getStoreFollowersUseCase;
     @MockitoBean LoadStoreRatingPort loadStoreRatingPort;
+    @MockitoBean LoadStoreRankPort loadStoreRankPort;
 
     private static final UUID USER_ID = UUID.randomUUID();
 
@@ -98,6 +100,8 @@ class StoreControllerTest {
         var auth = new UsernamePasswordAuthenticationToken(principal, null, principal.getAuthorities());
         SecurityContextHolder.getContext().setAuthentication(auth);
         lenient().when(loadStoreRatingPort.loadSummaries(any())).thenReturn(Map.of());
+        lenient().when(loadStoreRankPort.loadRanks(any())).thenReturn(Map.of());
+        lenient().when(getStoreFollowersUseCase.getFollowerCounts(any())).thenReturn(Map.of());
     }
 
     @AfterEach
@@ -200,6 +204,19 @@ class StoreControllerTest {
         mvc.perform(get("/api/stores/mi-tienda"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.name").value("Mi Tienda"));
+    }
+
+    @Test
+    void getBySlug_includesRankingPositionAndFollowerCount() throws Exception {
+        var store = buildStore();
+        when(getStoreUseCase.getBySlug("mi-tienda")).thenReturn(store);
+        when(loadStoreRankPort.loadRanks(any())).thenReturn(Map.of(store.getId(), 5));
+        when(getStoreFollowersUseCase.getFollowerCounts(any())).thenReturn(Map.of(store.getId(), 12L));
+
+        mvc.perform(get("/api/stores/mi-tienda"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.rankingPosition").value(5))
+                .andExpect(jsonPath("$.followerCount").value(12));
     }
 
     @Test

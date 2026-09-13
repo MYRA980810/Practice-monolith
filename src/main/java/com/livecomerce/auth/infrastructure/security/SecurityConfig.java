@@ -53,8 +53,9 @@ class SecurityConfig {
                         .requestMatchers("/api/auth/**", "/actuator/health", "/error").permitAll()
                         .requestMatchers("/oauth2/**", "/login/oauth2/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/stores", "/api/stores/plans", "/api/stores/address-types",
-                                "/api/stores/{slug}", "/api/stores/ranking", "/api/stores/{storeId}/reviews").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/products", "/api/products/{id}").permitAll()
+                                "/api/stores/{slug}", "/api/stores/ranking", "/api/stores/{storeId}/reviews",
+                                "/api/stores/{storeId}/followers/count", "/api/stores/{storeId}/following").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/products", "/api/products/{id}", "/api/products/{id}/reviews").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/categories").permitAll()
                         .requestMatchers("/api/billing/webhook/**").permitAll()
                         .requestMatchers("/api/payment/webhook").permitAll()

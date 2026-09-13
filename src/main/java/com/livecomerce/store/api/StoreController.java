@@ -14,11 +14,14 @@ import com.livecomerce.store.application.port.in.ReactivateStoreUseCase;
 import com.livecomerce.store.application.port.in.ReopenStoreUseCase;
 import com.livecomerce.store.application.port.in.UnfollowStoreUseCase;
 import com.livecomerce.store.application.port.in.UpdateStoreUseCase;
+import com.livecomerce.store.application.port.out.LoadStoreRankPort;
 import com.livecomerce.store.domain.AddressType;
 import com.livecomerce.store.domain.Store;
 import com.livecomerce.shared.Plan;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -30,15 +33,22 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+// Public: referenced from com.livecomerce.auth.infrastructure.security.StoreFollowerPermitAllTest
+// to verify the followers/count and following routes bypass the global filter's 401
+// for anonymous requests (same reason AgoraSignalingWebhookController is public).
 @RestController
 @RequestMapping("/api/stores")
 @RequiredArgsConstructor
-class StoreController {
+public class StoreController {
+
+    private static final Logger log = LoggerFactory.getLogger(StoreController.class);
 
     private final CreateStoreUseCase createStoreUseCase;
     private final GetStoreUseCase getStoreUseCase;
@@ -53,14 +63,18 @@ class StoreController {
     private final UnfollowStoreUseCase unfollowStoreUseCase;
     private final GetStoreFollowersUseCase getStoreFollowersUseCase;
     private final LoadStoreRatingPort loadStoreRatingPort;
+    private final LoadStoreRankPort loadStoreRankPort;
 
     @GetMapping
     ResponseEntity<Page<StoreCardResponse>> listStores(
             @PageableDefault(size = 20) Pageable pageable) {
         var page = listStoresUseCase.listActive(pageable);
-        var ratings = loadStoreRatingPort.loadSummaries(
-                page.getContent().stream().map(Store::getId).collect(Collectors.toSet()));
-        return ResponseEntity.ok(page.map(store -> StoreCardResponse.from(store, ratings.get(store.getId()))));
+        var storeIds = page.getContent().stream().map(Store::getId).collect(Collectors.toSet());
+        var ratings = loadRatingsSafely(storeIds);
+        var ranks = loadRanksSafely(storeIds);
+        var followerCounts = loadFollowerCountsSafely(storeIds);
+        return ResponseEntity.ok(page.map(store -> StoreCardResponse.from(
+                store, ratings.get(store.getId()), ranks.get(store.getId()), followerCounts.get(store.getId()))));
     }
 
     @PostMapping
@@ -89,8 +103,11 @@ class StoreController {
     @GetMapping("/{slug}")
     ResponseEntity<StoreCardResponse> getBySlug(@PathVariable String slug) {
         var store = getStoreUseCase.getBySlug(slug);
-        var rating = loadStoreRatingPort.loadSummaries(Set.of(store.getId())).get(store.getId());
-        return ResponseEntity.ok(StoreCardResponse.from(store, rating));
+        var storeId = store.getId();
+        var rating = loadRatingsSafely(Set.of(storeId)).get(storeId);
+        var rank = loadRanksSafely(Set.of(storeId)).get(storeId);
+        var followerCount = loadFollowerCountsSafely(Set.of(storeId)).get(storeId);
+        return ResponseEntity.ok(StoreCardResponse.from(store, rating, rank, followerCount));
     }
 
     @PutMapping("/me")
@@ -190,12 +207,47 @@ class StoreController {
         return ResponseEntity.ok(new FollowerCountResponse(count));
     }
 
+    // No @PreAuthorize here: the route is permitAll (see SecurityConfig) so an anonymous
+    // visitor's store card doesn't 401. Still requires auth for a real answer — principal
+    // is null for anonymous requests, in which case we degrade to "not following" instead
+    // of dereferencing a null userId.
     @GetMapping("/{storeId}/following")
-    @PreAuthorize("isAuthenticated()")
     ResponseEntity<FollowingStatusResponse> isFollowing(
             @PathVariable UUID storeId,
             @AuthenticationPrincipal UserPrincipal principal) {
-        boolean following = getStoreFollowersUseCase.isFollowing(storeId, principal.getUserId());
+        boolean following = principal != null && getStoreFollowersUseCase.isFollowing(storeId, principal.getUserId());
         return ResponseEntity.ok(new FollowingStatusResponse(following));
+    }
+
+    // Each store-card enrichment loader is isolated with its own try/catch (mirrors
+    // StoreRankingJob's per-loader isolation in the analytics module): a failure in
+    // one dimension must degrade only that field, not fail the whole public listing
+    // or detail response through GlobalExceptionHandler's unhandled-Exception path.
+
+    private Map<UUID, LoadStoreRatingPort.StoreRatingSummary> loadRatingsSafely(Collection<UUID> storeIds) {
+        try {
+            return loadStoreRatingPort.loadSummaries(storeIds);
+        } catch (Exception e) {
+            log.error("Failed to load rating summaries for {} stores; defaulting ratings for this response", storeIds.size(), e);
+            return Map.of();
+        }
+    }
+
+    private Map<UUID, Integer> loadRanksSafely(Collection<UUID> storeIds) {
+        try {
+            return loadStoreRankPort.loadRanks(storeIds);
+        } catch (Exception e) {
+            log.error("Failed to load ranks for {} stores; defaulting ranking position for this response", storeIds.size(), e);
+            return Map.of();
+        }
+    }
+
+    private Map<UUID, Long> loadFollowerCountsSafely(Collection<UUID> storeIds) {
+        try {
+            return getStoreFollowersUseCase.getFollowerCounts(storeIds);
+        } catch (Exception e) {
+            log.error("Failed to load follower counts for {} stores; defaulting follower count for this response", storeIds.size(), e);
+            return Map.of();
+        }
     }
 }

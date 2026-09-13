@@ -4,6 +4,7 @@ import com.livecomerce.shared.UserPrincipal;
 import com.livecomerce.store.LoadStoreRatingPort;
 import com.livecomerce.store.application.StoreNotFoundException;
 import com.livecomerce.store.application.port.in.*;
+import com.livecomerce.store.application.port.out.LoadStoreRankPort;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -62,6 +63,7 @@ class StoreFollowerControllerTest {
     @MockitoBean UnfollowStoreUseCase unfollowStoreUseCase;
     @MockitoBean GetStoreFollowersUseCase getStoreFollowersUseCase;
     @MockitoBean LoadStoreRatingPort loadStoreRatingPort;
+    @MockitoBean LoadStoreRankPort loadStoreRankPort;
 
     private static final UUID USER_ID = UUID.randomUUID();
     private static final UUID STORE_ID = UUID.randomUUID();
@@ -152,5 +154,18 @@ class StoreFollowerControllerTest {
         mvc.perform(get("/api/stores/{storeId}/following", STORE_ID))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.following").value(false));
+    }
+
+    @Test
+    void isFollowing_whenAnonymous_returnsFalseWithoutCallingUseCase() throws Exception {
+        // No principal set up for this test (unlike @BeforeEach's authenticated buyer) —
+        // simulates an anonymous visitor. Must degrade to false, never NPE on a null userId.
+        SecurityContextHolder.clearContext();
+
+        mvc.perform(get("/api/stores/{storeId}/following", STORE_ID))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.following").value(false));
+
+        verify(getStoreFollowersUseCase, never()).isFollowing(any(), any());
     }
 }
