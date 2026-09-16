@@ -13,6 +13,7 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Component;
 
 import java.time.OffsetDateTime;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -68,6 +69,23 @@ class ProductPersistenceAdapter implements LoadProductPort, SaveProductPort {
         repository.findByIdsWithImages(ids);
         repository.findByIdsWithOptions(ids);
         repository.findByIdsWithVariantOptionValues(ids);
+
+        return products;
+    }
+
+    @Override
+    public List<Product> loadByIds(Collection<UUID> productIds) {
+        if (productIds.isEmpty()) return List.of();
+
+        List<UUID> ids = List.copyOf(productIds);
+        List<Product> products = repository.findByIdsWithVariantsAndStock(ids);
+        if (products.isEmpty()) return products;
+
+        // Hydrate remaining lazy collections within the same session so callers
+        // with open-in-view=false don't hit LazyInitializationException — same
+        // pattern as loadByFilter/browsePublic. A single bulk query for the
+        // whole id list, never one query per product.
+        repository.findByIdsWithImages(ids);
 
         return products;
     }
