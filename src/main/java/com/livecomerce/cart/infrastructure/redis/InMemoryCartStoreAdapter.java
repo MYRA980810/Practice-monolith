@@ -34,7 +34,24 @@ class InMemoryCartStoreAdapter implements CartStorePort {
     @Override
     public void addOrIncrement(UUID buyerId, UUID storeId, UUID productId, UUID variantId, int quantity) {
         var key = new LineKey(buyerId, storeId, productId, variantId);
-        lines.merge(key, quantity, Integer::sum);
+        int resulting = lines.merge(key, quantity, Integer::sum);
+
+        if (resulting > CartItem.MAX_QUANTITY) {
+            // JD-R2-002/JDB2-006: the same check-then-act race as JDB2-001,
+            // but via addToCart's [1,99] guard instead of changeQuantity's
+            // stock guard — two concurrent addToCart calls can each read a
+            // pre-race quantity under the cap and jointly push the raw
+            // merge above it, bricking the cart on the next load()
+            // (CartItem.of() throws for quantity > MAX_QUANTITY).
+            resulting = correctOvershoot(key, buyerId, storeId, resulting, CartItem.MAX_QUANTITY);
+            if (resulting <= 0) {
+                // a concurrent removeLine raced the correction down to zero
+                // or below — the line is already removed (see
+                // correctOvershoot), don't resurrect it via the index below.
+                return;
+            }
+        }
+
         index(buyerId, storeId);
     }
 
@@ -53,15 +70,56 @@ class InMemoryCartStoreAdapter implements CartStorePort {
         if (availableStock != null && resulting > availableStock) {
             // JDB2-001: correct an invisible, permanent overshoot from a
             // concurrent check-then-act race immediately after it happens.
-            log.warn("changeQuantity overshoot detected for buyer {} store {} product {} variant {}: "
-                            + "{} > availableStock {} — clamping",
-                    buyerId, storeId, productId, variantId, resulting, availableStock);
-            lines.put(key, availableStock);
-            resulting = availableStock;
+            resulting = correctOvershoot(key, buyerId, storeId, resulting, availableStock);
+            if (resulting <= 0) {
+                // JD-R2-001: the correction itself raced a concurrent
+                // removeLine and landed at/below zero — correctOvershoot
+                // already removed the line + pruned the index. Return the
+                // same "removed" result the resulting<=0 branch above uses,
+                // instead of proceeding to re-index below, which would
+                // resurrect the line the buyer removed.
+                return 0;
+            }
         }
 
         index(buyerId, storeId);
         return resulting;
+    }
+
+    /**
+     * Corrects an overshoot (a raw atomic merge that landed above {@code
+     * bound}) via a RELATIVE corrective merge — never an absolute {@code
+     * put} (JD-R2-001). Because the correction is itself atomic relative to
+     * whatever the key's CURRENT value is at the moment it executes, it
+     * composes correctly with a concurrent {@code removeLine}: {@link
+     * java.util.concurrent.ConcurrentHashMap#merge} on an absent key simply
+     * associates it with the (negative) correction delta rather than
+     * invoking the remapping function, so the result lands at/below zero and
+     * this method removes the line + prunes the index — instead of
+     * resurrecting the line an absolute {@code put} would have.
+     *
+     * <p>Accepted residual (design D5, out of proportion to eliminate):
+     * if the line still exists and this correction converges it back to
+     * exactly {@code bound}, the caller's subsequent index update can still
+     * race very narrowly with a concurrent {@code removeLine}'s {@code
+     * pruneIfEmpty}. This self-heals via {@link #loadStoreIds}.
+     *
+     * @return the corrected quantity, or a value {@code <= 0} if the line
+     * was (or became, due to the race above) removed — callers must not
+     * proceed to re-index the store in that case.
+     */
+    private int correctOvershoot(LineKey key, UUID buyerId, UUID storeId, int resulting, int bound) {
+        log.warn("overshoot detected for buyer {} store {} product {} variant {}: {} > bound {} — "
+                        + "applying corrective decrement",
+                buyerId, storeId, key.productId(), key.variantId(), resulting, bound);
+        int correctionDelta = bound - resulting;
+        int corrected = lines.merge(key, correctionDelta, Integer::sum);
+        if (corrected <= 0) {
+            lines.remove(key);
+            pruneIfEmpty(buyerId, storeId);
+            return 0;
+        }
+        return corrected;
     }
 
     @Override

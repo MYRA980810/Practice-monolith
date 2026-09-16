@@ -4,9 +4,14 @@ import com.livecomerce.cart.domain.CartLineKey;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Field;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.BiFunction;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 
 class InMemoryCartStoreAdapterTest {
 
@@ -42,6 +47,20 @@ class InMemoryCartStoreAdapterTest {
     }
 
     @Test
+    void addOrIncrement_concurrentRace_clampsToMaxQuantity_andSubsequentLoadDoesNotThrow() {
+        // JD-R2-002/JDB2-006: two concurrent addToCart calls can each pass
+        // the [1,99] check-then-act guard on a pre-race quantity and jointly
+        // push the raw merge above CartItem.MAX_QUANTITY (99).
+        adapter.addOrIncrement(BUYER_ID, STORE_ID, PRODUCT_ID, VARIANT_ID, 95);
+
+        adapter.addOrIncrement(BUYER_ID, STORE_ID, PRODUCT_ID, VARIANT_ID, 10); // would overshoot to 105
+
+        var cart = adapter.load(BUYER_ID, STORE_ID);
+        assertThat(cart.findLine(new CartLineKey(PRODUCT_ID, VARIANT_ID)).orElseThrow().quantity()).isEqualTo(99);
+        assertThatCode(() -> adapter.load(BUYER_ID, STORE_ID)).doesNotThrowAnyException();
+    }
+
+    @Test
     void changeQuantity_positiveDelta_incrementsAndReturnsResult() {
         adapter.addOrIncrement(BUYER_ID, STORE_ID, PRODUCT_ID, VARIANT_ID, 2);
 
@@ -70,6 +89,59 @@ class InMemoryCartStoreAdapterTest {
         assertThat(result).isEqualTo(10);
         assertThat(adapter.load(BUYER_ID, STORE_ID).findLine(new CartLineKey(PRODUCT_ID, VARIANT_ID))
                 .orElseThrow().quantity()).isEqualTo(10);
+    }
+
+    @Test
+    void changeQuantity_overshootCorrection_concurrentRemoveLine_doesNotResurrectLine() throws Exception {
+        // JD-R2-001: simulate a concurrent removeLine racing in between the
+        // main merge and the corrective one by intercepting the internal
+        // map's mutating calls (put = old absolute-clamp primitive, merge
+        // with a negative delta = new relative-correction primitive) and
+        // deleting the entry right before the real call lands — exactly the
+        // race window the bug/fix are about. Must never resurrect the line.
+        adapter.addOrIncrement(BUYER_ID, STORE_ID, PRODUCT_ID, VARIANT_ID, 8);
+
+        Class<?> lineKeyClass = Class.forName(
+                "com.livecomerce.cart.infrastructure.redis.InMemoryCartStoreAdapter$LineKey");
+        Constructor<?> ctor = lineKeyClass.getDeclaredConstructor(UUID.class, UUID.class, UUID.class, UUID.class);
+        ctor.setAccessible(true);
+        Object key = ctor.newInstance(BUYER_ID, STORE_ID, PRODUCT_ID, VARIANT_ID);
+
+        Field linesField = InMemoryCartStoreAdapter.class.getDeclaredField("lines");
+        linesField.setAccessible(true);
+        @SuppressWarnings("unchecked")
+        ConcurrentHashMap<Object, Integer> realMap = (ConcurrentHashMap<Object, Integer>) linesField.get(adapter);
+
+        ConcurrentHashMap<Object, Integer> racyMap = new ConcurrentHashMap<>(realMap) {
+            @Override
+            public Integer put(Object k, Integer value) {
+                if (k.equals(key)) {
+                    // old (buggy) implementation: an absolute clamp write —
+                    // simulate the concurrent removal winning right before it
+                    super.remove(k);
+                }
+                return super.put(k, value);
+            }
+
+            @Override
+            public Integer merge(Object k, Integer value,
+                    BiFunction<? super Integer, ? super Integer, ? extends Integer> fn) {
+                if (k.equals(key) && value < 0) {
+                    // new (fixed) implementation: a relative corrective
+                    // merge — simulate the concurrent removal winning right
+                    // before it, same as above
+                    super.remove(k);
+                }
+                return super.merge(k, value, fn);
+            }
+        };
+        linesField.set(adapter, racyMap);
+
+        int result = adapter.changeQuantity(BUYER_ID, STORE_ID, PRODUCT_ID, VARIANT_ID, 5, 10);
+
+        assertThat(result).isZero();
+        assertThat(adapter.load(BUYER_ID, STORE_ID).isEmpty()).isTrue();
+        assertThat(adapter.loadStoreIds(BUYER_ID)).isEmpty();
     }
 
     @Test

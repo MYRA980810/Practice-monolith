@@ -68,6 +68,43 @@ class RedisCartStoreAdapterTest {
     }
 
     @Test
+    void addOrIncrement_resultExceedsMaxQuantity_clampsWithCorrectiveIncrement() {
+        // JD-R2-002/JDB2-006: two concurrent addToCart calls can jointly push
+        // the raw HINCRBY above CartItem.MAX_QUANTITY (99) even though each
+        // caller individually validated against the [1,99] bound.
+        when(redisTemplate.<String, String>opsForHash()).thenReturn(hashOps);
+        when(redisTemplate.opsForSet()).thenReturn(setOps);
+        when(hashOps.increment(CART_KEY, FIELD_WITH_VARIANT, 10L)).thenReturn(105L);
+        when(hashOps.increment(CART_KEY, FIELD_WITH_VARIANT, -6L)).thenReturn(99L);
+
+        adapter.addOrIncrement(BUYER_ID, STORE_ID, PRODUCT_ID, VARIANT_ID, 10);
+
+        verify(hashOps).increment(CART_KEY, FIELD_WITH_VARIANT, -6L);
+        verify(hashOps, never()).put(any(), any(), any());
+        verify(setOps).add(INDEX_KEY, STORE_ID.toString());
+    }
+
+    @Test
+    void addOrIncrement_overshootCorrection_concurrentRemoveLine_deletesInsteadOfResurrecting() {
+        // JD-R2-001 pattern applied to the new addOrIncrement backstop: if a
+        // concurrent removeLine deletes the field between the main HINCRBY
+        // and the corrective one, HINCRBY on an absent field starts from 0,
+        // so the corrective (negative) delta must land at/below zero and be
+        // routed into delete + pruneIfEmpty, never resurrect the line.
+        when(redisTemplate.<String, String>opsForHash()).thenReturn(hashOps);
+        when(redisTemplate.opsForSet()).thenReturn(setOps);
+        when(hashOps.increment(CART_KEY, FIELD_WITH_VARIANT, 10L)).thenReturn(105L);
+        when(hashOps.increment(CART_KEY, FIELD_WITH_VARIANT, -6L)).thenReturn(-6L);
+        when(hashOps.size(CART_KEY)).thenReturn(0L);
+
+        adapter.addOrIncrement(BUYER_ID, STORE_ID, PRODUCT_ID, VARIANT_ID, 10);
+
+        verify(hashOps).delete(CART_KEY, FIELD_WITH_VARIANT);
+        verify(hashOps, never()).put(any(), any(), any());
+        verify(setOps, never()).add(eq(INDEX_KEY), any());
+    }
+
+    @Test
     void changeQuantity_positiveDelta_incrementsAndReturnsResult() {
         when(redisTemplate.<String, String>opsForHash()).thenReturn(hashOps);
         when(redisTemplate.opsForSet()).thenReturn(setOps);
@@ -107,15 +144,41 @@ class RedisCartStoreAdapterTest {
     }
 
     @Test
-    void changeQuantity_resultExceedsAvailableStock_clampsWithCorrectiveWrite() {
+    void changeQuantity_resultExceedsAvailableStock_clampsWithCorrectiveIncrement() {
+        // JD-R2-001: the clamp must be a RELATIVE corrective HINCRBY, never
+        // an absolute put, so it composes correctly with a concurrent
+        // removeLine instead of being able to resurrect a removed line.
         when(redisTemplate.<String, String>opsForHash()).thenReturn(hashOps);
         when(redisTemplate.opsForSet()).thenReturn(setOps);
         when(hashOps.increment(CART_KEY, FIELD_WITH_VARIANT, 5L)).thenReturn(13L);
+        when(hashOps.increment(CART_KEY, FIELD_WITH_VARIANT, -3L)).thenReturn(10L);
 
         int result = adapter.changeQuantity(BUYER_ID, STORE_ID, PRODUCT_ID, VARIANT_ID, 5, 10);
 
         assertThat(result).isEqualTo(10);
-        verify(hashOps).put(CART_KEY, FIELD_WITH_VARIANT, "10");
+        verify(hashOps).increment(CART_KEY, FIELD_WITH_VARIANT, -3L);
+        verify(hashOps, never()).put(any(), any(), any());
+    }
+
+    @Test
+    void changeQuantity_overshootCorrection_concurrentRemoveLine_doesNotResurrectLine() {
+        // JD-R2-001: if a concurrent removeLine deletes the field between
+        // the main HINCRBY (line 58) and the corrective one, HINCRBY on an
+        // absent field starts from 0, so the negative correction delta must
+        // land at/below zero and route into the existing resulting<=0
+        // handling (delete + pruneIfEmpty) instead of resurrecting the line.
+        when(redisTemplate.<String, String>opsForHash()).thenReturn(hashOps);
+        when(redisTemplate.opsForSet()).thenReturn(setOps);
+        when(hashOps.increment(CART_KEY, FIELD_WITH_VARIANT, 5L)).thenReturn(13L);
+        when(hashOps.increment(CART_KEY, FIELD_WITH_VARIANT, -3L)).thenReturn(-3L);
+        when(hashOps.size(CART_KEY)).thenReturn(0L);
+
+        int result = adapter.changeQuantity(BUYER_ID, STORE_ID, PRODUCT_ID, VARIANT_ID, 5, 10);
+
+        assertThat(result).isZero();
+        verify(hashOps).delete(CART_KEY, FIELD_WITH_VARIANT);
+        verify(hashOps, never()).put(any(), any(), any());
+        verify(setOps, never()).add(eq(INDEX_KEY), any());
     }
 
     @Test

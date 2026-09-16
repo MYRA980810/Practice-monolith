@@ -41,9 +41,29 @@ class RedisCartStoreAdapter implements CartStorePort {
     @Override
     public void addOrIncrement(UUID buyerId, UUID storeId, UUID productId, UUID variantId, int quantity) {
         String cartKey = cartKey(buyerId, storeId);
+        String field = field(productId, variantId);
         String indexKey = indexKey(buyerId);
 
-        redisTemplate.opsForHash().increment(cartKey, field(productId, variantId), quantity);
+        Long result = redisTemplate.opsForHash().increment(cartKey, field, quantity);
+        long resulting = result == null ? 0L : result;
+
+        if (resulting > CartItem.MAX_QUANTITY) {
+            // JD-R2-002/JDB2-006: the same check-then-act race as JDB2-001,
+            // but via addToCart's [1,99] guard instead of changeQuantity's
+            // stock guard — two concurrent addToCart calls can each read a
+            // pre-race quantity under the cap and jointly push the raw
+            // HINCRBY above it, bricking the cart on the next load()
+            // (CartItem.of() throws for quantity > MAX_QUANTITY).
+            resulting = correctOvershoot(cartKey, field, buyerId, storeId, resulting, CartItem.MAX_QUANTITY);
+            if (resulting <= 0) {
+                // a concurrent removeLine raced the correction down to zero
+                // or below — the line is already deleted (see
+                // correctOvershoot), don't resurrect it via the index/TTL
+                // refresh below.
+                return;
+            }
+        }
+
         redisTemplate.opsForSet().add(indexKey, storeId.toString());
         redisTemplate.expire(cartKey, CART_TTL);
         redisTemplate.expire(indexKey, CART_TTL);
@@ -70,10 +90,16 @@ class RedisCartStoreAdapter implements CartStorePort {
             // validated against it individually. Correct the persisted
             // state immediately rather than leaving an invisible,
             // permanent overshoot.
-            log.warn("changeQuantity overshoot detected for cart {} field {}: {} > availableStock {} — clamping",
-                    cartKey, field, resulting, availableStock);
-            redisTemplate.opsForHash().put(cartKey, field, String.valueOf(availableStock));
-            resulting = availableStock;
+            resulting = correctOvershoot(cartKey, field, buyerId, storeId, resulting, availableStock);
+            if (resulting <= 0) {
+                // JD-R2-001: the correction itself raced a concurrent
+                // removeLine and landed at/below zero — correctOvershoot
+                // already deleted the field + pruned the index. Return the
+                // same "removed" result the resulting<=0 branch above uses,
+                // instead of proceeding to (re-)add the index/TTL refresh
+                // below, which would resurrect the line the buyer removed.
+                return 0;
+            }
         }
 
         String indexKey = indexKey(buyerId);
@@ -81,6 +107,46 @@ class RedisCartStoreAdapter implements CartStorePort {
         redisTemplate.expire(cartKey, CART_TTL);
         redisTemplate.expire(indexKey, CART_TTL);
         return (int) resulting;
+    }
+
+    /**
+     * Corrects an overshoot (a raw atomic increment that landed above
+     * {@code bound}) via a RELATIVE corrective {@code HINCRBY} — never an
+     * absolute {@code put} (JD-R2-001). Because the correction is itself an
+     * atomic increment relative to whatever the field's CURRENT value is at
+     * the moment it executes, it composes correctly with a concurrent {@code
+     * removeLine}: if the field was deleted in between, HINCRBY on an absent
+     * field starts from 0, so the negative correction delta lands at/below
+     * zero and this method deletes the field + prunes the index — instead of
+     * resurrecting the line an absolute write would have.
+     *
+     * <p>Accepted residual (design D5, out of proportion to eliminate
+     * without Redis transactions/Lua scripting, which have no precedent
+     * elsewhere in this codebase): if the field still exists and this
+     * correction converges it back to exactly {@code bound}, the caller's
+     * subsequent index {@code SADD}/{@code EXPIRE} can still race very
+     * narrowly with a concurrent {@code removeLine}'s {@code
+     * pruneIfEmpty}, potentially leaving the index momentarily inconsistent
+     * with the hash. This self-heals via {@link #loadStoreIds}'s
+     * prune-on-read logic.
+     *
+     * @return the corrected quantity, or a value {@code <= 0} if the field
+     * was (or became, due to the race above) empty — callers must not
+     * proceed to (re-)add the store to the index in that case.
+     */
+    private long correctOvershoot(String cartKey, String field, UUID buyerId, UUID storeId, long resulting,
+            int bound) {
+        log.warn("overshoot detected for cart {} field {}: {} > bound {} — applying corrective decrement",
+                cartKey, field, resulting, bound);
+        long correctionDelta = bound - resulting;
+        Long corrected = redisTemplate.opsForHash().increment(cartKey, field, correctionDelta);
+        long result = corrected == null ? 0L : corrected;
+        if (result <= 0) {
+            redisTemplate.opsForHash().delete(cartKey, field);
+            pruneIfEmpty(buyerId, storeId);
+            return 0L;
+        }
+        return result;
     }
 
     @Override
