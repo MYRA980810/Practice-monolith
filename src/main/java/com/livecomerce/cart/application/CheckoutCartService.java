@@ -1,0 +1,131 @@
+package com.livecomerce.cart.application;
+
+import com.livecomerce.cart.application.port.in.CheckoutCartUseCase;
+import com.livecomerce.cart.application.port.out.CartStorePort;
+import com.livecomerce.cart.domain.Cart;
+import com.livecomerce.cart.domain.CartItem;
+import com.livecomerce.cart.domain.CartLineKey;
+import com.livecomerce.catalog.LoadCartProductInfoPort;
+import com.livecomerce.catalog.LoadCartProductInfoPort.CartLineRef;
+import com.livecomerce.catalog.LoadCartProductInfoPort.CartProductInfo;
+import com.livecomerce.order.PlaceCartOrderPort;
+import com.livecomerce.order.PlaceCartOrderPort.CartOrderLine;
+import com.livecomerce.order.PlaceCartOrderPort.PlaceCartOrderCommand;
+import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Service;
+
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
+import java.util.stream.Collectors;
+
+/**
+ * Batches selected item ids into one {@link PlaceCartOrderPort} call per
+ * store, best-effort across stores (design D8). {@code order}'s batch
+ * entry point cannot report which line in a batch failed with insufficient
+ * stock (JDB-002, PR1 review), so every line's availability — stock,
+ * live-exclusivity, and D6 fail-closed catalog-lookup failures — is
+ * validated here, against the same freshly-fetched {@link CartProductInfo}
+ * used for hydration, BEFORE {@code order} is ever called. {@code order}
+ * therefore only ever receives lines this class has already confirmed
+ * should succeed, and its own transaction stays all-or-nothing for exactly
+ * that pre-vetted batch.
+ */
+@Service
+@RequiredArgsConstructor
+public class CheckoutCartService implements CheckoutCartUseCase {
+
+    private static final Logger log = LoggerFactory.getLogger(CheckoutCartService.class);
+
+    private static final String REASON_OUT_OF_STOCK = "OUT_OF_STOCK";
+    private static final String REASON_LIVE_EXCLUSIVE = "LIVE_EXCLUSIVE";
+    private static final String REASON_UNAVAILABLE = "UNAVAILABLE";
+    private static final String FAILURE_ALL_ITEMS_UNAVAILABLE = "ALL_ITEMS_UNAVAILABLE";
+    private static final String FAILURE_RESERVATION_FAILED = "RESERVATION_FAILED";
+
+    private final CartStorePort cartStorePort;
+    private final LoadCartProductInfoPort loadCartProductInfoPort;
+    private final PlaceCartOrderPort placeCartOrderPort;
+
+    @Override
+    public CheckoutCartResponse checkout(CheckoutCartCommand command) {
+        Map<UUID, List<SelectedItem>> byStore = command.selectedItems().stream()
+                .collect(Collectors.groupingBy(SelectedItem::storeId, LinkedHashMap::new, Collectors.toList()));
+
+        List<StoreCheckoutResult> results = new ArrayList<>();
+        for (var entry : byStore.entrySet()) {
+            results.add(checkoutStore(command.buyerId(), entry.getKey(), entry.getValue()));
+        }
+        return new CheckoutCartResponse(results);
+    }
+
+    private StoreCheckoutResult checkoutStore(UUID buyerId, UUID storeId, List<SelectedItem> items) {
+        Cart cart = cartStorePort.load(buyerId, storeId);
+
+        Set<CartLineRef> refs = items.stream()
+                .map(i -> new CartLineRef(i.productId(), i.variantId()))
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+        Map<CartLineRef, CartProductInfo> infoByRef = loadCartProductInfoPort.loadForCart(refs);
+
+        List<CartOrderLine> orderLines = new ArrayList<>();
+        List<SkippedLine> skipped = new ArrayList<>();
+        String currency = null;
+
+        for (SelectedItem item : items) {
+            var key = new CartLineKey(item.productId(), item.variantId());
+            var cartLine = cart.findLine(key);
+            if (cartLine.isEmpty()) {
+                skipped.add(new SkippedLine(item.productId(), item.variantId(), REASON_UNAVAILABLE));
+                continue;
+            }
+
+            var ref = new CartLineRef(item.productId(), item.variantId());
+            var info = infoByRef.get(ref);
+            if (info == null) {
+                skipped.add(new SkippedLine(item.productId(), item.variantId(), REASON_UNAVAILABLE));
+                continue;
+            }
+            if (info.exclusiveToActiveLive()) {
+                skipped.add(new SkippedLine(item.productId(), item.variantId(), REASON_LIVE_EXCLUSIVE));
+                continue;
+            }
+            CartItem line = cartLine.get();
+            if (line.quantity() > info.availableStock()) {
+                skipped.add(new SkippedLine(item.productId(), item.variantId(), REASON_OUT_OF_STOCK));
+                continue;
+            }
+
+            currency = info.currency();
+            orderLines.add(new CartOrderLine(item.productId(), item.variantId(), info.name(),
+                    info.unitPrice(), line.quantity()));
+        }
+
+        if (orderLines.isEmpty()) {
+            return new StoreCheckoutResult(storeId, false, null, null, null, skipped, FAILURE_ALL_ITEMS_UNAVAILABLE);
+        }
+
+        try {
+            var placed = placeCartOrderPort.placeOrder(new PlaceCartOrderCommand(buyerId, storeId, currency, orderLines));
+
+            for (CartOrderLine line : orderLines) {
+                cartStorePort.removeLine(buyerId, storeId, line.productId(), line.variantId());
+            }
+
+            return new StoreCheckoutResult(storeId, true, placed.orderId(), placed.total(), placed.currency(),
+                    skipped, null);
+        } catch (Exception e) {
+            log.warn("Checkout failed for store {}: {}", storeId, e.getMessage());
+            List<SkippedLine> allSkipped = new ArrayList<>(skipped);
+            for (CartOrderLine line : orderLines) {
+                allSkipped.add(new SkippedLine(line.productId(), line.variantId(), REASON_OUT_OF_STOCK));
+            }
+            return new StoreCheckoutResult(storeId, false, null, null, null, allSkipped, FAILURE_RESERVATION_FAILED);
+        }
+    }
+}
