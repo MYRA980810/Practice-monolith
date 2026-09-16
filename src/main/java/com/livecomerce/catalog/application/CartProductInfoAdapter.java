@@ -130,7 +130,7 @@ class CartProductInfoAdapter implements LoadCartProductInfoPort {
         var stock = variant.getStock();
         return new CartProductInfo(
                 product.getId(),
-                ref.variantId(),
+                variant.getId(),
                 product.getStoreId(),
                 product.getName(),
                 primaryImageUrl(product),

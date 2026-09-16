@@ -66,6 +66,7 @@ class CartProductInfoAdapterTest {
         assertThat(info.active()).isTrue();
         assertThat(info.paused()).isFalse();
         assertThat(info.exclusiveToActiveLive()).isTrue();
+        assertThat(info.variantId()).isEqualTo(product.defaultVariant().getId());
     }
 
     @Test
