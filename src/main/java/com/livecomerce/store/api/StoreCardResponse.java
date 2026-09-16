@@ -11,9 +11,11 @@ public record StoreCardResponse(
         double averageRating,
         long reviewCount,
         Integer rankingPosition,
-        long followerCount
+        long followerCount,
+        boolean liveNow
 ) {
-    public static StoreCardResponse from(Store store, StoreRatingSummary rating, Integer rankingPosition, Long followerCount) {
+    public static StoreCardResponse from(Store store, StoreRatingSummary rating, Integer rankingPosition,
+                                         Long followerCount, boolean liveNow) {
         return new StoreCardResponse(
                 store.getName(),
                 store.getSlug(),
@@ -22,7 +24,8 @@ public record StoreCardResponse(
                 rating != null ? rating.averageRating() : 0.0,
                 rating != null ? rating.reviewCount() : 0L,
                 rankingPosition,
-                followerCount != null ? followerCount : 0L
+                followerCount != null ? followerCount : 0L,
+                liveNow
         );
     }
 }

@@ -29,6 +29,12 @@ public class LiveProductReadEntity {
     @Column(name = "product_id")
     private UUID productId;
 
+    /** Raw {@code live.domain.LiveProductStatus} enum name (AVAILABLE/PINNED/SOLD) — kept
+     * as a plain String, same as {@link LiveReadEntity#getStatus()}, so this read-only
+     * mapping never needs to import {@code live}'s domain enum. */
+    @Column(name = "status")
+    private String status;
+
     @Column(name = "product_name_snapshot")
     private String productNameSnapshot;
 

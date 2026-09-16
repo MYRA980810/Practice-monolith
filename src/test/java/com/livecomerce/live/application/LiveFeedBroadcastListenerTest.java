@@ -12,6 +12,7 @@ import org.mockito.Mock;
 import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
@@ -34,7 +35,7 @@ class LiveFeedBroadcastListenerTest {
 
     @Test
     void onLiveStarted_sendsAddSignalToFeedChannel() {
-        var event = new LiveStartedEvent(LIVE_ID, STORE_ID, "Flash Sale", List.of());
+        var event = new LiveStartedEvent(LIVE_ID, STORE_ID, "Flash Sale", List.of(), Instant.now());
 
         sut.on(event);
 
@@ -47,7 +48,7 @@ class LiveFeedBroadcastListenerTest {
 
     @Test
     void onLiveEnded_sendsRemoveSignalToFeedChannel() {
-        var event = new LiveEndedEvent(LIVE_ID, SELLER_ID);
+        var event = new LiveEndedEvent(LIVE_ID, SELLER_ID, STORE_ID, Instant.now());
 
         sut.on(event);
 
@@ -60,7 +61,7 @@ class LiveFeedBroadcastListenerTest {
 
     @Test
     void onLiveStarted_rtmExceptionIsSwallowed() {
-        var event = new LiveStartedEvent(LIVE_ID, STORE_ID, "Flash Sale", List.of());
+        var event = new LiveStartedEvent(LIVE_ID, STORE_ID, "Flash Sale", List.of(), Instant.now());
         doThrow(new RuntimeException("RTM error")).when(agoraRtmMessagePort)
                 .sendChannelMessage(any(), any());
 

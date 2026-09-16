@@ -1,5 +1,7 @@
 package com.livecomerce.catalog.application;
 
+import com.livecomerce.catalog.LoadLiveProductStatusPort;
+import com.livecomerce.catalog.LoadLiveProductStatusPort.LiveProductBadge;
 import com.livecomerce.catalog.LoadProductRatingPort;
 import com.livecomerce.catalog.LoadProductRatingPort.ProductRatingSummary;
 import com.livecomerce.catalog.LoadProductSalesPort;
@@ -43,6 +45,7 @@ class GetProductServiceTest {
     @Mock LoadCategoryPort loadCategoryPort;
     @Mock LoadProductRatingPort loadProductRatingPort;
     @Mock LoadProductSalesPort loadProductSalesPort;
+    @Mock LoadLiveProductStatusPort loadLiveProductStatusPort;
 
     @InjectMocks GetProductService service;
 
@@ -53,6 +56,7 @@ class GetProductServiceTest {
     void defaultNoRatings() {
         when(loadProductRatingPort.loadSummaries(any())).thenReturn(Map.of());
         when(loadProductSalesPort.loadSoldCounts(any())).thenReturn(Map.of());
+        when(loadLiveProductStatusPort.loadStatuses(any())).thenReturn(Map.of());
     }
 
     private static Product buildProduct() {
@@ -398,5 +402,75 @@ class GetProductServiceTest {
         var result = service.getById(product.getId());
 
         assertThat(result.stockLabel()).isEqualTo("Sin stock");
+    }
+
+    // --- live status (pinnedNow / exclusiveToActiveLive) ---
+
+    @Test
+    void getById_whenNoLiveAssociation_bothLiveFlagsAreFalse() {
+        var product = buildProduct();
+        when(loadProductPort.loadById(product.getId())).thenReturn(Optional.of(product));
+
+        var result = service.getById(product.getId());
+
+        assertThat(result.pinnedNow()).isFalse();
+        assertThat(result.exclusiveToActiveLive()).isFalse();
+    }
+
+    @Test
+    void getById_whenPinnedInActiveLive_setsBothFlagsTrue() {
+        var product = buildProduct();
+        when(loadProductPort.loadById(product.getId())).thenReturn(Optional.of(product));
+        when(loadLiveProductStatusPort.loadStatuses(Set.of(product.getId())))
+                .thenReturn(Map.of(product.getId(), new LiveProductBadge(true, true)));
+
+        var result = service.getById(product.getId());
+
+        assertThat(result.pinnedNow()).isTrue();
+        assertThat(result.exclusiveToActiveLive()).isTrue();
+    }
+
+    @Test
+    void getById_whenShowcasedButNotPinned_onlyExclusiveFlagIsTrue() {
+        var product = buildProduct();
+        when(loadProductPort.loadById(product.getId())).thenReturn(Optional.of(product));
+        when(loadLiveProductStatusPort.loadStatuses(Set.of(product.getId())))
+                .thenReturn(Map.of(product.getId(), new LiveProductBadge(false, true)));
+
+        var result = service.getById(product.getId());
+
+        assertThat(result.pinnedNow()).isFalse();
+        assertThat(result.exclusiveToActiveLive()).isTrue();
+    }
+
+    @Test
+    void getById_whenLiveStatusPortThrows_failsOpenBothFlagsFalse() {
+        var product = buildProduct();
+        when(loadProductPort.loadById(product.getId())).thenReturn(Optional.of(product));
+        when(loadLiveProductStatusPort.loadStatuses(Set.of(product.getId())))
+                .thenThrow(new RuntimeException("live module unavailable"));
+
+        var result = service.getById(product.getId());
+
+        assertThat(result).isNotNull();
+        assertThat(result.pinnedNow()).isFalse();
+        assertThat(result.exclusiveToActiveLive()).isFalse();
+    }
+
+    @Test
+    void browse_whenLiveStatusPortThrows_defaultsToFalseInsteadOfPropagating() {
+        var filter = new ProductFilter(null, null, null, null);
+        var pageable = PageRequest.of(0, 20);
+        var product = buildProduct();
+        Page<Product> portPage = new PageImpl<>(List.of(product), pageable, 1);
+        when(loadProductPort.browsePublic(filter, pageable)).thenReturn(portPage);
+        when(loadLiveProductStatusPort.loadStatuses(Set.of(product.getId())))
+                .thenThrow(new RuntimeException("live module unavailable"));
+
+        var result = service.browse(filter, pageable);
+
+        assertThat(result.getContent()).hasSize(1);
+        assertThat(result.getContent().get(0).pinnedNow()).isFalse();
+        assertThat(result.getContent().get(0).exclusiveToActiveLive()).isFalse();
     }
 }

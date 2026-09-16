@@ -130,7 +130,7 @@ class ProductControllerTest {
                 new BigDecimal("150.00"), null, null, "MXN", "SKU-001",
                 true, false, null, null,
                 stock, "Sin stock", 0L, List.of(), List.of(), List.of(),
-                0.0, 0L,
+                0.0, 0L, false, false,
                 OffsetDateTime.now(), OffsetDateTime.now()
         );
     }
@@ -184,7 +184,7 @@ class ProductControllerTest {
                 true, false, null, null,
                 new ProductView.StockInfo(0, 0, 0), "Sin stock", 0L,
                 List.of(imageInfo), List.of(), List.of(),
-                0.0, 0L,
+                0.0, 0L, false, false,
                 java.time.OffsetDateTime.now(), java.time.OffsetDateTime.now()
         );
         when(createProductUseCase.create(any())).thenReturn(buildProduct());

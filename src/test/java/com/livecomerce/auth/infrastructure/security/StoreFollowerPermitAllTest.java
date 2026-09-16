@@ -14,6 +14,7 @@ import com.livecomerce.store.application.port.in.ReactivateStoreUseCase;
 import com.livecomerce.store.application.port.in.ReopenStoreUseCase;
 import com.livecomerce.store.application.port.in.UnfollowStoreUseCase;
 import com.livecomerce.store.application.port.in.UpdateStoreUseCase;
+import com.livecomerce.store.application.port.out.LoadStoreLiveStatusPort;
 import com.livecomerce.store.application.port.out.LoadStoreRankPort;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -88,6 +89,7 @@ class StoreFollowerPermitAllTest {
     @MockitoBean GetStoreFollowersUseCase getStoreFollowersUseCase;
     @MockitoBean LoadStoreRatingPort loadStoreRatingPort;
     @MockitoBean LoadStoreRankPort loadStoreRankPort;
+    @MockitoBean LoadStoreLiveStatusPort loadStoreLiveStatusPort;
 
     private static final UUID STORE_ID = UUID.randomUUID();
 

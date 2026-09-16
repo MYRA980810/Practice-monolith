@@ -14,6 +14,7 @@ import com.livecomerce.store.application.port.in.ReactivateStoreUseCase;
 import com.livecomerce.store.application.port.in.ReopenStoreUseCase;
 import com.livecomerce.store.application.port.in.UnfollowStoreUseCase;
 import com.livecomerce.store.application.port.in.UpdateStoreUseCase;
+import com.livecomerce.store.application.port.out.LoadStoreLiveStatusPort;
 import com.livecomerce.store.application.port.out.LoadStoreRankPort;
 import com.livecomerce.store.domain.AddressType;
 import com.livecomerce.store.domain.Store;
@@ -64,6 +65,7 @@ public class StoreController {
     private final GetStoreFollowersUseCase getStoreFollowersUseCase;
     private final LoadStoreRatingPort loadStoreRatingPort;
     private final LoadStoreRankPort loadStoreRankPort;
+    private final LoadStoreLiveStatusPort loadStoreLiveStatusPort;
 
     @GetMapping
     ResponseEntity<Page<StoreCardResponse>> listStores(
@@ -73,8 +75,10 @@ public class StoreController {
         var ratings = loadRatingsSafely(storeIds);
         var ranks = loadRanksSafely(storeIds);
         var followerCounts = loadFollowerCountsSafely(storeIds);
+        var activeLiveIds = loadLiveNowSafely(storeIds);
         return ResponseEntity.ok(page.map(store -> StoreCardResponse.from(
-                store, ratings.get(store.getId()), ranks.get(store.getId()), followerCounts.get(store.getId()))));
+                store, ratings.get(store.getId()), ranks.get(store.getId()), followerCounts.get(store.getId()),
+                activeLiveIds.containsKey(store.getId()))));
     }
 
     @PostMapping
@@ -107,7 +111,8 @@ public class StoreController {
         var rating = loadRatingsSafely(Set.of(storeId)).get(storeId);
         var rank = loadRanksSafely(Set.of(storeId)).get(storeId);
         var followerCount = loadFollowerCountsSafely(Set.of(storeId)).get(storeId);
-        return ResponseEntity.ok(StoreCardResponse.from(store, rating, rank, followerCount));
+        var liveNow = loadLiveNowSafely(Set.of(storeId)).containsKey(storeId);
+        return ResponseEntity.ok(StoreCardResponse.from(store, rating, rank, followerCount, liveNow));
     }
 
     @PutMapping("/me")
@@ -247,6 +252,15 @@ public class StoreController {
             return getStoreFollowersUseCase.getFollowerCounts(storeIds);
         } catch (Exception e) {
             log.error("Failed to load follower counts for {} stores; defaulting follower count for this response", storeIds.size(), e);
+            return Map.of();
+        }
+    }
+
+    private Map<UUID, UUID> loadLiveNowSafely(Collection<UUID> storeIds) {
+        try {
+            return loadStoreLiveStatusPort.loadActiveLiveIds(storeIds);
+        } catch (Exception e) {
+            log.error("Failed to load live status for {} stores; defaulting liveNow to false for this response", storeIds.size(), e);
             return Map.of();
         }
     }

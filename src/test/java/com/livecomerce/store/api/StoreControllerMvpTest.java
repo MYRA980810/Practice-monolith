@@ -16,6 +16,7 @@ import com.livecomerce.store.application.port.in.UnfollowStoreUseCase;
 import com.livecomerce.store.application.port.in.UpdateStoreUseCase;
 import com.livecomerce.store.application.port.in.FollowStoreUseCase;
 import com.livecomerce.store.application.port.in.GetStoreFollowersUseCase;
+import com.livecomerce.store.application.port.out.LoadStoreLiveStatusPort;
 import com.livecomerce.store.application.port.out.LoadStoreRankPort;
 import com.livecomerce.store.domain.Store;
 import org.junit.jupiter.api.AfterEach;
@@ -88,6 +89,7 @@ class StoreControllerMvpTest {
     @MockitoBean GetStoreFollowersUseCase getStoreFollowersUseCase;
     @MockitoBean LoadStoreRatingPort loadStoreRatingPort;
     @MockitoBean LoadStoreRankPort loadStoreRankPort;
+    @MockitoBean LoadStoreLiveStatusPort loadStoreLiveStatusPort;
 
     private static final UUID USER_ID = UUID.randomUUID();
 
@@ -102,6 +104,7 @@ class StoreControllerMvpTest {
         lenient().when(loadStoreRatingPort.loadSummaries(any())).thenReturn(Map.of());
         lenient().when(loadStoreRankPort.loadRanks(any())).thenReturn(Map.of());
         lenient().when(getStoreFollowersUseCase.getFollowerCounts(any())).thenReturn(Map.of());
+        lenient().when(loadStoreLiveStatusPort.loadActiveLiveIds(any())).thenReturn(Map.of());
     }
 
     @AfterEach
@@ -184,6 +187,31 @@ class StoreControllerMvpTest {
                 .andExpect(jsonPath("$.content[0].slug").value("tienda-a"))
                 .andExpect(jsonPath("$.content[0].rankingPosition").doesNotExist())
                 .andExpect(jsonPath("$.content[0].followerCount").value(7));
+    }
+
+    @Test
+    void listStores_whenStoreHasActiveLive_liveNowIsTrue() throws Exception {
+        var store = Store.create(UUID.randomUUID(), "Tienda A", "tienda-a", "Descripción", null);
+        var page = new PageImpl<>(List.of(store), PageRequest.of(0, 20), 1);
+        when(listStoresUseCase.listActive(any())).thenReturn(page);
+        when(loadStoreLiveStatusPort.loadActiveLiveIds(any())).thenReturn(Map.of(store.getId(), UUID.randomUUID()));
+
+        mvc.perform(get("/api/stores"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].liveNow").value(true));
+    }
+
+    @Test
+    void listStores_whenLiveStatusPortThrows_liveNowDefaultsFalseInsteadOfPropagating() throws Exception {
+        var store = Store.create(UUID.randomUUID(), "Tienda A", "tienda-a", "Descripción", null);
+        var page = new PageImpl<>(List.of(store), PageRequest.of(0, 20), 1);
+        when(listStoresUseCase.listActive(any())).thenReturn(page);
+        when(loadStoreLiveStatusPort.loadActiveLiveIds(any())).thenThrow(new RuntimeException("store_live_status read failed"));
+
+        mvc.perform(get("/api/stores"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].slug").value("tienda-a"))
+                .andExpect(jsonPath("$.content[0].liveNow").value(false));
     }
 
     @Test

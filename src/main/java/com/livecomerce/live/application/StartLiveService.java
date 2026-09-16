@@ -79,7 +79,7 @@ public class StartLiveService implements StartLiveUseCase {
 
         var subscriberIds = loadLiveSubscriptionPort.loadSubscriberIdsByLiveId(live.getId());
         eventPublisher.publishEvent(
-                new LiveStartedEvent(live.getId(), live.getStoreId(), live.getTitle(), subscriberIds));
+                new LiveStartedEvent(live.getId(), live.getStoreId(), live.getTitle(), subscriberIds, live.getStartedAt()));
         saveLiveSubscriptionPort.deleteAllByLiveId(live.getId());
 
         return saved;

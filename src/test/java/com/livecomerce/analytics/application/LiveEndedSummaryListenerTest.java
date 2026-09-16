@@ -14,6 +14,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -56,7 +57,7 @@ class LiveEndedSummaryListenerTest {
         when(loadLiveSummarySourcePort.findTotalAllocated(LIVE_ID)).thenReturn(50L);
         when(saveLiveSummaryPort.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        sut.on(new LiveEndedEvent(LIVE_ID, SELLER_ID));
+        sut.on(new LiveEndedEvent(LIVE_ID, SELLER_ID, STORE_ID, Instant.now()));
 
         var captor = ArgumentCaptor.forClass(LiveSummary.class);
         verify(saveLiveSummaryPort).save(captor.capture());
@@ -88,7 +89,7 @@ class LiveEndedSummaryListenerTest {
         when(loadLiveSummarySourcePort.findTotalAllocated(LIVE_ID)).thenReturn(0L);
         when(saveLiveSummaryPort.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        sut.on(new LiveEndedEvent(LIVE_ID, SELLER_ID));
+        sut.on(new LiveEndedEvent(LIVE_ID, SELLER_ID, STORE_ID, Instant.now()));
 
         var captor = ArgumentCaptor.forClass(LiveSummary.class);
         verify(saveLiveSummaryPort).save(captor.capture());
@@ -116,7 +117,7 @@ class LiveEndedSummaryListenerTest {
         when(loadLiveSummarySourcePort.findTotalAllocated(LIVE_ID)).thenReturn(5L);
         when(saveLiveSummaryPort.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        sut.on(new LiveEndedEvent(LIVE_ID, SELLER_ID));
+        sut.on(new LiveEndedEvent(LIVE_ID, SELLER_ID, STORE_ID, Instant.now()));
 
         var captor = ArgumentCaptor.forClass(LiveSummary.class);
         verify(saveLiveSummaryPort).save(captor.capture());
@@ -127,7 +128,7 @@ class LiveEndedSummaryListenerTest {
     void on_redeliveredEvent_skipsProcessingWithoutThrowingOrDuplicating() {
         when(saveLiveSummaryPort.existsByLiveId(LIVE_ID)).thenReturn(true);
 
-        sut.on(new LiveEndedEvent(LIVE_ID, SELLER_ID));
+        sut.on(new LiveEndedEvent(LIVE_ID, SELLER_ID, STORE_ID, Instant.now()));
 
         verify(saveLiveSummaryPort, times(1)).existsByLiveId(LIVE_ID);
         verify(loadLiveSummarySourcePort, never()).findLiveSnapshot(any());

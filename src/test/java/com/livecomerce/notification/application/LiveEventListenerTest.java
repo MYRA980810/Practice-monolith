@@ -15,6 +15,7 @@ import org.mockito.Mock;
 import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
@@ -43,7 +44,7 @@ class LiveEventListenerTest {
     void onLiveStarted_withSubscribers_savesNotificationsAndSendsPeerMessages() {
         var subscriber1 = UUID.randomUUID();
         var subscriber2 = UUID.randomUUID();
-        var event = new LiveStartedEvent(LIVE_ID, STORE_ID, "Flash Sale", List.of(subscriber1, subscriber2));
+        var event = new LiveStartedEvent(LIVE_ID, STORE_ID, "Flash Sale", List.of(subscriber1, subscriber2), Instant.now());
         when(saveNotificationPort.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         sut.on(event);
@@ -63,7 +64,7 @@ class LiveEventListenerTest {
 
     @Test
     void onLiveStarted_withNoSubscribers_doesNothing() {
-        var event = new LiveStartedEvent(LIVE_ID, STORE_ID, "Empty", List.of());
+        var event = new LiveStartedEvent(LIVE_ID, STORE_ID, "Empty", List.of(), Instant.now());
 
         sut.on(event);
 

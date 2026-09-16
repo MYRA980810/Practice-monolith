@@ -4,6 +4,7 @@ import com.livecomerce.shared.UserPrincipal;
 import com.livecomerce.store.LoadStoreRatingPort;
 import com.livecomerce.store.application.StoreNotFoundException;
 import com.livecomerce.store.application.port.in.*;
+import com.livecomerce.store.application.port.out.LoadStoreLiveStatusPort;
 import com.livecomerce.store.application.port.out.LoadStoreRankPort;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -64,6 +65,7 @@ class StoreFollowerControllerTest {
     @MockitoBean GetStoreFollowersUseCase getStoreFollowersUseCase;
     @MockitoBean LoadStoreRatingPort loadStoreRatingPort;
     @MockitoBean LoadStoreRankPort loadStoreRankPort;
+    @MockitoBean LoadStoreLiveStatusPort loadStoreLiveStatusPort;
 
     private static final UUID USER_ID = UUID.randomUUID();
     private static final UUID STORE_ID = UUID.randomUUID();

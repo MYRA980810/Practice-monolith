@@ -18,6 +18,7 @@ import com.livecomerce.store.application.port.in.UnfollowStoreUseCase;
 import com.livecomerce.store.application.port.in.UpdateStoreUseCase;
 import com.livecomerce.store.application.port.in.FollowStoreUseCase;
 import com.livecomerce.store.application.port.in.GetStoreFollowersUseCase;
+import com.livecomerce.store.application.port.out.LoadStoreLiveStatusPort;
 import com.livecomerce.store.application.port.out.LoadStoreRankPort;
 import com.livecomerce.store.domain.Store;
 import org.junit.jupiter.api.AfterEach;
@@ -88,6 +89,7 @@ class StoreControllerTest {
     @MockitoBean GetStoreFollowersUseCase getStoreFollowersUseCase;
     @MockitoBean LoadStoreRatingPort loadStoreRatingPort;
     @MockitoBean LoadStoreRankPort loadStoreRankPort;
+    @MockitoBean LoadStoreLiveStatusPort loadStoreLiveStatusPort;
 
     private static final UUID USER_ID = UUID.randomUUID();
 
@@ -102,6 +104,7 @@ class StoreControllerTest {
         lenient().when(loadStoreRatingPort.loadSummaries(any())).thenReturn(Map.of());
         lenient().when(loadStoreRankPort.loadRanks(any())).thenReturn(Map.of());
         lenient().when(getStoreFollowersUseCase.getFollowerCounts(any())).thenReturn(Map.of());
+        lenient().when(loadStoreLiveStatusPort.loadActiveLiveIds(any())).thenReturn(Map.of());
     }
 
     @AfterEach
@@ -217,6 +220,38 @@ class StoreControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.rankingPosition").value(5))
                 .andExpect(jsonPath("$.followerCount").value(12));
+    }
+
+    @Test
+    void getBySlug_whenStoreHasActiveLive_liveNowIsTrue() throws Exception {
+        var store = buildStore();
+        when(getStoreUseCase.getBySlug("mi-tienda")).thenReturn(store);
+        when(loadStoreLiveStatusPort.loadActiveLiveIds(any())).thenReturn(Map.of(store.getId(), UUID.randomUUID()));
+
+        mvc.perform(get("/api/stores/mi-tienda"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.liveNow").value(true));
+    }
+
+    @Test
+    void getBySlug_whenStoreHasNoActiveLive_liveNowIsFalse() throws Exception {
+        var store = buildStore();
+        when(getStoreUseCase.getBySlug("mi-tienda")).thenReturn(store);
+
+        mvc.perform(get("/api/stores/mi-tienda"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.liveNow").value(false));
+    }
+
+    @Test
+    void getBySlug_whenLiveStatusPortThrows_liveNowDefaultsFalseInsteadOfPropagating() throws Exception {
+        var store = buildStore();
+        when(getStoreUseCase.getBySlug("mi-tienda")).thenReturn(store);
+        when(loadStoreLiveStatusPort.loadActiveLiveIds(any())).thenThrow(new RuntimeException("store_live_status read failed"));
+
+        mvc.perform(get("/api/stores/mi-tienda"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.liveNow").value(false));
     }
 
     @Test

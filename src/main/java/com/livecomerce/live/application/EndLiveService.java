@@ -86,7 +86,7 @@ public class EndLiveService implements EndLiveUseCase {
 
         var saved = saveLivePort.save(live);
 
-        eventPublisher.publishEvent(new LiveEndedEvent(saved.getId(), saved.getSellerId()));
+        eventPublisher.publishEvent(new LiveEndedEvent(saved.getId(), saved.getSellerId(), saved.getStoreId(), saved.getEndedAt()));
 
         try {
             String payload = objectMapper.writeValueAsString(Map.of(

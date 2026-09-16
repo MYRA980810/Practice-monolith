@@ -1,5 +1,7 @@
 package com.livecomerce.catalog.application;
 
+import com.livecomerce.catalog.LoadLiveProductStatusPort;
+import com.livecomerce.catalog.LoadLiveProductStatusPort.LiveProductBadge;
 import com.livecomerce.catalog.LoadProductRatingPort;
 import com.livecomerce.catalog.LoadProductRatingPort.ProductRatingSummary;
 import com.livecomerce.catalog.LoadProductSalesPort;
@@ -39,6 +41,7 @@ public class GetProductService implements GetProductUseCase {
     private final LoadCategoryPort loadCategoryPort;
     private final LoadProductRatingPort loadProductRatingPort;
     private final LoadProductSalesPort loadProductSalesPort;
+    private final LoadLiveProductStatusPort loadLiveProductStatusPort;
 
     @Override
     public ProductView getById(UUID productId) {
@@ -47,7 +50,8 @@ public class GetProductService implements GetProductUseCase {
         var ids = Set.of(productId);
         var ratings = loadRatingsSafely(ids);
         var sales = loadSalesSafely(ids);
-        return toView(product, ratings, sales);
+        var liveStatuses = loadLiveStatusSafely(ids);
+        return toView(product, ratings, sales, liveStatuses);
     }
 
     @Override
@@ -56,8 +60,9 @@ public class GetProductService implements GetProductUseCase {
         var ids = products.stream().map(Product::getId).collect(Collectors.toSet());
         var ratings = loadRatingsSafely(ids);
         var sales = loadSalesSafely(ids);
+        var liveStatuses = loadLiveStatusSafely(ids);
         return products.stream()
-                .map(p -> toView(p, ratings, sales))
+                .map(p -> toView(p, ratings, sales, liveStatuses))
                 .toList();
     }
 
@@ -67,8 +72,9 @@ public class GetProductService implements GetProductUseCase {
         var ids = products.stream().map(Product::getId).collect(Collectors.toSet());
         var ratings = loadRatingsSafely(ids);
         var sales = loadSalesSafely(ids);
+        var liveStatuses = loadLiveStatusSafely(ids);
         return products.stream()
-                .map(p -> toView(p, ratings, sales))
+                .map(p -> toView(p, ratings, sales, liveStatuses))
                 .toList();
     }
 
@@ -78,7 +84,8 @@ public class GetProductService implements GetProductUseCase {
         var ids = page.getContent().stream().map(Product::getId).collect(Collectors.toSet());
         var ratings = loadRatingsSafely(ids);
         var sales = loadSalesSafely(ids);
-        return page.map(p -> toView(p, ratings, sales));
+        var liveStatuses = loadLiveStatusSafely(ids);
+        return page.map(p -> toView(p, ratings, sales, liveStatuses));
     }
 
     // Every read path here must degrade gracefully if the review module is
@@ -107,7 +114,21 @@ public class GetProductService implements GetProductUseCase {
         }
     }
 
-    private ProductView toView(Product product, Map<UUID, ProductRatingSummary> ratings, Map<UUID, Long> sales) {
+    // Fail-open by design (not fail-safe-to-block): a transient failure in the unrelated
+    // `live` module must never block every general-storefront purchase by defaulting
+    // exclusiveToActiveLive to true. The rare live-exclusive product oversold during that
+    // window is an acceptable cost next to blocking all checkouts store-wide.
+    private Map<UUID, LiveProductBadge> loadLiveStatusSafely(Set<UUID> productIds) {
+        try {
+            return loadLiveProductStatusPort.loadStatuses(productIds);
+        } catch (Exception e) {
+            log.error("Failed to load live status for {} products; defaulting pinnedNow/exclusiveToActiveLive to false for this response", productIds.size(), e);
+            return Map.of();
+        }
+    }
+
+    private ProductView toView(Product product, Map<UUID, ProductRatingSummary> ratings, Map<UUID, Long> sales,
+                               Map<UUID, LiveProductBadge> liveStatuses) {
         var category = product.getCategoryId() != null
                 ? loadCategoryPort.loadById(product.getCategoryId()).orElse(null)
                 : null;
@@ -125,6 +146,7 @@ public class GetProductService implements GetProductUseCase {
 
         var rating = ratings.get(product.getId());
         var soldCount = sales.getOrDefault(product.getId(), 0L);
+        var liveStatus = liveStatuses.getOrDefault(product.getId(), LiveProductBadge.NONE);
 
         return new ProductView(
                 product.getId(),
@@ -150,6 +172,8 @@ public class GetProductService implements GetProductUseCase {
                 variantViews,
                 rating != null ? rating.averageRating() : 0.0,
                 rating != null ? rating.reviewCount() : 0L,
+                liveStatus.pinnedNow(),
+                liveStatus.exclusiveToActiveLive(),
                 product.getCreatedAt(),
                 product.getUpdatedAt()
         );

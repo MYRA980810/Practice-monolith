@@ -27,6 +27,8 @@ public record ProductView(
         List<VariantView> variants,
         double averageRating,
         long reviewCount,
+        boolean pinnedNow,
+        boolean exclusiveToActiveLive,
         OffsetDateTime createdAt,
         OffsetDateTime updatedAt
 ) {
