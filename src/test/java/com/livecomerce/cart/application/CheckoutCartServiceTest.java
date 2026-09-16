@@ -204,6 +204,79 @@ class CheckoutCartServiceTest {
     }
 
     @Test
+    void checkout_linePausedOrDeactivated_skippedAsUnavailable() {
+        setUp();
+        var p1 = UUID.randomUUID();
+        var cart = Cart.of(BUYER_ID, STORE_A, List.of(CartItem.of(new CartLineKey(p1, null), 1)));
+        when(cartStorePort.load(BUYER_ID, STORE_A)).thenReturn(cart);
+        var pausedInfo = new CartProductInfo(p1, null, STORE_A, "Product-" + p1, null,
+                new BigDecimal("10.00"), "MXN", 10, true, true, false);
+        when(loadCartProductInfoPort.loadForCart(any())).thenReturn(Map.of(new CartLineRef(p1, null), pausedInfo));
+
+        var response = sut.checkout(new CheckoutCartCommand(BUYER_ID, List.of(new SelectedItem(STORE_A, p1, null))));
+
+        var result = response.results().get(0);
+        assertThat(result.succeeded()).isFalse();
+        assertThat(result.skippedLines()).containsExactly(
+                new com.livecomerce.cart.application.port.in.CheckoutCartUseCase.SkippedLine(p1, null, "UNAVAILABLE"));
+    }
+
+    @Test
+    void checkout_duplicateSelectedItem_dedupedIntoSingleOrderLineWithSummedQuantity() {
+        setUp();
+        var p1 = UUID.randomUUID();
+        var cart = Cart.of(BUYER_ID, STORE_A, List.of(CartItem.of(new CartLineKey(p1, null), 2)));
+        when(cartStorePort.load(BUYER_ID, STORE_A)).thenReturn(cart);
+        when(loadCartProductInfoPort.loadForCart(any()))
+                .thenReturn(Map.of(new CartLineRef(p1, null), info(p1, STORE_A, 10, false)));
+        var orderId = UUID.randomUUID();
+        when(placeCartOrderPort.placeOrder(any())).thenReturn(new PlacedOrder(orderId, BigDecimal.TEN, "MXN"));
+
+        var response = sut.checkout(new CheckoutCartCommand(BUYER_ID, List.of(
+                new SelectedItem(STORE_A, p1, null),
+                new SelectedItem(STORE_A, p1, null))));
+
+        var result = response.results().get(0);
+        assertThat(result.succeeded()).isTrue();
+
+        ArgumentCaptor<PlaceCartOrderCommand> captor = ArgumentCaptor.forClass(PlaceCartOrderCommand.class);
+        verify(placeCartOrderPort, times(1)).placeOrder(captor.capture());
+        assertThat(captor.getValue().lines()).hasSize(1);
+        assertThat(captor.getValue().lines().get(0).quantity()).isEqualTo(4);
+
+        verify(cartStorePort, times(1)).removeLine(BUYER_ID, STORE_A, p1, null);
+    }
+
+    @Test
+    void checkout_oneStoreThrowsDuringLoad_otherStoreStillSucceeds_bestEffortIsolation() {
+        setUp();
+        var pA = UUID.randomUUID();
+        var pB = UUID.randomUUID();
+        var cartA = Cart.of(BUYER_ID, STORE_A, List.of(CartItem.of(new CartLineKey(pA, null), 1)));
+        when(cartStorePort.load(BUYER_ID, STORE_A)).thenReturn(cartA);
+        when(cartStorePort.load(BUYER_ID, STORE_B)).thenThrow(new RuntimeException("redis unavailable"));
+        when(loadCartProductInfoPort.loadForCart(any()))
+                .thenReturn(Map.of(new CartLineRef(pA, null), info(pA, STORE_A, 10, false)));
+        var orderId = UUID.randomUUID();
+        when(placeCartOrderPort.placeOrder(any())).thenReturn(new PlacedOrder(orderId, BigDecimal.TEN, "MXN"));
+
+        var response = sut.checkout(new CheckoutCartCommand(BUYER_ID, List.of(
+                new SelectedItem(STORE_A, pA, null),
+                new SelectedItem(STORE_B, pB, null))));
+
+        assertThat(response.results()).hasSize(2);
+        var resultA = response.results().stream().filter(r -> r.storeId().equals(STORE_A)).findFirst().orElseThrow();
+        var resultB = response.results().stream().filter(r -> r.storeId().equals(STORE_B)).findFirst().orElseThrow();
+
+        assertThat(resultA.succeeded()).isTrue();
+        assertThat(resultA.orderId()).isEqualTo(orderId);
+
+        assertThat(resultB.succeeded()).isFalse();
+        assertThat(resultB.orderId()).isNull();
+        assertThat(resultB.failureReason()).isNotNull();
+    }
+
+    @Test
     void checkout_onlyLineForStoreIsUnavailable_wholeStoreFails_noOrderCreated() {
         setUp();
         var p1 = UUID.randomUUID();

@@ -3,7 +3,6 @@ package com.livecomerce.cart.application;
 import com.livecomerce.cart.application.port.in.CheckoutCartUseCase;
 import com.livecomerce.cart.application.port.out.CartStorePort;
 import com.livecomerce.cart.domain.Cart;
-import com.livecomerce.cart.domain.CartItem;
 import com.livecomerce.cart.domain.CartLineKey;
 import com.livecomerce.catalog.LoadCartProductInfoPort;
 import com.livecomerce.catalog.LoadCartProductInfoPort.CartLineRef;
@@ -48,6 +47,7 @@ public class CheckoutCartService implements CheckoutCartUseCase {
     private static final String REASON_UNAVAILABLE = "UNAVAILABLE";
     private static final String FAILURE_ALL_ITEMS_UNAVAILABLE = "ALL_ITEMS_UNAVAILABLE";
     private static final String FAILURE_RESERVATION_FAILED = "RESERVATION_FAILED";
+    private static final String FAILURE_STORE_CHECKOUT_ERROR = "STORE_CHECKOUT_ERROR";
 
     private final CartStorePort cartStorePort;
     private final LoadCartProductInfoPort loadCartProductInfoPort;
@@ -65,11 +65,38 @@ public class CheckoutCartService implements CheckoutCartUseCase {
         return new CheckoutCartResponse(results);
     }
 
+    /**
+     * Outer isolation boundary for a single store's checkout (JDA2-002):
+     * catches ANY exception from the whole per-store flow — including
+     * {@code cartStorePort.load(...)} and {@code loadCartProductInfoPort.loadForCart(...)},
+     * which are not guarded by {@link #doCheckoutStore}'s own inner
+     * try/catch — so one store's infrastructure failure never propagates out
+     * of {@link #checkout} and discards already-computed sibling results
+     * (design D8, best-effort per store).
+     */
     private StoreCheckoutResult checkoutStore(UUID buyerId, UUID storeId, List<SelectedItem> items) {
+        try {
+            return doCheckoutStore(buyerId, storeId, items);
+        } catch (Exception e) {
+            log.error("Unexpected error during checkout for store {}: {}", storeId, e.getMessage(), e);
+            return new StoreCheckoutResult(storeId, false, null, null, null, List.of(), FAILURE_STORE_CHECKOUT_ERROR);
+        }
+    }
+
+    private StoreCheckoutResult doCheckoutStore(UUID buyerId, UUID storeId, List<SelectedItem> items) {
         Cart cart = cartStorePort.load(buyerId, storeId);
 
-        Set<CartLineRef> refs = items.stream()
-                .map(i -> new CartLineRef(i.productId(), i.variantId()))
+        // JDA2-004: coalesce duplicate (productId,variantId) selections for
+        // this store before the stock check and before building order lines,
+        // so a duplicated selection can't produce two independent stock
+        // checks / two order lines against the same cart-stored quantity.
+        Map<CartLineKey, Integer> occurrencesByKey = new LinkedHashMap<>();
+        for (SelectedItem item : items) {
+            occurrencesByKey.merge(new CartLineKey(item.productId(), item.variantId()), 1, Integer::sum);
+        }
+
+        Set<CartLineRef> refs = occurrencesByKey.keySet().stream()
+                .map(key -> new CartLineRef(key.productId(), key.variantId()))
                 .collect(Collectors.toCollection(LinkedHashSet::new));
         Map<CartLineRef, CartProductInfo> infoByRef = loadCartProductInfoPort.loadForCart(refs);
 
@@ -77,33 +104,40 @@ public class CheckoutCartService implements CheckoutCartUseCase {
         List<SkippedLine> skipped = new ArrayList<>();
         String currency = null;
 
-        for (SelectedItem item : items) {
-            var key = new CartLineKey(item.productId(), item.variantId());
+        for (var entry : occurrencesByKey.entrySet()) {
+            CartLineKey key = entry.getKey();
+            int occurrences = entry.getValue();
+            UUID productId = key.productId();
+            UUID variantId = key.variantId();
+
             var cartLine = cart.findLine(key);
             if (cartLine.isEmpty()) {
-                skipped.add(new SkippedLine(item.productId(), item.variantId(), REASON_UNAVAILABLE));
+                skipped.add(new SkippedLine(productId, variantId, REASON_UNAVAILABLE));
                 continue;
             }
 
-            var ref = new CartLineRef(item.productId(), item.variantId());
+            var ref = new CartLineRef(productId, variantId);
             var info = infoByRef.get(ref);
             if (info == null) {
-                skipped.add(new SkippedLine(item.productId(), item.variantId(), REASON_UNAVAILABLE));
+                skipped.add(new SkippedLine(productId, variantId, REASON_UNAVAILABLE));
                 continue;
             }
             if (info.exclusiveToActiveLive()) {
-                skipped.add(new SkippedLine(item.productId(), item.variantId(), REASON_LIVE_EXCLUSIVE));
+                skipped.add(new SkippedLine(productId, variantId, REASON_LIVE_EXCLUSIVE));
                 continue;
             }
-            CartItem line = cartLine.get();
-            if (line.quantity() > info.availableStock()) {
-                skipped.add(new SkippedLine(item.productId(), item.variantId(), REASON_OUT_OF_STOCK));
+            if (!info.active() || info.paused()) {
+                skipped.add(new SkippedLine(productId, variantId, REASON_UNAVAILABLE));
+                continue;
+            }
+            int quantity = cartLine.get().quantity() * occurrences;
+            if (quantity > info.availableStock()) {
+                skipped.add(new SkippedLine(productId, variantId, REASON_OUT_OF_STOCK));
                 continue;
             }
 
             currency = info.currency();
-            orderLines.add(new CartOrderLine(item.productId(), item.variantId(), info.name(),
-                    info.unitPrice(), line.quantity()));
+            orderLines.add(new CartOrderLine(productId, variantId, info.name(), info.unitPrice(), quantity));
         }
 
         if (orderLines.isEmpty()) {
