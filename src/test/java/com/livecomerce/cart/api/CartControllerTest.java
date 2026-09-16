@@ -39,6 +39,7 @@ import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -158,6 +159,18 @@ class CartControllerTest {
                 .andExpect(status().isBadRequest());
     }
 
+    @Test
+    void addToCart_quantityAboveRequestBound_returns400WithoutInvokingUseCase() throws Exception {
+        mvc.perform(post("/api/cart/stores/{storeId}/items", STORE_ID)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"productId":"%s","quantity":100}
+                                """.formatted(PRODUCT_ID)))
+                .andExpect(status().isBadRequest());
+
+        verify(addToCartUseCase, never()).addToCart(any());
+    }
+
     // --- POST /api/cart/stores/{storeId}/items/{productId}/increment ---
 
     @Test
@@ -192,6 +205,15 @@ class CartControllerTest {
                 .andExpect(status().isNotFound());
     }
 
+    @Test
+    void increment_deltaAboveRequestBound_returns400WithoutInvokingUseCase() throws Exception {
+        mvc.perform(post("/api/cart/stores/{storeId}/items/{productId}/increment", STORE_ID, PRODUCT_ID)
+                        .param("delta", "1000"))
+                .andExpect(status().isBadRequest());
+
+        verify(changeQuantityUseCase, never()).changeQuantity(any());
+    }
+
     // --- POST /api/cart/stores/{storeId}/items/{productId}/decrement ---
 
     @Test
@@ -216,6 +238,15 @@ class CartControllerTest {
         mvc.perform(post("/api/cart/stores/{storeId}/items/{productId}/decrement", STORE_ID, PRODUCT_ID))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.resultingQuantity").value(0));
+    }
+
+    @Test
+    void decrement_deltaAboveRequestBound_returns400WithoutInvokingUseCase() throws Exception {
+        mvc.perform(post("/api/cart/stores/{storeId}/items/{productId}/decrement", STORE_ID, PRODUCT_ID)
+                        .param("delta", "1000"))
+                .andExpect(status().isBadRequest());
+
+        verify(changeQuantityUseCase, never()).changeQuantity(any());
     }
 
     // --- DELETE /api/cart/stores/{storeId}/items/{productId} ---

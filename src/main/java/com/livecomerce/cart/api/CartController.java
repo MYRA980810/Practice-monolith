@@ -7,11 +7,14 @@ import com.livecomerce.cart.application.port.in.GetCombinedCartViewUseCase;
 import com.livecomerce.cart.application.port.in.RemoveFromCartUseCase;
 import com.livecomerce.shared.UserPrincipal;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
@@ -27,6 +30,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/cart")
 @RequiredArgsConstructor
+@Validated
 class CartController {
 
     private final AddToCartUseCase addToCartUseCase;
@@ -58,7 +62,7 @@ class CartController {
             @PathVariable UUID storeId,
             @PathVariable UUID productId,
             @RequestParam(required = false) UUID variantId,
-            @RequestParam(defaultValue = "1") int delta,
+            @RequestParam(defaultValue = "1") @Min(1) @Max(99) int delta,
             @AuthenticationPrincipal UserPrincipal principal) {
 
         return applyDelta(storeId, productId, variantId, delta, principal);
@@ -70,7 +74,7 @@ class CartController {
             @PathVariable UUID storeId,
             @PathVariable UUID productId,
             @RequestParam(required = false) UUID variantId,
-            @RequestParam(defaultValue = "1") int delta,
+            @RequestParam(defaultValue = "1") @Min(1) @Max(99) int delta,
             @AuthenticationPrincipal UserPrincipal principal) {
 
         return applyDelta(storeId, productId, variantId, -delta, principal);

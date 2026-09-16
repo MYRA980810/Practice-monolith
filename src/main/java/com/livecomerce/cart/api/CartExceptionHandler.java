@@ -1,5 +1,6 @@
 package com.livecomerce.cart.api;
 
+import jakarta.validation.ConstraintViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -22,6 +23,22 @@ class CartExceptionHandler {
 
     @ExceptionHandler(IllegalArgumentException.class)
     ProblemDetail handleInvalidArgument(IllegalArgumentException e) {
+        var detail = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, e.getMessage());
+        detail.setType(URI.create("https://livecomerce.com/errors/cart-invalid-argument"));
+        return detail;
+    }
+
+    /**
+     * {@code @RequestParam}-level bean validation (e.g. {@code increment}/
+     * {@code decrement}'s {@code delta} bound) is enforced via {@code
+     * @Validated} on {@link CartController}, which routes through an AOP
+     * proxy ({@code MethodValidationInterceptor}) rather than Spring MVC's
+     * newer {@code HandlerMethodValidationException} path — so it surfaces
+     * as a raw {@link ConstraintViolationException} that would otherwise be
+     * an unhandled 500.
+     */
+    @ExceptionHandler(ConstraintViolationException.class)
+    ProblemDetail handleConstraintViolation(ConstraintViolationException e) {
         var detail = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, e.getMessage());
         detail.setType(URI.create("https://livecomerce.com/errors/cart-invalid-argument"));
         return detail;
