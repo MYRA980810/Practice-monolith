@@ -4,6 +4,8 @@ import com.livecomerce.cart.application.port.out.CartStorePort;
 import com.livecomerce.cart.domain.Cart;
 import com.livecomerce.cart.domain.CartItem;
 import com.livecomerce.cart.domain.CartLineKey;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
@@ -21,6 +23,8 @@ import java.util.concurrent.ConcurrentHashMap;
 @Profile("local")
 class InMemoryCartStoreAdapter implements CartStorePort {
 
+    private static final Logger log = LoggerFactory.getLogger(InMemoryCartStoreAdapter.class);
+
     private record LineKey(UUID buyerId, UUID storeId, UUID productId, UUID variantId) {}
 
     private final ConcurrentHashMap<LineKey, Integer> lines = new ConcurrentHashMap<>();
@@ -35,7 +39,8 @@ class InMemoryCartStoreAdapter implements CartStorePort {
     }
 
     @Override
-    public int changeQuantity(UUID buyerId, UUID storeId, UUID productId, UUID variantId, int delta) {
+    public int changeQuantity(UUID buyerId, UUID storeId, UUID productId, UUID variantId, int delta,
+            Integer availableStock) {
         var key = new LineKey(buyerId, storeId, productId, variantId);
         int resulting = lines.merge(key, delta, Integer::sum);
 
@@ -43,6 +48,16 @@ class InMemoryCartStoreAdapter implements CartStorePort {
             lines.remove(key);
             pruneIfEmpty(buyerId, storeId);
             return 0;
+        }
+
+        if (availableStock != null && resulting > availableStock) {
+            // JDB2-001: correct an invisible, permanent overshoot from a
+            // concurrent check-then-act race immediately after it happens.
+            log.warn("changeQuantity overshoot detected for buyer {} store {} product {} variant {}: "
+                            + "{} > availableStock {} — clamping",
+                    buyerId, storeId, productId, variantId, resulting, availableStock);
+            lines.put(key, availableStock);
+            resulting = availableStock;
         }
 
         index(buyerId, storeId);
@@ -107,5 +122,10 @@ class InMemoryCartStoreAdapter implements CartStorePort {
     @Override
     public void recordNotifiedThreshold(UUID buyerId, UUID storeId, UUID productId, UUID variantId, int threshold) {
         notifiedThresholds.put(new LineKey(buyerId, storeId, productId, variantId), threshold);
+    }
+
+    @Override
+    public void clearNotifiedThreshold(UUID buyerId, UUID storeId, UUID productId, UUID variantId) {
+        notifiedThresholds.remove(new LineKey(buyerId, storeId, productId, variantId));
     }
 }

@@ -45,7 +45,7 @@ class InMemoryCartStoreAdapterTest {
     void changeQuantity_positiveDelta_incrementsAndReturnsResult() {
         adapter.addOrIncrement(BUYER_ID, STORE_ID, PRODUCT_ID, VARIANT_ID, 2);
 
-        int result = adapter.changeQuantity(BUYER_ID, STORE_ID, PRODUCT_ID, VARIANT_ID, 1);
+        int result = adapter.changeQuantity(BUYER_ID, STORE_ID, PRODUCT_ID, VARIANT_ID, 1, 10);
 
         assertThat(result).isEqualTo(3);
     }
@@ -54,11 +54,22 @@ class InMemoryCartStoreAdapterTest {
     void changeQuantity_toZero_removesLine_andCartBecomesEmpty() {
         adapter.addOrIncrement(BUYER_ID, STORE_ID, PRODUCT_ID, VARIANT_ID, 1);
 
-        int result = adapter.changeQuantity(BUYER_ID, STORE_ID, PRODUCT_ID, VARIANT_ID, -1);
+        int result = adapter.changeQuantity(BUYER_ID, STORE_ID, PRODUCT_ID, VARIANT_ID, -1, null);
 
         assertThat(result).isZero();
         assertThat(adapter.load(BUYER_ID, STORE_ID).isEmpty()).isTrue();
         assertThat(adapter.loadStoreIds(BUYER_ID)).isEmpty();
+    }
+
+    @Test
+    void changeQuantity_resultExceedsAvailableStock_clampsToAvailableStock() {
+        adapter.addOrIncrement(BUYER_ID, STORE_ID, PRODUCT_ID, VARIANT_ID, 8);
+
+        int result = adapter.changeQuantity(BUYER_ID, STORE_ID, PRODUCT_ID, VARIANT_ID, 5, 10);
+
+        assertThat(result).isEqualTo(10);
+        assertThat(adapter.load(BUYER_ID, STORE_ID).findLine(new CartLineKey(PRODUCT_ID, VARIANT_ID))
+                .orElseThrow().quantity()).isEqualTo(10);
     }
 
     @Test
@@ -131,5 +142,14 @@ class InMemoryCartStoreAdapterTest {
         adapter.recordNotifiedThreshold(BUYER_ID, STORE_ID, PRODUCT_ID, VARIANT_ID, 5);
 
         assertThat(adapter.loadNotifiedThreshold(BUYER_ID, STORE_ID, PRODUCT_ID, VARIANT_ID)).isEqualTo(5);
+    }
+
+    @Test
+    void clearNotifiedThreshold_removesRecordedValue() {
+        adapter.recordNotifiedThreshold(BUYER_ID, STORE_ID, PRODUCT_ID, VARIANT_ID, 5);
+
+        adapter.clearNotifiedThreshold(BUYER_ID, STORE_ID, PRODUCT_ID, VARIANT_ID);
+
+        assertThat(adapter.loadNotifiedThreshold(BUYER_ID, STORE_ID, PRODUCT_ID, VARIANT_ID)).isNull();
     }
 }

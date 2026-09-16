@@ -73,10 +73,11 @@ class RedisCartStoreAdapterTest {
         when(redisTemplate.opsForSet()).thenReturn(setOps);
         when(hashOps.increment(CART_KEY, FIELD_WITH_VARIANT, 1L)).thenReturn(3L);
 
-        int result = adapter.changeQuantity(BUYER_ID, STORE_ID, PRODUCT_ID, VARIANT_ID, 1);
+        int result = adapter.changeQuantity(BUYER_ID, STORE_ID, PRODUCT_ID, VARIANT_ID, 1, 10);
 
         assertThat(result).isEqualTo(3);
         verify(hashOps, never()).delete(any(), any());
+        verify(hashOps, never()).put(any(), any(), any());
     }
 
     @Test
@@ -86,7 +87,7 @@ class RedisCartStoreAdapterTest {
         when(hashOps.increment(CART_KEY, FIELD_WITH_VARIANT, -1L)).thenReturn(0L);
         when(hashOps.size(CART_KEY)).thenReturn(0L);
 
-        int result = adapter.changeQuantity(BUYER_ID, STORE_ID, PRODUCT_ID, VARIANT_ID, -1);
+        int result = adapter.changeQuantity(BUYER_ID, STORE_ID, PRODUCT_ID, VARIANT_ID, -1, null);
 
         assertThat(result).isZero();
         verify(hashOps).delete(CART_KEY, FIELD_WITH_VARIANT);
@@ -99,10 +100,22 @@ class RedisCartStoreAdapterTest {
         when(hashOps.increment(CART_KEY, FIELD_WITH_VARIANT, -1L)).thenReturn(0L);
         when(hashOps.size(CART_KEY)).thenReturn(0L);
 
-        adapter.changeQuantity(BUYER_ID, STORE_ID, PRODUCT_ID, VARIANT_ID, -1);
+        adapter.changeQuantity(BUYER_ID, STORE_ID, PRODUCT_ID, VARIANT_ID, -1, null);
 
         verify(redisTemplate).delete(CART_KEY);
         verify(setOps).remove(INDEX_KEY, STORE_ID.toString());
+    }
+
+    @Test
+    void changeQuantity_resultExceedsAvailableStock_clampsWithCorrectiveWrite() {
+        when(redisTemplate.<String, String>opsForHash()).thenReturn(hashOps);
+        when(redisTemplate.opsForSet()).thenReturn(setOps);
+        when(hashOps.increment(CART_KEY, FIELD_WITH_VARIANT, 5L)).thenReturn(13L);
+
+        int result = adapter.changeQuantity(BUYER_ID, STORE_ID, PRODUCT_ID, VARIANT_ID, 5, 10);
+
+        assertThat(result).isEqualTo(10);
+        verify(hashOps).put(CART_KEY, FIELD_WITH_VARIANT, "10");
     }
 
     @Test
@@ -217,5 +230,14 @@ class RedisCartStoreAdapterTest {
         adapter.recordNotifiedThreshold(BUYER_ID, STORE_ID, PRODUCT_ID, VARIANT_ID, 5);
 
         verify(valueOps).set(key, "5", Duration.ofDays(7));
+    }
+
+    @Test
+    void clearNotifiedThreshold_deletesKey() {
+        String key = "cart:" + BUYER_ID + ":" + STORE_ID + ":notified:" + PRODUCT_ID + ":" + VARIANT_ID;
+
+        adapter.clearNotifiedThreshold(BUYER_ID, STORE_ID, PRODUCT_ID, VARIANT_ID);
+
+        verify(redisTemplate).delete(key);
     }
 }

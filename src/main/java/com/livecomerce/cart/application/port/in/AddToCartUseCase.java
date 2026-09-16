@@ -16,7 +16,8 @@ public interface AddToCartUseCase {
 
     /**
      * {@code rejectionReason} is {@code null} on success, or one of
-     * {@code LIVE_EXCLUSIVE} / {@code UNAVAILABLE} on failure.
+     * {@code LIVE_EXCLUSIVE} / {@code UNAVAILABLE} / {@code
+     * QUANTITY_LIMIT_EXCEEDED} on failure.
      */
     record AddToCartResult(boolean success, String rejectionReason) {
 

@@ -58,6 +58,7 @@ class CartServiceTest {
         setUp();
         var ref = new CartLineRef(PRODUCT_ID, VARIANT_ID);
         when(loadCartProductInfoPort.loadForCart(Set.of(ref))).thenReturn(Map.of(ref, info(10, false, true)));
+        when(cartStorePort.load(BUYER_ID, STORE_ID)).thenReturn(Cart.empty(BUYER_ID, STORE_ID));
 
         var result = sut.addToCart(new AddToCartCommand(BUYER_ID, STORE_ID, PRODUCT_ID, VARIANT_ID, 2));
 
@@ -70,6 +71,7 @@ class CartServiceTest {
         setUp();
         var ref = new CartLineRef(PRODUCT_ID, VARIANT_ID);
         when(loadCartProductInfoPort.loadForCart(Set.of(ref))).thenReturn(Map.of(ref, info(10, false, true)));
+        when(cartStorePort.load(BUYER_ID, STORE_ID)).thenReturn(Cart.empty(BUYER_ID, STORE_ID));
 
         sut.addToCart(new AddToCartCommand(BUYER_ID, STORE_ID, PRODUCT_ID, VARIANT_ID, 2));
         sut.addToCart(new AddToCartCommand(BUYER_ID, STORE_ID, PRODUCT_ID, VARIANT_ID, 1));
@@ -107,6 +109,65 @@ class CartServiceTest {
         verify(cartStorePort, never()).addOrIncrement(any(), any(), any(), any(), anyInt());
     }
 
+    @Test
+    void addToCart_pausedProduct_rejectedAsUnavailable() {
+        setUp();
+        var ref = new CartLineRef(PRODUCT_ID, VARIANT_ID);
+        var pausedInfo = new CartProductInfo(PRODUCT_ID, VARIANT_ID, STORE_ID, "Playera", "http://img",
+                new BigDecimal("199.00"), "MXN", 10, true, true, false);
+        when(loadCartProductInfoPort.loadForCart(Set.of(ref))).thenReturn(Map.of(ref, pausedInfo));
+
+        var result = sut.addToCart(new AddToCartCommand(BUYER_ID, STORE_ID, PRODUCT_ID, VARIANT_ID, 1));
+
+        assertThat(result.success()).isFalse();
+        assertThat(result.rejectionReason()).isEqualTo("UNAVAILABLE");
+        verify(cartStorePort, never()).addOrIncrement(any(), any(), any(), any(), anyInt());
+    }
+
+    @Test
+    void addToCart_deactivatedProduct_rejectedAsUnavailable() {
+        setUp();
+        var ref = new CartLineRef(PRODUCT_ID, VARIANT_ID);
+        when(loadCartProductInfoPort.loadForCart(Set.of(ref))).thenReturn(Map.of(ref, info(10, false, false)));
+
+        var result = sut.addToCart(new AddToCartCommand(BUYER_ID, STORE_ID, PRODUCT_ID, VARIANT_ID, 1));
+
+        assertThat(result.success()).isFalse();
+        assertThat(result.rejectionReason()).isEqualTo("UNAVAILABLE");
+        verify(cartStorePort, never()).addOrIncrement(any(), any(), any(), any(), anyInt());
+    }
+
+    @Test
+    void addToCart_quantityAtExactly99_succeeds() {
+        setUp();
+        var ref = new CartLineRef(PRODUCT_ID, VARIANT_ID);
+        when(loadCartProductInfoPort.loadForCart(Set.of(ref))).thenReturn(Map.of(ref, info(200, false, true)));
+        when(cartStorePort.load(BUYER_ID, STORE_ID)).thenReturn(Cart.empty(BUYER_ID, STORE_ID));
+
+        var result = sut.addToCart(new AddToCartCommand(BUYER_ID, STORE_ID, PRODUCT_ID, VARIANT_ID, 99));
+
+        assertThat(result.success()).isTrue();
+        verify(cartStorePort).addOrIncrement(BUYER_ID, STORE_ID, PRODUCT_ID, VARIANT_ID, 99);
+    }
+
+    @Test
+    void addToCart_quantityExceeding99_rejected_cartUnchanged() {
+        setUp();
+        var ref = new CartLineRef(PRODUCT_ID, VARIANT_ID);
+        when(loadCartProductInfoPort.loadForCart(Set.of(ref))).thenReturn(Map.of(ref, info(200, false, true)));
+        var existingCart = Cart.of(BUYER_ID, STORE_ID,
+                List.of(CartItem.of(new CartLineKey(PRODUCT_ID, VARIANT_ID), 95)));
+        when(cartStorePort.load(BUYER_ID, STORE_ID)).thenReturn(existingCart);
+
+        var result = sut.addToCart(new AddToCartCommand(BUYER_ID, STORE_ID, PRODUCT_ID, VARIANT_ID, 10));
+
+        assertThat(result.success()).isFalse();
+        assertThat(result.rejectionReason()).isEqualTo("QUANTITY_LIMIT_EXCEEDED");
+        verify(cartStorePort, never()).addOrIncrement(any(), any(), any(), any(), anyInt());
+        assertThat(cartStorePort.load(BUYER_ID, STORE_ID)
+                .findLine(new CartLineKey(PRODUCT_ID, VARIANT_ID)).orElseThrow().quantity()).isEqualTo(95);
+    }
+
     // --- changeQuantity (4.3) ---
 
     @Test
@@ -117,7 +178,7 @@ class CartServiceTest {
         when(cartStorePort.load(BUYER_ID, STORE_ID)).thenReturn(cart);
         var ref = new CartLineRef(PRODUCT_ID, VARIANT_ID);
         when(loadCartProductInfoPort.loadForCart(Set.of(ref))).thenReturn(Map.of(ref, info(10, false, true)));
-        when(cartStorePort.changeQuantity(BUYER_ID, STORE_ID, PRODUCT_ID, VARIANT_ID, 1)).thenReturn(3);
+        when(cartStorePort.changeQuantity(BUYER_ID, STORE_ID, PRODUCT_ID, VARIANT_ID, 1, 10)).thenReturn(3);
 
         var result = sut.changeQuantity(new ChangeQuantityCommand(BUYER_ID, STORE_ID, PRODUCT_ID, VARIANT_ID, 1));
 
@@ -139,7 +200,58 @@ class CartServiceTest {
         assertThat(result.success()).isFalse();
         assertThat(result.failureReason()).isEqualTo("INSUFFICIENT_STOCK");
         assertThat(result.availableStock()).isEqualTo(8);
-        verify(cartStorePort, never()).changeQuantity(any(), any(), any(), any(), anyInt());
+        verify(cartStorePort, never()).changeQuantity(any(), any(), any(), any(), anyInt(), any());
+    }
+
+    @Test
+    void changeQuantity_increment_pausedProduct_rejectedAsUnavailable() {
+        setUp();
+        var key = new CartLineKey(PRODUCT_ID, VARIANT_ID);
+        var cart = Cart.of(BUYER_ID, STORE_ID, List.of(CartItem.of(key, 2)));
+        when(cartStorePort.load(BUYER_ID, STORE_ID)).thenReturn(cart);
+        var ref = new CartLineRef(PRODUCT_ID, VARIANT_ID);
+        var pausedInfo = new CartProductInfo(PRODUCT_ID, VARIANT_ID, STORE_ID, "Playera", "http://img",
+                new BigDecimal("199.00"), "MXN", 10, true, true, false);
+        when(loadCartProductInfoPort.loadForCart(Set.of(ref))).thenReturn(Map.of(ref, pausedInfo));
+
+        var result = sut.changeQuantity(new ChangeQuantityCommand(BUYER_ID, STORE_ID, PRODUCT_ID, VARIANT_ID, 1));
+
+        assertThat(result.success()).isFalse();
+        assertThat(result.failureReason()).isEqualTo("UNAVAILABLE");
+        verify(cartStorePort, never()).changeQuantity(any(), any(), any(), any(), anyInt(), any());
+    }
+
+    @Test
+    void changeQuantity_incrementToExactly99_succeeds() {
+        setUp();
+        var key = new CartLineKey(PRODUCT_ID, VARIANT_ID);
+        var cart = Cart.of(BUYER_ID, STORE_ID, List.of(CartItem.of(key, 98)));
+        when(cartStorePort.load(BUYER_ID, STORE_ID)).thenReturn(cart);
+        var ref = new CartLineRef(PRODUCT_ID, VARIANT_ID);
+        when(loadCartProductInfoPort.loadForCart(Set.of(ref))).thenReturn(Map.of(ref, info(200, false, true)));
+        when(cartStorePort.changeQuantity(BUYER_ID, STORE_ID, PRODUCT_ID, VARIANT_ID, 1, 200)).thenReturn(99);
+
+        var result = sut.changeQuantity(new ChangeQuantityCommand(BUYER_ID, STORE_ID, PRODUCT_ID, VARIANT_ID, 1));
+
+        assertThat(result.success()).isTrue();
+        assertThat(result.resultingQuantity()).isEqualTo(99);
+    }
+
+    @Test
+    void changeQuantity_incrementBeyond99_rejected_storageUntouched() {
+        setUp();
+        var key = new CartLineKey(PRODUCT_ID, VARIANT_ID);
+        var cart = Cart.of(BUYER_ID, STORE_ID, List.of(CartItem.of(key, 99)));
+        when(cartStorePort.load(BUYER_ID, STORE_ID)).thenReturn(cart);
+        var ref = new CartLineRef(PRODUCT_ID, VARIANT_ID);
+        when(loadCartProductInfoPort.loadForCart(Set.of(ref))).thenReturn(Map.of(ref, info(200, false, true)));
+
+        var result = sut.changeQuantity(new ChangeQuantityCommand(BUYER_ID, STORE_ID, PRODUCT_ID, VARIANT_ID, 1));
+
+        assertThat(result.success()).isFalse();
+        assertThat(result.failureReason()).isEqualTo("QUANTITY_LIMIT_EXCEEDED");
+        verify(cartStorePort, never()).changeQuantity(any(), any(), any(), any(), anyInt(), any());
+        assertThat(cartStorePort.load(BUYER_ID, STORE_ID).findLine(key).orElseThrow().quantity()).isEqualTo(99);
     }
 
     @Test
@@ -148,7 +260,7 @@ class CartServiceTest {
         var key = new CartLineKey(PRODUCT_ID, VARIANT_ID);
         var cart = Cart.of(BUYER_ID, STORE_ID, List.of(CartItem.of(key, 3)));
         when(cartStorePort.load(BUYER_ID, STORE_ID)).thenReturn(cart);
-        when(cartStorePort.changeQuantity(BUYER_ID, STORE_ID, PRODUCT_ID, VARIANT_ID, -1)).thenReturn(2);
+        when(cartStorePort.changeQuantity(BUYER_ID, STORE_ID, PRODUCT_ID, VARIANT_ID, -1, null)).thenReturn(2);
 
         var result = sut.changeQuantity(new ChangeQuantityCommand(BUYER_ID, STORE_ID, PRODUCT_ID, VARIANT_ID, -1));
 
@@ -163,7 +275,7 @@ class CartServiceTest {
         var key = new CartLineKey(PRODUCT_ID, VARIANT_ID);
         var cart = Cart.of(BUYER_ID, STORE_ID, List.of(CartItem.of(key, 1)));
         when(cartStorePort.load(BUYER_ID, STORE_ID)).thenReturn(cart);
-        when(cartStorePort.changeQuantity(BUYER_ID, STORE_ID, PRODUCT_ID, VARIANT_ID, -1)).thenReturn(0);
+        when(cartStorePort.changeQuantity(BUYER_ID, STORE_ID, PRODUCT_ID, VARIANT_ID, -1, null)).thenReturn(0);
 
         var result = sut.changeQuantity(new ChangeQuantityCommand(BUYER_ID, STORE_ID, PRODUCT_ID, VARIANT_ID, -1));
 
@@ -250,6 +362,24 @@ class CartServiceTest {
         when(cartStorePort.load(BUYER_ID, STORE_ID)).thenReturn(cart);
         var ref = new CartLineRef(PRODUCT_ID, VARIANT_ID);
         when(loadCartProductInfoPort.loadForCart(any())).thenReturn(Map.of(ref, info(5, false, false)));
+
+        var view = sut.getCombinedView(BUYER_ID);
+
+        assertThat(view.stores()).isEmpty();
+        verify(cartStorePort, never()).removeLine(any(), any(), any(), any());
+        verify(cartStorePort, never()).clear(any(), any());
+    }
+
+    @Test
+    void combinedView_pausedProduct_excludedFromView_dataUntouched() {
+        setUp();
+        when(cartStorePort.loadStoreIds(BUYER_ID)).thenReturn(Set.of(STORE_ID));
+        var cart = Cart.of(BUYER_ID, STORE_ID, List.of(CartItem.of(new CartLineKey(PRODUCT_ID, VARIANT_ID), 1)));
+        when(cartStorePort.load(BUYER_ID, STORE_ID)).thenReturn(cart);
+        var ref = new CartLineRef(PRODUCT_ID, VARIANT_ID);
+        var pausedInfo = new CartProductInfo(PRODUCT_ID, VARIANT_ID, STORE_ID, "Playera", "http://img",
+                new BigDecimal("199.00"), "MXN", 5, true, true, false);
+        when(loadCartProductInfoPort.loadForCart(any())).thenReturn(Map.of(ref, pausedInfo));
 
         var view = sut.getCombinedView(BUYER_ID);
 

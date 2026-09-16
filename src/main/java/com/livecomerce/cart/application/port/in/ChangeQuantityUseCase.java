@@ -17,9 +17,9 @@ public interface ChangeQuantityUseCase {
     /**
      * {@code failureReason} is {@code null} on success, or one of
      * {@code LINE_NOT_FOUND} / {@code INSUFFICIENT_STOCK} / {@code
-     * UNAVAILABLE} on failure. {@code availableStock} is only populated for
-     * {@code INSUFFICIENT_STOCK}. {@code resultingQuantity} is {@code 0} when
-     * the line was removed.
+     * UNAVAILABLE} / {@code QUANTITY_LIMIT_EXCEEDED} on failure. {@code
+     * availableStock} is only populated for {@code INSUFFICIENT_STOCK}.
+     * {@code resultingQuantity} is {@code 0} when the line was removed.
      */
     record ChangeQuantityResult(boolean success, String failureReason, Integer availableStock, int resultingQuantity) {
 
@@ -29,6 +29,10 @@ public interface ChangeQuantityUseCase {
 
         public static ChangeQuantityResult insufficientStock(int availableStock) {
             return new ChangeQuantityResult(false, "INSUFFICIENT_STOCK", availableStock, 0);
+        }
+
+        public static ChangeQuantityResult quantityLimitExceeded() {
+            return new ChangeQuantityResult(false, "QUANTITY_LIMIT_EXCEEDED", null, 0);
         }
 
         public static ChangeQuantityResult failure(String reason) {

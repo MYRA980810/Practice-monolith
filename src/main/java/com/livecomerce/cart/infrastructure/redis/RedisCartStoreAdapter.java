@@ -5,6 +5,8 @@ import com.livecomerce.cart.domain.Cart;
 import com.livecomerce.cart.domain.CartItem;
 import com.livecomerce.cart.domain.CartLineKey;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Profile;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
@@ -30,6 +32,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 class RedisCartStoreAdapter implements CartStorePort {
 
+    private static final Logger log = LoggerFactory.getLogger(RedisCartStoreAdapter.class);
     private static final Duration CART_TTL = Duration.ofDays(7);
     private static final String NO_VARIANT = "none";
 
@@ -47,7 +50,8 @@ class RedisCartStoreAdapter implements CartStorePort {
     }
 
     @Override
-    public int changeQuantity(UUID buyerId, UUID storeId, UUID productId, UUID variantId, int delta) {
+    public int changeQuantity(UUID buyerId, UUID storeId, UUID productId, UUID variantId, int delta,
+            Integer availableStock) {
         String cartKey = cartKey(buyerId, storeId);
         String field = field(productId, variantId);
 
@@ -58,6 +62,18 @@ class RedisCartStoreAdapter implements CartStorePort {
             redisTemplate.opsForHash().delete(cartKey, field);
             pruneIfEmpty(buyerId, storeId);
             return 0;
+        }
+
+        if (availableStock != null && resulting > availableStock) {
+            // JDB2-001: a concurrent check-then-act race can push the raw
+            // atomic increment above availableStock even though each caller
+            // validated against it individually. Correct the persisted
+            // state immediately rather than leaving an invisible,
+            // permanent overshoot.
+            log.warn("changeQuantity overshoot detected for cart {} field {}: {} > availableStock {} — clamping",
+                    cartKey, field, resulting, availableStock);
+            redisTemplate.opsForHash().put(cartKey, field, String.valueOf(availableStock));
+            resulting = availableStock;
         }
 
         String indexKey = indexKey(buyerId);
@@ -153,6 +169,11 @@ class RedisCartStoreAdapter implements CartStorePort {
     public void recordNotifiedThreshold(UUID buyerId, UUID storeId, UUID productId, UUID variantId, int threshold) {
         redisTemplate.opsForValue().set(
                 notifiedKey(buyerId, storeId, productId, variantId), String.valueOf(threshold), CART_TTL);
+    }
+
+    @Override
+    public void clearNotifiedThreshold(UUID buyerId, UUID storeId, UUID productId, UUID variantId) {
+        redisTemplate.delete(notifiedKey(buyerId, storeId, productId, variantId));
     }
 
     private static String cartKey(UUID buyerId, UUID storeId) {

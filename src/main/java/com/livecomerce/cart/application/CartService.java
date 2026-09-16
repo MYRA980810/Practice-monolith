@@ -38,6 +38,7 @@ public class CartService implements AddToCartUseCase, ChangeQuantityUseCase, Rem
     private static final String REASON_UNAVAILABLE = "UNAVAILABLE";
     private static final String REASON_INSUFFICIENT_STOCK = "INSUFFICIENT_STOCK";
     private static final String REASON_LINE_NOT_FOUND = "LINE_NOT_FOUND";
+    private static final String REASON_QUANTITY_LIMIT_EXCEEDED = "QUANTITY_LIMIT_EXCEEDED";
 
     private final CartStorePort cartStorePort;
     private final LoadCartProductInfoPort loadCartProductInfoPort;
@@ -52,6 +53,17 @@ public class CartService implements AddToCartUseCase, ChangeQuantityUseCase, Rem
         }
         if (info.exclusiveToActiveLive()) {
             return AddToCartResult.rejected(REASON_LIVE_EXCLUSIVE);
+        }
+        if (!info.active() || info.paused()) {
+            return AddToCartResult.rejected(REASON_UNAVAILABLE);
+        }
+
+        var cart = cartStorePort.load(command.buyerId(), command.storeId());
+        var key = new CartLineKey(command.productId(), command.variantId());
+        int currentQuantity = cart.findLine(key).map(CartItem::quantity).orElse(0);
+        int prospectiveQuantity = currentQuantity + command.quantity();
+        if (prospectiveQuantity > CartItem.MAX_QUANTITY) {
+            return AddToCartResult.rejected(REASON_QUANTITY_LIMIT_EXCEEDED);
         }
 
         cartStorePort.addOrIncrement(command.buyerId(), command.storeId(), command.productId(),
@@ -69,20 +81,28 @@ public class CartService implements AddToCartUseCase, ChangeQuantityUseCase, Rem
             return ChangeQuantityResult.failure(REASON_LINE_NOT_FOUND);
         }
 
+        Integer availableStockBound = null;
         if (command.delta() > 0) {
             var ref = new CartLineRef(command.productId(), command.variantId());
             var info = loadCartProductInfoPort.loadForCart(Set.of(ref)).get(ref);
             if (info == null) {
                 return ChangeQuantityResult.failure(REASON_UNAVAILABLE);
             }
+            if (!info.active() || info.paused()) {
+                return ChangeQuantityResult.failure(REASON_UNAVAILABLE);
+            }
             int newQuantity = line.get().quantity() + command.delta();
+            if (newQuantity > CartItem.MAX_QUANTITY) {
+                return ChangeQuantityResult.quantityLimitExceeded();
+            }
             if (newQuantity > info.availableStock()) {
                 return ChangeQuantityResult.insufficientStock(info.availableStock());
             }
+            availableStockBound = info.availableStock();
         }
 
         int resulting = cartStorePort.changeQuantity(command.buyerId(), command.storeId(),
-                command.productId(), command.variantId(), command.delta());
+                command.productId(), command.variantId(), command.delta(), availableStockBound);
         return ChangeQuantityResult.success(resulting);
     }
 
@@ -119,10 +139,11 @@ public class CartService implements AddToCartUseCase, ChangeQuantityUseCase, Rem
             for (CartItem item : cart.items()) {
                 var ref = new CartLineRef(item.key().productId(), item.key().variantId());
                 var info = infoByRef.get(ref);
-                if (info == null || !info.active()) {
-                    // D6 fail-closed lookup failure, or a deactivated
-                    // product/store (see catalog.application.StoreEventListener):
-                    // exclude the line from the view without touching storage.
+                if (info == null || !info.active() || info.paused()) {
+                    // D6 fail-closed lookup failure, a deactivated
+                    // product/store (see catalog.application.StoreEventListener),
+                    // or a seller-paused product: exclude the line from the
+                    // view without touching storage.
                     continue;
                 }
                 String blockedReason = info.exclusiveToActiveLive() ? REASON_LIVE_EXCLUSIVE : null;

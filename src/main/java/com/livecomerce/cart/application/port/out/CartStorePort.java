@@ -36,10 +36,21 @@ public interface CartStorePort {
      * calling this method, since the underlying counter op is a raw
      * increment with no bound-check of its own.
      *
-     * @return the resulting quantity, or {@code 0} if the line was removed
+     * @param availableStock the current available-stock bound, used as a
+     * post-increment correction backstop (JDB2-001): a concurrent
+     * check-then-act race between two callers can jointly push the raw
+     * atomic increment above this bound even though each caller validated
+     * against it individually. Implementations MUST read back the result
+     * of the atomic increment and, if it exceeds this bound, immediately
+     * issue a corrective write clamping the stored quantity down to exactly
+     * {@code availableStock}, logging a warning when this fires. Pass
+     * {@code null} when no upper bound applies (e.g. a negative {@code
+     * delta}, which can never overshoot).
+     * @return the resulting quantity (clamped to {@code availableStock} if
+     * an overshoot correction fired), or {@code 0} if the line was removed
      * as a result of this call.
      */
-    int changeQuantity(UUID buyerId, UUID storeId, UUID productId, UUID variantId, int delta);
+    int changeQuantity(UUID buyerId, UUID storeId, UUID productId, UUID variantId, int delta, Integer availableStock);
 
     /**
      * Removes a line. Idempotent — a no-op (not an error) if the line is
@@ -86,4 +97,13 @@ public interface CartStorePort {
      * TTL matching the cart's own (design D9).
      */
     void recordNotifiedThreshold(UUID buyerId, UUID storeId, UUID productId, UUID variantId, int threshold);
+
+    /**
+     * Clears the last stock-depletion threshold notified for a line —
+     * called once stock recovers above every configured threshold
+     * (JDA2-005/JDB2-002), so a later re-crossing of the same threshold
+     * fires a fresh notification instead of being permanently suppressed.
+     * Idempotent — a no-op if nothing is recorded.
+     */
+    void clearNotifiedThreshold(UUID buyerId, UUID storeId, UUID productId, UUID variantId);
 }
