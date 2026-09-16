@@ -16,6 +16,19 @@ interface OrderJpaRepository extends JpaRepository<Order, UUID> {
     @Query("SELECT o FROM Order o LEFT JOIN FETCH o.items WHERE o.id = :id")
     Optional<Order> findByIdWithItems(@Param("id") UUID id);
 
+    /**
+     * Live-scoped lookup: {@code liveSessionId} MUST NOT be {@code null}.
+     * The {@code = :liveSessionId} comparison relies on SQL equality
+     * semantics, which never match {@code NULL} (a null-safe {@code IS NOT
+     * DISTINCT FROM} would be needed for that). Its only real caller is
+     * {@code PlaceOrderItemService}, which always passes a non-null
+     * {@code liveSessionId} on the live-purchase path — the batched cart
+     * checkout path ({@code PlaceCartOrderService}) never calls this query
+     * at all, since a cart checkout always opens a fresh Order per store
+     * rather than reusing one. Left unchanged deliberately: "fixing" the
+     * null comparison here would be dead code for this query's only caller
+     * and an unnecessary risk to the live-purchase path.
+     */
     @Query("""
             SELECT o FROM Order o LEFT JOIN FETCH o.items
             WHERE o.buyerId = :buyerId
