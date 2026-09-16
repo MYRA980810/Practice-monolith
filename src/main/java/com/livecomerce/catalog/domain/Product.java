@@ -34,6 +34,15 @@ public class Product implements Persistable<UUID> {
     @Column(name = "base_price", nullable = false, precision = 10, scale = 2)
     private BigDecimal basePrice;
 
+    /**
+     * Nullable "was" price shown struck-through next to {@code basePrice} to
+     * advertise a discount. Lives at the product level (not per-variant) by
+     * design. {@code discountLabel} in {@link com.livecomerce.catalog.application.query.ProductView}
+     * only trusts this when it is strictly greater than {@code basePrice}.
+     */
+    @Column(name = "compare_at_price", precision = 10, scale = 2)
+    private BigDecimal compareAtPrice;
+
     @Column(nullable = false, length = 3)
     private String currency;
 
@@ -111,6 +120,24 @@ public class Product implements Persistable<UUID> {
     public void assignCategory(UUID categoryId) {
         this.categoryId = categoryId;
         this.updatedAt  = OffsetDateTime.now();
+    }
+
+    public void updateCompareAtPrice(BigDecimal compareAtPrice) {
+        this.compareAtPrice = compareAtPrice;
+        this.updatedAt      = OffsetDateTime.now();
+    }
+
+    public void assignOptionValueSwatch(UUID optionId, UUID valueId, String swatchHex) {
+        var option = options.stream()
+                .filter(o -> o.getId().equals(optionId))
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("Option not found: " + optionId));
+        var value = option.getValues().stream()
+                .filter(v -> v.getId().equals(valueId))
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("Option value not found: " + valueId));
+        value.assignSwatchHex(swatchHex);
+        this.updatedAt = OffsetDateTime.now();
     }
 
     public ProductOption addOption(String name, List<String> values) {

@@ -7,12 +7,15 @@ import lombok.NoArgsConstructor;
 import org.springframework.data.domain.Persistable;
 
 import java.util.UUID;
+import java.util.regex.Pattern;
 
 @Entity
 @Table(name = "product_option_values")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class ProductOptionValue implements Persistable<UUID> {
+
+    private static final Pattern HEX_COLOR = Pattern.compile("^#[0-9A-Fa-f]{6}$");
 
     @Id
     private UUID id;
@@ -26,6 +29,14 @@ public class ProductOptionValue implements Persistable<UUID> {
 
     @Column(nullable = false)
     private int position;
+
+    /**
+     * Only populated for option values that represent a color (e.g. an option
+     * named "Color"). Nullable by design: sizes, materials, etc. never carry
+     * a swatch. Format is enforced as {@code #RRGGBB} when present.
+     */
+    @Column(name = "swatch_hex", length = 7)
+    private String swatchHex;
 
     @Transient
     private boolean isNew = true;
@@ -53,5 +64,13 @@ public class ProductOptionValue implements Persistable<UUID> {
         v.position = position;
         v.isNew    = true;
         return v;
+    }
+
+    public void assignSwatchHex(String swatchHex) {
+        if (swatchHex != null && !HEX_COLOR.matcher(swatchHex).matches()) {
+            throw new IllegalArgumentException(
+                    "swatchHex must match #RRGGBB, got: " + swatchHex);
+        }
+        this.swatchHex = swatchHex;
     }
 }

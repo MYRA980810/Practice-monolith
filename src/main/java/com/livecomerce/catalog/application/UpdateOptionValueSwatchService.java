@@ -1,6 +1,6 @@
 package com.livecomerce.catalog.application;
 
-import com.livecomerce.catalog.application.port.in.UpdateProductUseCase;
+import com.livecomerce.catalog.application.port.in.UpdateOptionValueSwatchUseCase;
 import com.livecomerce.catalog.application.port.out.LoadProductPort;
 import com.livecomerce.catalog.application.port.out.SaveProductPort;
 import com.livecomerce.catalog.domain.Product;
@@ -12,13 +12,13 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @RequiredArgsConstructor
 @Transactional
-public class UpdateProductService implements UpdateProductUseCase {
+public class UpdateOptionValueSwatchService implements UpdateOptionValueSwatchUseCase {
 
     private final LoadProductPort loadProductPort;
     private final SaveProductPort saveProductPort;
 
     @Override
-    public Product update(UpdateProductCommand command) {
+    public Product updateSwatch(UpdateOptionValueSwatchCommand command) {
         var product = loadProductPort.loadById(command.productId())
                 .orElseThrow(() -> new ProductNotFoundException(command.productId()));
 
@@ -26,19 +26,7 @@ public class UpdateProductService implements UpdateProductUseCase {
             throw new AccessDeniedException("Product does not belong to this store");
         }
 
-        product.update(
-                command.name(),
-                command.description(),
-                command.basePrice(),
-                command.currency(),
-                command.sku()
-        );
-
-        if (command.categoryId() != null) {
-            product.assignCategory(command.categoryId());
-        }
-
-        product.updateCompareAtPrice(command.compareAtPrice());
+        product.assignOptionValueSwatch(command.optionId(), command.valueId(), command.swatchHex());
 
         return saveProductPort.save(product);
     }

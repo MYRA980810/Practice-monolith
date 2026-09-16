@@ -1,6 +1,8 @@
 package com.livecomerce.catalog.application.port.in;
 
 import com.livecomerce.catalog.application.query.ProductView;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 import java.util.List;
 import java.util.UUID;
@@ -12,4 +14,10 @@ public interface GetProductUseCase {
     List<ProductView> getByStoreId(UUID storeId);
 
     List<ProductView> listWithFilters(ProductFilter filter);
+
+    /**
+     * Public global catalog browse, optionally scoped to a category, across
+     * ALL stores. Never touches {@link #listWithFilters}'s store-scoped path.
+     */
+    Page<ProductView> browse(ProductFilter filter, Pageable pageable);
 }

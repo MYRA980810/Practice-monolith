@@ -6,10 +6,19 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.OffsetDateTime;
+import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 
 interface ProductMetricsRepository extends JpaRepository<OrderItemSalesEntity, UUID> {
+
+    @Query(value = """
+            SELECT oi.product_id, SUM(oi.quantity) AS units_sold
+            FROM order_items oi
+            WHERE oi.status = 'PAID' AND oi.product_id IN (:productIds)
+            GROUP BY oi.product_id
+            """, nativeQuery = true)
+    List<Object[]> sumUnitsSoldByProductIds(@Param("productIds") Collection<UUID> productIds);
 
     @Query(value = """
             SELECT oi.product_id, oi.product_name,

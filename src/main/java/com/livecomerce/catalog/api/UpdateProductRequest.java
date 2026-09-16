@@ -14,5 +14,6 @@ record UpdateProductRequest(
         @NotNull @DecimalMin("0.01") BigDecimal basePrice,
         @Size(max = 3) String currency,
         @Size(max = 100) String sku,
-        UUID categoryId
+        UUID categoryId,
+        @DecimalMin("0.01") BigDecimal compareAtPrice
 ) {}

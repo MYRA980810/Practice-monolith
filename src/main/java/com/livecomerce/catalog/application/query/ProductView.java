@@ -11,6 +11,8 @@ public record ProductView(
         String name,
         String description,
         BigDecimal basePrice,
+        BigDecimal compareAtPrice,
+        String discountLabel,
         String currency,
         String sku,
         boolean active,
@@ -18,6 +20,8 @@ public record ProductView(
         UUID categoryId,
         String categoryName,
         StockInfo stock,
+        String stockLabel,
+        long soldCount,
         List<ImageInfo> images,
         List<OptionInfo> options,
         List<VariantView> variants,
@@ -30,5 +34,7 @@ public record ProductView(
 
     public record ImageInfo(UUID id, String url, int position, boolean primary) {}
 
-    public record OptionInfo(UUID id, String name, List<String> values) {}
+    public record OptionInfo(UUID id, String name, List<OptionValueInfo> values) {
+        public record OptionValueInfo(String value, String swatchHex) {}
+    }
 }

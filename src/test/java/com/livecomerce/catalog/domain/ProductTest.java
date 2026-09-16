@@ -58,6 +58,47 @@ class ProductTest {
     }
 
     @Test
+    void assignOptionValueSwatch_setsHexOnMatchingValue() {
+        var product = Product.create(STORE_ID, "Remera", null, BigDecimal.TEN, "MXN", null, null);
+        var option = product.addOption("Color", List.of("Red", "Blue"));
+        var redValue = option.getValues().get(0);
+
+        product.assignOptionValueSwatch(option.getId(), redValue.getId(), "#FF0000");
+
+        assertThat(redValue.getSwatchHex()).isEqualTo("#FF0000");
+        assertThat(option.getValues().get(1).getSwatchHex()).isNull();
+    }
+
+    @Test
+    void assignOptionValueSwatch_withUnknownOptionId_throwsIllegalArgument() {
+        var product = Product.create(STORE_ID, "Remera", null, BigDecimal.TEN, "MXN", null, null);
+        var option = product.addOption("Color", List.of("Red"));
+        var valueId = option.getValues().get(0).getId();
+
+        assertThatThrownBy(() -> product.assignOptionValueSwatch(UUID.randomUUID(), valueId, "#FF0000"))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void assignOptionValueSwatch_withUnknownValueId_throwsIllegalArgument() {
+        var product = Product.create(STORE_ID, "Remera", null, BigDecimal.TEN, "MXN", null, null);
+        var option = product.addOption("Color", List.of("Red"));
+
+        assertThatThrownBy(() -> product.assignOptionValueSwatch(option.getId(), UUID.randomUUID(), "#FF0000"))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void assignOptionValueSwatch_withInvalidHex_throwsIllegalArgument() {
+        var product = Product.create(STORE_ID, "Remera", null, BigDecimal.TEN, "MXN", null, null);
+        var option = product.addOption("Color", List.of("Red"));
+        var valueId = option.getValues().get(0).getId();
+
+        assertThatThrownBy(() -> product.assignOptionValueSwatch(option.getId(), valueId, "red"))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
     void addVariant_createsNonDefaultVariant() {
         var product = Product.create(STORE_ID, "Remera", null, BigDecimal.TEN, "MXN", null, null);
         product.addOption("Color", List.of("Red", "Blue"));
@@ -163,5 +204,28 @@ class ProductTest {
         var stock = product.defaultVariant().getStock();
         assertThat(stock.getAvailableQuantity()).isEqualTo(8);
         assertThat(stock.getTotalQuantity()).isEqualTo(8);
+    }
+
+    // --- compareAtPrice ---
+
+    @Test
+    void create_compareAtPriceDefaultsToNull() {
+        var product = Product.create(STORE_ID, "Remera", null, BigDecimal.TEN, "MXN", null, null);
+        assertThat(product.getCompareAtPrice()).isNull();
+    }
+
+    @Test
+    void updateCompareAtPrice_setsField() {
+        var product = Product.create(STORE_ID, "Remera", null, BigDecimal.TEN, "MXN", null, null);
+        product.updateCompareAtPrice(new BigDecimal("19.99"));
+        assertThat(product.getCompareAtPrice()).isEqualByComparingTo("19.99");
+    }
+
+    @Test
+    void updateCompareAtPrice_withNull_clearsField() {
+        var product = Product.create(STORE_ID, "Remera", null, BigDecimal.TEN, "MXN", null, null);
+        product.updateCompareAtPrice(new BigDecimal("19.99"));
+        product.updateCompareAtPrice(null);
+        assertThat(product.getCompareAtPrice()).isNull();
     }
 }

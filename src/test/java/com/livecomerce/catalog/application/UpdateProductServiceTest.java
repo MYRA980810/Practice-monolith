@@ -44,7 +44,7 @@ class UpdateProductServiceTest {
         when(saveProductPort.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         var result = service.update(
-                new UpdateProductCommand(PRODUCT_ID, STORE_ID, "New Name", "desc", BigDecimal.valueOf(99), "USD", "SKU-001", null));
+                new UpdateProductCommand(PRODUCT_ID, STORE_ID, "New Name", "desc", BigDecimal.valueOf(99), "USD", "SKU-001", null, null));
 
         assertThat(result.getName()).isEqualTo("New Name");
         assertThat(result.getBasePrice()).isEqualByComparingTo(BigDecimal.valueOf(99));
@@ -55,7 +55,7 @@ class UpdateProductServiceTest {
         when(loadProductPort.loadById(PRODUCT_ID)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.update(
-                new UpdateProductCommand(PRODUCT_ID, STORE_ID, "Name", null, BigDecimal.TEN, "MXN", null, null)))
+                new UpdateProductCommand(PRODUCT_ID, STORE_ID, "Name", null, BigDecimal.TEN, "MXN", null, null, null)))
                 .isInstanceOf(ProductNotFoundException.class);
 
         verify(saveProductPort, never()).save(any());
@@ -69,9 +69,35 @@ class UpdateProductServiceTest {
         var differentStoreId = UUID.randomUUID();
 
         assertThatThrownBy(() -> service.update(
-                new UpdateProductCommand(PRODUCT_ID, differentStoreId, "Name", null, BigDecimal.TEN, "MXN", null, null)))
+                new UpdateProductCommand(PRODUCT_ID, differentStoreId, "Name", null, BigDecimal.TEN, "MXN", null, null, null)))
                 .isInstanceOf(AccessDeniedException.class);
 
         verify(saveProductPort, never()).save(any());
+    }
+
+    @Test
+    void update_withCompareAtPrice_setsCompareAtPriceOnProduct() {
+        var product = buildProduct();
+        when(loadProductPort.loadById(PRODUCT_ID)).thenReturn(Optional.of(product));
+        when(saveProductPort.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        var result = service.update(new UpdateProductCommand(
+                PRODUCT_ID, STORE_ID, "New Name", "desc", BigDecimal.valueOf(75), "MXN", null, null,
+                BigDecimal.valueOf(100)));
+
+        assertThat(result.getCompareAtPrice()).isEqualByComparingTo(BigDecimal.valueOf(100));
+    }
+
+    @Test
+    void update_withNullCompareAtPrice_clearsExistingCompareAtPrice() {
+        var product = buildProduct();
+        product.updateCompareAtPrice(BigDecimal.valueOf(50));
+        when(loadProductPort.loadById(PRODUCT_ID)).thenReturn(Optional.of(product));
+        when(saveProductPort.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        var result = service.update(new UpdateProductCommand(
+                PRODUCT_ID, STORE_ID, "New Name", "desc", BigDecimal.TEN, "MXN", null, null, null));
+
+        assertThat(result.getCompareAtPrice()).isNull();
     }
 }

@@ -5,6 +5,9 @@ import com.livecomerce.catalog.application.port.out.LoadProductPort;
 import com.livecomerce.catalog.application.port.out.SaveProductPort;
 import com.livecomerce.catalog.domain.Product;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Component;
@@ -67,6 +70,35 @@ class ProductPersistenceAdapter implements LoadProductPort, SaveProductPort {
         repository.findByIdsWithVariantOptionValues(ids);
 
         return products;
+    }
+
+    @Override
+    public Page<Product> browsePublic(ProductFilter filter, Pageable pageable) {
+        Specification<Product> spec = ProductSpecification.isActive()
+                .and(ProductSpecification.isNotPaused());
+
+        if (filter.categoryId() != null)
+            spec = spec.and(ProductSpecification.hasCategoryId(filter.categoryId()));
+
+        Sort sort = switch (filter.sortBy()) {
+            case PRICE_ASC      -> Sort.by("basePrice").ascending();
+            case PRICE_DESC     -> Sort.by("basePrice").descending();
+            case RECENTLY_ADDED -> Sort.by("createdAt").descending();
+        };
+
+        Page<Product> page = repository.findAll(spec, PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), sort));
+        List<Product> products = page.getContent();
+        if (products.isEmpty()) return page;
+
+        // Hydrate remaining lazy collections within the same session so callers
+        // with open-in-view=false don't hit LazyInitializationException
+        List<UUID> ids = products.stream().map(Product::getId).toList();
+        repository.findByIdsWithVariantsAndStock(ids);
+        repository.findByIdsWithImages(ids);
+        repository.findByIdsWithOptions(ids);
+        repository.findByIdsWithVariantOptionValues(ids);
+
+        return page;
     }
 
     @Override

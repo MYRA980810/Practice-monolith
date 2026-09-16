@@ -16,6 +16,7 @@ import com.livecomerce.catalog.application.port.in.ProductFilter;
 import com.livecomerce.catalog.application.port.in.ProductFilter.SortBy;
 import com.livecomerce.catalog.application.port.in.ProductFilter.StockLevel;
 import com.livecomerce.catalog.application.port.in.RemoveProductImageUseCase;
+import com.livecomerce.catalog.application.port.in.UpdateOptionValueSwatchUseCase;
 import com.livecomerce.catalog.application.port.in.UpdateProductImageUseCase;
 import com.livecomerce.catalog.application.port.in.UpdateProductUseCase;
 import com.livecomerce.catalog.application.query.ProductView;
@@ -24,6 +25,9 @@ import com.livecomerce.shared.UserPrincipal;
 import com.livecomerce.store.application.port.in.GetStoreUseCase;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -37,7 +41,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/products")
 @RequiredArgsConstructor
-class ProductController {
+public class ProductController {
 
     private final CreateProductUseCase createProductUseCase;
     private final UpdateProductUseCase updateProductUseCase;
@@ -53,6 +57,7 @@ class ProductController {
     private final ResumeProductUseCase resumeProductUseCase;
     private final GetStoreUseCase getStoreUseCase;
     private final AddProductOptionUseCase addProductOptionUseCase;
+    private final UpdateOptionValueSwatchUseCase updateOptionValueSwatchUseCase;
     private final CreateProductVariantUseCase createProductVariantUseCase;
     private final AddProductImagesUseCase addProductImagesUseCase;
 
@@ -98,7 +103,8 @@ class ProductController {
                 request.basePrice(),
                 Objects.requireNonNullElse(request.currency(), DEFAULT_CURRENCY),
                 request.sku(),
-                request.categoryId()
+                request.categoryId(),
+                request.compareAtPrice()
         ));
         return ResponseEntity.ok(getProductUseCase.getById(id));
     }
@@ -116,6 +122,14 @@ class ProductController {
             return ResponseEntity.ok(getProductUseCase.getByStoreId(storeId));
         }
         return ResponseEntity.ok(getProductUseCase.listWithFilters(new ProductFilter(storeId, categoryId, null, null)));
+    }
+
+    @GetMapping("/browse")
+    ResponseEntity<Page<ProductView>> browse(
+            @RequestParam(required = false) UUID categoryId,
+            @RequestParam(required = false, defaultValue = "RECENTLY_ADDED") SortBy sort,
+            @PageableDefault(size = 20) Pageable pageable) {
+        return ResponseEntity.ok(getProductUseCase.browse(new ProductFilter(null, categoryId, sort, null), pageable));
     }
 
     @GetMapping("/me")
@@ -150,6 +164,23 @@ class ProductController {
         var storeId = getStoreUseCase.getStoreIdByUserId(principal.getUserId());
         addProductOptionUseCase.addOption(
                 new AddProductOptionUseCase.AddProductOptionCommand(id, storeId, request.name(), request.values()));
+        return getProductUseCase.getById(id);
+    }
+
+    @PatchMapping("/{id}/options/{optionId}/values/{valueId}/swatch")
+    @PreAuthorize("hasRole('SELLER')")
+    @ResponseStatus(HttpStatus.OK)
+    ProductView updateOptionValueSwatch(
+            @PathVariable UUID id,
+            @PathVariable UUID optionId,
+            @PathVariable UUID valueId,
+            @RequestBody @Valid UpdateOptionValueSwatchRequest request,
+            @AuthenticationPrincipal UserPrincipal principal) {
+
+        var storeId = getStoreUseCase.getStoreIdByUserId(principal.getUserId());
+        updateOptionValueSwatchUseCase.updateSwatch(
+                new UpdateOptionValueSwatchUseCase.UpdateOptionValueSwatchCommand(
+                        id, storeId, optionId, valueId, request.swatchHex()));
         return getProductUseCase.getById(id);
     }
 

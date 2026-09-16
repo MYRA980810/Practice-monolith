@@ -16,6 +16,7 @@ import com.livecomerce.catalog.application.port.in.PauseProductUseCase;
 import com.livecomerce.catalog.application.port.in.ProductFilter;
 import com.livecomerce.catalog.application.port.in.RemoveProductImageUseCase;
 import com.livecomerce.catalog.application.port.in.ResumeProductUseCase;
+import com.livecomerce.catalog.application.port.in.UpdateOptionValueSwatchUseCase;
 import com.livecomerce.catalog.application.port.in.UpdateProductImageUseCase;
 import com.livecomerce.catalog.application.port.in.UpdateProductUseCase;
 import com.livecomerce.catalog.application.query.ProductView;
@@ -45,6 +46,9 @@ import org.springframework.web.method.support.HandlerMethodArgumentResolver;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 import org.mockito.ArgumentCaptor;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
@@ -60,6 +64,7 @@ import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -95,6 +100,7 @@ class ProductControllerTest {
     @MockitoBean ResumeProductUseCase resumeProductUseCase;
     @MockitoBean GetStoreUseCase getStoreUseCase;
     @MockitoBean AddProductOptionUseCase addProductOptionUseCase;
+    @MockitoBean UpdateOptionValueSwatchUseCase updateOptionValueSwatchUseCase;
     @MockitoBean CreateProductVariantUseCase createProductVariantUseCase;
     @MockitoBean AddProductImagesUseCase addProductImagesUseCase;
 
@@ -121,9 +127,9 @@ class ProductControllerTest {
         var stock = new ProductView.StockInfo(0, 0, 0);
         return new ProductView(
                 PRODUCT_ID, STORE_ID, "Remera Básica", "Descripción",
-                new BigDecimal("150.00"), "MXN", "SKU-001",
+                new BigDecimal("150.00"), null, null, "MXN", "SKU-001",
                 true, false, null, null,
-                stock, List.of(), List.of(), List.of(),
+                stock, "Sin stock", 0L, List.of(), List.of(), List.of(),
                 0.0, 0L,
                 OffsetDateTime.now(), OffsetDateTime.now()
         );
@@ -174,9 +180,9 @@ class ProductControllerTest {
         var imageInfo = new ProductView.ImageInfo(UUID.randomUUID(), "https://cdn.example.com/img.jpg", 0, true);
         var viewWithImages = new ProductView(
                 PRODUCT_ID, STORE_ID, "Remera Básica", "Descripción",
-                new BigDecimal("150.00"), "MXN", "SKU-001",
+                new BigDecimal("150.00"), null, null, "MXN", "SKU-001",
                 true, false, null, null,
-                new ProductView.StockInfo(0, 0, 0),
+                new ProductView.StockInfo(0, 0, 0), "Sin stock", 0L,
                 List.of(imageInfo), List.of(), List.of(),
                 0.0, 0L,
                 java.time.OffsetDateTime.now(), java.time.OffsetDateTime.now()
@@ -296,6 +302,63 @@ class ProductControllerTest {
         assertThat(filterCaptor.getValue().storeId()).isEqualTo(STORE_ID);
         assertThat(filterCaptor.getValue().categoryId()).isEqualTo(categoryId);
         verify(getProductUseCase, org.mockito.Mockito.never()).getByStoreId(any());
+    }
+
+    // --- GET /api/products/browse ---
+
+    @Test
+    void browse_returnsOk_withPageOfProducts() throws Exception {
+        var page = new PageImpl<>(List.of(buildProductView(), buildProductView()), PageRequest.of(0, 20), 2);
+        when(getProductUseCase.browse(any(), any())).thenReturn(page);
+
+        mvc.perform(get("/api/products/browse"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content.length()").value(2))
+                .andExpect(jsonPath("$.totalElements").value(2));
+    }
+
+    @Test
+    void browse_withCategoryId_passesFilterToUseCase() throws Exception {
+        var categoryId = UUID.randomUUID();
+        var page = new PageImpl<>(List.of(buildProductView()), PageRequest.of(0, 20), 1);
+        when(getProductUseCase.browse(any(), any())).thenReturn(page);
+
+        mvc.perform(get("/api/products/browse").param("categoryId", categoryId.toString()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content.length()").value(1));
+
+        var filterCaptor = ArgumentCaptor.forClass(ProductFilter.class);
+        verify(getProductUseCase).browse(filterCaptor.capture(), any());
+        assertThat(filterCaptor.getValue().categoryId()).isEqualTo(categoryId);
+        assertThat(filterCaptor.getValue().storeId()).isNull();
+    }
+
+    @Test
+    void browse_withoutCategoryId_stillDelegatesWithNullCategory() throws Exception {
+        var page = new PageImpl<>(List.of(buildProductView()), PageRequest.of(0, 20), 1);
+        when(getProductUseCase.browse(any(), any())).thenReturn(page);
+
+        mvc.perform(get("/api/products/browse"))
+                .andExpect(status().isOk());
+
+        var filterCaptor = ArgumentCaptor.forClass(ProductFilter.class);
+        verify(getProductUseCase).browse(filterCaptor.capture(), any());
+        assertThat(filterCaptor.getValue().categoryId()).isNull();
+        assertThat(filterCaptor.getValue().storeId()).isNull();
+    }
+
+    @Test
+    void browse_forwardsPageAndSizeParamsAsPageable() throws Exception {
+        var page = new PageImpl<>(List.of(buildProductView()), PageRequest.of(2, 10), 30);
+        when(getProductUseCase.browse(any(), any())).thenReturn(page);
+
+        mvc.perform(get("/api/products/browse").param("page", "2").param("size", "10"))
+                .andExpect(status().isOk());
+
+        var pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
+        verify(getProductUseCase).browse(any(), pageableCaptor.capture());
+        assertThat(pageableCaptor.getValue().getPageNumber()).isEqualTo(2);
+        assertThat(pageableCaptor.getValue().getPageSize()).isEqualTo(10);
     }
 
     // --- POST /api/products/{id}/variants/{variantId}/stock ---
@@ -490,6 +553,84 @@ class ProductControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"availableQuantity": 8}
+                                """))
+                .andExpect(status().isForbidden());
+    }
+
+    // --- PUT /api/products/{id} ---
+
+    @Test
+    void update_withCompareAtPrice_forwardsCompareAtPriceOnCommand() throws Exception {
+        when(getStoreUseCase.getStoreIdByUserId(any())).thenReturn(STORE_ID);
+        when(updateProductUseCase.update(any())).thenReturn(buildProduct());
+        when(getProductUseCase.getById(any())).thenReturn(buildProductView());
+
+        mvc.perform(put("/api/products/{id}", PRODUCT_ID)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"name": "Remera Básica", "basePrice": 75.00, "compareAtPrice": 100.00}
+                                """))
+                .andExpect(status().isOk());
+
+        var commandCaptor = ArgumentCaptor.forClass(UpdateProductUseCase.UpdateProductCommand.class);
+        verify(updateProductUseCase).update(commandCaptor.capture());
+        assertThat(commandCaptor.getValue().compareAtPrice()).isEqualByComparingTo(new BigDecimal("100.00"));
+    }
+
+    @Test
+    void update_withoutCompareAtPrice_forwardsNullOnCommand() throws Exception {
+        when(getStoreUseCase.getStoreIdByUserId(any())).thenReturn(STORE_ID);
+        when(updateProductUseCase.update(any())).thenReturn(buildProduct());
+        when(getProductUseCase.getById(any())).thenReturn(buildProductView());
+
+        mvc.perform(put("/api/products/{id}", PRODUCT_ID)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"name": "Remera Básica", "basePrice": 75.00}
+                                """))
+                .andExpect(status().isOk());
+
+        var commandCaptor = ArgumentCaptor.forClass(UpdateProductUseCase.UpdateProductCommand.class);
+        verify(updateProductUseCase).update(commandCaptor.capture());
+        assertThat(commandCaptor.getValue().compareAtPrice()).isNull();
+    }
+
+    // --- PATCH /api/products/{id}/options/{optionId}/values/{valueId}/swatch ---
+
+    @Test
+    void updateOptionValueSwatch_withValidHex_returns200AndForwardsCommand() throws Exception {
+        var optionId = UUID.randomUUID();
+        var valueId = UUID.randomUUID();
+        when(getStoreUseCase.getStoreIdByUserId(any())).thenReturn(STORE_ID);
+        when(updateOptionValueSwatchUseCase.updateSwatch(any())).thenReturn(buildProduct());
+        when(getProductUseCase.getById(any())).thenReturn(buildProductView());
+
+        mvc.perform(patch("/api/products/{id}/options/{optionId}/values/{valueId}/swatch", PRODUCT_ID, optionId, valueId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"swatchHex": "#FF0000"}
+                                """))
+                .andExpect(status().isOk());
+
+        var commandCaptor = ArgumentCaptor.forClass(UpdateOptionValueSwatchUseCase.UpdateOptionValueSwatchCommand.class);
+        verify(updateOptionValueSwatchUseCase).updateSwatch(commandCaptor.capture());
+        assertThat(commandCaptor.getValue().optionId()).isEqualTo(optionId);
+        assertThat(commandCaptor.getValue().valueId()).isEqualTo(valueId);
+        assertThat(commandCaptor.getValue().storeId()).isEqualTo(STORE_ID);
+        assertThat(commandCaptor.getValue().swatchHex()).isEqualTo("#FF0000");
+    }
+
+    @Test
+    void updateOptionValueSwatch_whenAccessDenied_returns403() throws Exception {
+        when(getStoreUseCase.getStoreIdByUserId(any())).thenReturn(STORE_ID);
+        when(updateOptionValueSwatchUseCase.updateSwatch(any()))
+                .thenThrow(new org.springframework.security.access.AccessDeniedException("not your product"));
+
+        mvc.perform(patch("/api/products/{id}/options/{optionId}/values/{valueId}/swatch",
+                        PRODUCT_ID, UUID.randomUUID(), UUID.randomUUID())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"swatchHex": "#FF0000"}
                                 """))
                 .andExpect(status().isForbidden());
     }

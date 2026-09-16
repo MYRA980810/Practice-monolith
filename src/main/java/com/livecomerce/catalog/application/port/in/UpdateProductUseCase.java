@@ -15,7 +15,8 @@ public interface UpdateProductUseCase {
             BigDecimal basePrice,
             String currency,
             String sku,
-            UUID categoryId
+            UUID categoryId,
+            BigDecimal compareAtPrice
     ) {}
 
     Product update(UpdateProductCommand command);
