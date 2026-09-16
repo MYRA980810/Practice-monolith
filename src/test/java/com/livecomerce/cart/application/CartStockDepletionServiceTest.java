@@ -24,6 +24,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -99,11 +100,61 @@ class CartStockDepletionServiceTest {
     void stockAboveAllThresholds_noCrossing_doesNotFire() {
         setUp();
         givenCartWithStock(50);
+        when(cartStorePort.loadNotifiedThreshold(BUYER_ID, STORE_ID, PRODUCT_ID, null)).thenReturn(null);
 
         sut.checkBuyerCarts(BUYER_ID);
 
         verify(eventPublisher, never()).publishEvent(any());
-        verify(cartStorePort, never()).loadNotifiedThreshold(any(), any(), any(), any());
+        verify(cartStorePort, never()).recordNotifiedThreshold(any(), any(), any(), any(),
+                org.mockito.ArgumentMatchers.anyInt());
+        verify(cartStorePort, never()).clearNotifiedThreshold(any(), any(), any(), any());
+    }
+
+    @Test
+    void stockRecoversAboveAllThresholds_andWasPreviouslyNotified_clearsNotifiedState() {
+        setUp();
+        givenCartWithStock(50);
+        when(cartStorePort.loadNotifiedThreshold(BUYER_ID, STORE_ID, PRODUCT_ID, null)).thenReturn(5);
+
+        sut.checkBuyerCarts(BUYER_ID);
+
+        verify(eventPublisher, never()).publishEvent(any());
+        verify(cartStorePort).clearNotifiedThreshold(BUYER_ID, STORE_ID, PRODUCT_ID, null);
+    }
+
+    @Test
+    void recoveryThenReCrossingSameThreshold_firesSecondNotification_afterClear() {
+        setUp();
+
+        // Phase 1: first crossing of the "low stock" threshold (5) -> notified, lastNotified recorded as 5
+        givenCartWithStock(4);
+        when(cartStorePort.loadNotifiedThreshold(BUYER_ID, STORE_ID, PRODUCT_ID, null)).thenReturn(null);
+        sut.checkBuyerCarts(BUYER_ID);
+        ArgumentCaptor<CartItemDepletedEvent> firstCaptor = ArgumentCaptor.forClass(CartItemDepletedEvent.class);
+        verify(eventPublisher, times(1)).publishEvent(firstCaptor.capture());
+        assertThat(firstCaptor.getValue().threshold()).isEqualTo(5);
+        verify(cartStorePort).recordNotifiedThreshold(BUYER_ID, STORE_ID, PRODUCT_ID, null, 5);
+
+        org.mockito.Mockito.clearInvocations(cartStorePort, eventPublisher);
+
+        // Phase 2: stock recovers above every threshold -> notified state must be cleared
+        givenCartWithStock(50);
+        when(cartStorePort.loadNotifiedThreshold(BUYER_ID, STORE_ID, PRODUCT_ID, null)).thenReturn(5);
+        sut.checkBuyerCarts(BUYER_ID);
+        verify(eventPublisher, never()).publishEvent(any());
+        verify(cartStorePort).clearNotifiedThreshold(BUYER_ID, STORE_ID, PRODUCT_ID, null);
+
+        org.mockito.Mockito.clearInvocations(cartStorePort, eventPublisher);
+
+        // Phase 3: re-crossing the SAME threshold after recovery must fire again, not be suppressed
+        givenCartWithStock(4);
+        when(cartStorePort.loadNotifiedThreshold(BUYER_ID, STORE_ID, PRODUCT_ID, null)).thenReturn(null);
+        sut.checkBuyerCarts(BUYER_ID);
+
+        ArgumentCaptor<CartItemDepletedEvent> secondCaptor = ArgumentCaptor.forClass(CartItemDepletedEvent.class);
+        verify(eventPublisher, times(1)).publishEvent(secondCaptor.capture());
+        assertThat(secondCaptor.getValue().threshold()).isEqualTo(5);
+        verify(cartStorePort).recordNotifiedThreshold(BUYER_ID, STORE_ID, PRODUCT_ID, null, 5);
     }
 
     @Test

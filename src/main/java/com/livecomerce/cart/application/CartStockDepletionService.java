@@ -74,11 +74,19 @@ public class CartStockDepletionService {
 
     private void checkLine(UUID buyerId, UUID storeId, UUID productId, UUID variantId, CartProductInfo info) {
         Integer crossedThreshold = highestSeverityCrossed(info.availableStock());
+        Integer lastNotified = cartStorePort.loadNotifiedThreshold(buyerId, storeId, productId, variantId);
+
         if (crossedThreshold == null) {
+            // Stock has recovered above every configured threshold
+            // (JDA2-005/JDB2-002): clear any recorded dedupe state so a
+            // later re-crossing of the SAME threshold fires a fresh
+            // notification instead of being permanently suppressed.
+            if (lastNotified != null) {
+                cartStorePort.clearNotifiedThreshold(buyerId, storeId, productId, variantId);
+            }
             return;
         }
 
-        Integer lastNotified = cartStorePort.loadNotifiedThreshold(buyerId, storeId, productId, variantId);
         if (lastNotified != null && crossedThreshold >= lastNotified) {
             return;
         }
