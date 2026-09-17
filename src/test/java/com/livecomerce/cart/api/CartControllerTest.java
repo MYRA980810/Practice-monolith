@@ -16,6 +16,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.boot.autoconfigure.security.oauth2.client.OAuth2ClientAutoConfiguration;
 import org.springframework.boot.autoconfigure.security.oauth2.client.servlet.OAuth2ClientWebSecurityAutoConfiguration;
 import org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration;
@@ -37,6 +38,8 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.not;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.never;
@@ -365,5 +368,16 @@ class CartControllerTest {
         mvc.perform(get("/api/cart"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.detail").value("buyerId must not be null"));
+    }
+
+    @Test
+    void cartStorageFailure_returns503WithoutLeakingExceptionDetails() throws Exception {
+        when(getCombinedCartViewUseCase.getCombinedView(any()))
+                .thenThrow(new DataAccessResourceFailureException("Redis connection refused at 10.0.0.5:6379"));
+
+        mvc.perform(get("/api/cart"))
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(jsonPath("$.detail").value("Cart is temporarily unavailable, please retry."))
+                .andExpect(jsonPath("$.detail", not(containsString("Redis"))));
     }
 }

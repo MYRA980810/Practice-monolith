@@ -1,6 +1,7 @@
 package com.livecomerce.cart.api;
 
 import jakarta.validation.ConstraintViolationException;
+import org.springframework.dao.DataAccessException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -41,6 +42,22 @@ class CartExceptionHandler {
     ProblemDetail handleConstraintViolation(ConstraintViolationException e) {
         var detail = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, e.getMessage());
         detail.setType(URI.create("https://livecomerce.com/errors/cart-invalid-argument"));
+        return detail;
+    }
+
+    /**
+     * The cart store ({@code RedisCartStoreAdapter}) has no retry/circuit
+     * breaker of its own, so a Redis timeout or connection failure would
+     * otherwise surface as an unhandled 500. This net maps it to a 503 so
+     * clients can distinguish "cart storage is temporarily unavailable,
+     * retry" from a genuine server bug, without leaking the underlying
+     * exception message (which may contain infrastructure details).
+     */
+    @ExceptionHandler(DataAccessException.class)
+    ProblemDetail handleDataAccessException(DataAccessException e) {
+        var detail = ProblemDetail.forStatusAndDetail(HttpStatus.SERVICE_UNAVAILABLE,
+                "Cart is temporarily unavailable, please retry.");
+        detail.setType(URI.create("https://livecomerce.com/errors/cart-storage-unavailable"));
         return detail;
     }
 }
