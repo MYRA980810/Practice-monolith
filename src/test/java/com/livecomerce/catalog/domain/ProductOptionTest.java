@@ -18,7 +18,7 @@ class ProductOptionTest {
     @Test
     void of_setsNameAndPositionAndBuildsValues() {
         var product = buildProduct();
-        var option  = ProductOption.of(product, "Color", 0, List.of("Red", "Blue", "Green"));
+        var option  = ProductOption.of(product, "Color", OptionType.COLOR, 0, List.of("Red", "Blue", "Green"));
 
         assertThat(option.getId()).isNotNull();
         assertThat(option.getName()).isEqualTo("Color");
@@ -31,8 +31,15 @@ class ProductOptionTest {
     }
 
     @Test
+    void of_setsType() {
+        var option = ProductOption.of(buildProduct(), "Color", OptionType.COLOR, 0, List.of("Red"));
+
+        assertThat(option.getType()).isEqualTo(OptionType.COLOR);
+    }
+
+    @Test
     void of_assignsPositionToValues() {
-        var option = ProductOption.of(buildProduct(), "Size", 0, List.of("S", "M", "L"));
+        var option = ProductOption.of(buildProduct(), "Size", OptionType.SIZE, 0, List.of("S", "M", "L"));
 
         assertThat(option.getValues().get(0).getPosition()).isEqualTo(0);
         assertThat(option.getValues().get(1).getPosition()).isEqualTo(1);
@@ -41,7 +48,7 @@ class ProductOptionTest {
 
     @Test
     void findValue_returnsCorrectValue() {
-        var option = ProductOption.of(buildProduct(), "Color", 0, List.of("Red", "Blue"));
+        var option = ProductOption.of(buildProduct(), "Color", OptionType.COLOR, 0, List.of("Red", "Blue"));
 
         var found = option.findValue("Red");
         assertThat(found.getValue()).isEqualTo("Red");
@@ -49,7 +56,7 @@ class ProductOptionTest {
 
     @Test
     void findValue_whenNotFound_throwsIllegalArgument() {
-        var option = ProductOption.of(buildProduct(), "Color", 0, List.of("Red"));
+        var option = ProductOption.of(buildProduct(), "Color", OptionType.COLOR, 0, List.of("Red"));
 
         assertThatThrownBy(() -> option.findValue("Green"))
                 .isInstanceOf(IllegalArgumentException.class);
@@ -57,7 +64,7 @@ class ProductOptionTest {
 
     @Test
     void persistable_isNew_trueOnCreate() {
-        var option = ProductOption.of(buildProduct(), "Color", 0, List.of("Red"));
+        var option = ProductOption.of(buildProduct(), "Color", OptionType.COLOR, 0, List.of("Red"));
         assertThat(option.isNew()).isTrue();
     }
 }
