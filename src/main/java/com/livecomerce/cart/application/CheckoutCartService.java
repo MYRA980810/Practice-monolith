@@ -1,5 +1,6 @@
 package com.livecomerce.cart.application;
 
+import com.livecomerce.cart.CartCheckoutCompletedEvent;
 import com.livecomerce.cart.application.port.in.CheckoutCartUseCase;
 import com.livecomerce.cart.application.port.out.CartStorePort;
 import com.livecomerce.cart.domain.Cart;
@@ -13,6 +14,7 @@ import com.livecomerce.order.PlaceCartOrderPort.PlaceCartOrderCommand;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -52,6 +54,7 @@ public class CheckoutCartService implements CheckoutCartUseCase {
     private final CartStorePort cartStorePort;
     private final LoadCartProductInfoPort loadCartProductInfoPort;
     private final PlaceCartOrderPort placeCartOrderPort;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Override
     public CheckoutCartResponse checkout(CheckoutCartCommand command) {
@@ -76,11 +79,22 @@ public class CheckoutCartService implements CheckoutCartUseCase {
      */
     private StoreCheckoutResult checkoutStore(UUID buyerId, UUID storeId, List<SelectedItem> items) {
         try {
-            return doCheckoutStore(buyerId, storeId, items);
+            StoreCheckoutResult result = doCheckoutStore(buyerId, storeId, items);
+            publishCheckoutCompleted(buyerId, result);
+            return result;
         } catch (Exception e) {
             log.error("Unexpected error during checkout for store {}: {}", storeId, e.getMessage(), e);
-            return new StoreCheckoutResult(storeId, false, null, null, null, List.of(), FAILURE_STORE_CHECKOUT_ERROR);
+            StoreCheckoutResult result = new StoreCheckoutResult(
+                    storeId, false, null, null, null, List.of(), FAILURE_STORE_CHECKOUT_ERROR);
+            publishCheckoutCompleted(buyerId, result);
+            return result;
         }
+    }
+
+    private void publishCheckoutCompleted(UUID buyerId, StoreCheckoutResult result) {
+        eventPublisher.publishEvent(new CartCheckoutCompletedEvent(
+                buyerId, result.storeId(), result.succeeded(), result.orderId(),
+                result.total(), result.failureReason()));
     }
 
     private StoreCheckoutResult doCheckoutStore(UUID buyerId, UUID storeId, List<SelectedItem> items) {
