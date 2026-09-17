@@ -222,7 +222,7 @@ class CheckoutCartServiceTest {
     }
 
     @Test
-    void checkout_duplicateSelectedItem_dedupedIntoSingleOrderLineWithSummedQuantity() {
+    void checkout_duplicateSelectedItem_dedupedIntoSingleOrderLineWithCartQuantity() {
         setUp();
         var p1 = UUID.randomUUID();
         var cart = Cart.of(BUYER_ID, STORE_A, List.of(CartItem.of(new CartLineKey(p1, null), 2)));
@@ -242,9 +242,34 @@ class CheckoutCartServiceTest {
         ArgumentCaptor<PlaceCartOrderCommand> captor = ArgumentCaptor.forClass(PlaceCartOrderCommand.class);
         verify(placeCartOrderPort, times(1)).placeOrder(captor.capture());
         assertThat(captor.getValue().lines()).hasSize(1);
-        assertThat(captor.getValue().lines().get(0).quantity()).isEqualTo(4);
+        assertThat(captor.getValue().lines().get(0).quantity()).isEqualTo(2);
 
         verify(cartStorePort, times(1)).removeLine(BUYER_ID, STORE_A, p1, null);
+    }
+
+    @Test
+    void checkout_selectedItemRepeatedManyTimes_stillOrdersOnlyCartQuantity() {
+        setUp();
+        var p1 = UUID.randomUUID();
+        var cart = Cart.of(BUYER_ID, STORE_A, List.of(CartItem.of(new CartLineKey(p1, null), 5)));
+        when(cartStorePort.load(BUYER_ID, STORE_A)).thenReturn(cart);
+        when(loadCartProductInfoPort.loadForCart(any()))
+                .thenReturn(Map.of(new CartLineRef(p1, null), info(p1, STORE_A, 10, false)));
+        var orderId = UUID.randomUUID();
+        when(placeCartOrderPort.placeOrder(any())).thenReturn(new PlacedOrder(orderId, BigDecimal.TEN, "MXN"));
+
+        var repeatedSelection = java.util.stream.IntStream.range(0, 50)
+                .mapToObj(i -> new SelectedItem(STORE_A, p1, null))
+                .toList();
+        var response = sut.checkout(new CheckoutCartCommand(BUYER_ID, repeatedSelection));
+
+        var result = response.results().get(0);
+        assertThat(result.succeeded()).isTrue();
+
+        ArgumentCaptor<PlaceCartOrderCommand> captor = ArgumentCaptor.forClass(PlaceCartOrderCommand.class);
+        verify(placeCartOrderPort, times(1)).placeOrder(captor.capture());
+        assertThat(captor.getValue().lines()).hasSize(1);
+        assertThat(captor.getValue().lines().get(0).quantity()).isEqualTo(5);
     }
 
     @Test
@@ -292,4 +317,5 @@ class CheckoutCartServiceTest {
         assertThat(result.orderId()).isNull();
         verify(placeCartOrderPort, never()).placeOrder(any());
     }
+
 }

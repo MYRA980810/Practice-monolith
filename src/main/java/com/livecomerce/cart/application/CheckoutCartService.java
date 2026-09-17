@@ -90,12 +90,15 @@ public class CheckoutCartService implements CheckoutCartUseCase {
         // this store before the stock check and before building order lines,
         // so a duplicated selection can't produce two independent stock
         // checks / two order lines against the same cart-stored quantity.
-        Map<CartLineKey, Integer> occurrencesByKey = new LinkedHashMap<>();
+        // The cart-stored quantity (cartLine.quantity()) is the sole source
+        // of truth for how many units are being ordered — repeating a
+        // selection must never multiply or sum it.
+        Set<CartLineKey> selectedKeys = new LinkedHashSet<>();
         for (SelectedItem item : items) {
-            occurrencesByKey.merge(new CartLineKey(item.productId(), item.variantId()), 1, Integer::sum);
+            selectedKeys.add(new CartLineKey(item.productId(), item.variantId()));
         }
 
-        Set<CartLineRef> refs = occurrencesByKey.keySet().stream()
+        Set<CartLineRef> refs = selectedKeys.stream()
                 .map(key -> new CartLineRef(key.productId(), key.variantId()))
                 .collect(Collectors.toCollection(LinkedHashSet::new));
         Map<CartLineRef, CartProductInfo> infoByRef = loadCartProductInfoPort.loadForCart(refs);
@@ -104,9 +107,7 @@ public class CheckoutCartService implements CheckoutCartUseCase {
         List<SkippedLine> skipped = new ArrayList<>();
         String currency = null;
 
-        for (var entry : occurrencesByKey.entrySet()) {
-            CartLineKey key = entry.getKey();
-            int occurrences = entry.getValue();
+        for (CartLineKey key : selectedKeys) {
             UUID productId = key.productId();
             UUID variantId = key.variantId();
 
@@ -130,7 +131,7 @@ public class CheckoutCartService implements CheckoutCartUseCase {
                 skipped.add(new SkippedLine(productId, variantId, REASON_UNAVAILABLE));
                 continue;
             }
-            int quantity = cartLine.get().quantity() * occurrences;
+            int quantity = cartLine.get().quantity();
             if (quantity > info.availableStock()) {
                 skipped.add(new SkippedLine(productId, variantId, REASON_OUT_OF_STOCK));
                 continue;
