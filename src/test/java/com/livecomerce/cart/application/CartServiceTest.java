@@ -168,6 +168,22 @@ class CartServiceTest {
                 .findLine(new CartLineKey(PRODUCT_ID, VARIANT_ID)).orElseThrow().quantity()).isEqualTo(95);
     }
 
+    @Test
+    void addToCart_quantityOverflow_rejectedAsQuantityLimitExceeded_notSilentCorruption() {
+        setUp();
+        var ref = new CartLineRef(PRODUCT_ID, VARIANT_ID);
+        when(loadCartProductInfoPort.loadForCart(Set.of(ref))).thenReturn(Map.of(ref, info(200, false, true)));
+        var existingCart = Cart.of(BUYER_ID, STORE_ID,
+                List.of(CartItem.of(new CartLineKey(PRODUCT_ID, VARIANT_ID), 10)));
+        when(cartStorePort.load(BUYER_ID, STORE_ID)).thenReturn(existingCart);
+
+        var result = sut.addToCart(new AddToCartCommand(BUYER_ID, STORE_ID, PRODUCT_ID, VARIANT_ID, Integer.MAX_VALUE));
+
+        assertThat(result.success()).isFalse();
+        assertThat(result.rejectionReason()).isEqualTo("QUANTITY_LIMIT_EXCEEDED");
+        verify(cartStorePort, never()).addOrIncrement(any(), any(), any(), any(), anyInt());
+    }
+
     // --- changeQuantity (4.3) ---
 
     @Test
@@ -252,6 +268,23 @@ class CartServiceTest {
         assertThat(result.failureReason()).isEqualTo("QUANTITY_LIMIT_EXCEEDED");
         verify(cartStorePort, never()).changeQuantity(any(), any(), any(), any(), anyInt(), any());
         assertThat(cartStorePort.load(BUYER_ID, STORE_ID).findLine(key).orElseThrow().quantity()).isEqualTo(99);
+    }
+
+    @Test
+    void changeQuantity_incrementOverflow_rejectedAsQuantityLimitExceeded_notSilentDeletion() {
+        setUp();
+        var key = new CartLineKey(PRODUCT_ID, VARIANT_ID);
+        var cart = Cart.of(BUYER_ID, STORE_ID, List.of(CartItem.of(key, 10)));
+        when(cartStorePort.load(BUYER_ID, STORE_ID)).thenReturn(cart);
+        var ref = new CartLineRef(PRODUCT_ID, VARIANT_ID);
+        when(loadCartProductInfoPort.loadForCart(Set.of(ref))).thenReturn(Map.of(ref, info(200, false, true)));
+
+        var result = sut.changeQuantity(
+                new ChangeQuantityCommand(BUYER_ID, STORE_ID, PRODUCT_ID, VARIANT_ID, Integer.MAX_VALUE));
+
+        assertThat(result.success()).isFalse();
+        assertThat(result.failureReason()).isEqualTo("QUANTITY_LIMIT_EXCEEDED");
+        verify(cartStorePort, never()).changeQuantity(any(), any(), any(), any(), anyInt(), any());
     }
 
     @Test

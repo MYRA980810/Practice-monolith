@@ -61,7 +61,17 @@ public class CartService implements AddToCartUseCase, ChangeQuantityUseCase, Rem
         var cart = cartStorePort.load(command.buyerId(), command.storeId());
         var key = new CartLineKey(command.productId(), command.variantId());
         int currentQuantity = cart.findLine(key).map(CartItem::quantity).orElse(0);
-        int prospectiveQuantity = currentQuantity + command.quantity();
+        int prospectiveQuantity;
+        try {
+            prospectiveQuantity = Math.addExact(currentQuantity, command.quantity());
+        } catch (ArithmeticException overflow) {
+            // Overflow can only mean the requested quantity, combined with
+            // what's already in the cart, is nonsensically large — treat it
+            // the same as any other over-cap request rather than letting a
+            // wrapped-around (possibly negative) value slip past the check
+            // below and get persisted.
+            return AddToCartResult.rejected(REASON_QUANTITY_LIMIT_EXCEEDED);
+        }
         if (prospectiveQuantity > CartItem.MAX_QUANTITY) {
             return AddToCartResult.rejected(REASON_QUANTITY_LIMIT_EXCEEDED);
         }
@@ -91,7 +101,13 @@ public class CartService implements AddToCartUseCase, ChangeQuantityUseCase, Rem
             if (!info.active() || info.paused()) {
                 return ChangeQuantityResult.failure(REASON_UNAVAILABLE);
             }
-            int newQuantity = line.get().quantity() + command.delta();
+            int newQuantity;
+            try {
+                newQuantity = Math.addExact(line.get().quantity(), command.delta());
+            } catch (ArithmeticException overflow) {
+                // Same overflow-as-over-cap treatment as addToCart above.
+                return ChangeQuantityResult.quantityLimitExceeded();
+            }
             if (newQuantity > CartItem.MAX_QUANTITY) {
                 return ChangeQuantityResult.quantityLimitExceeded();
             }
