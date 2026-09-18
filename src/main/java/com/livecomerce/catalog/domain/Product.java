@@ -140,8 +140,8 @@ public class Product implements Persistable<UUID> {
         this.updatedAt = OffsetDateTime.now();
     }
 
-    public ProductOption addOption(String name, List<String> values) {
-        var option = ProductOption.of(this, name, options.size(), values);
+    public ProductOption addOption(String name, OptionType type, List<String> values) {
+        var option = ProductOption.of(this, name, type, options.size(), values);
         options.add(option);
         this.updatedAt = OffsetDateTime.now();
         return option;

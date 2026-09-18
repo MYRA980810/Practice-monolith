@@ -212,7 +212,7 @@ public class GetProductService implements GetProductUseCase {
         var values = option.getValues().stream()
                 .map(v -> new ProductView.OptionInfo.OptionValueInfo(v.getValue(), v.getSwatchHex()))
                 .toList();
-        return new ProductView.OptionInfo(option.getId(), option.getName(), values);
+        return new ProductView.OptionInfo(option.getId(), option.getName(), option.getType(), values);
     }
 
     static VariantView toVariantView(ProductVariant v, BigDecimal basePrice) {

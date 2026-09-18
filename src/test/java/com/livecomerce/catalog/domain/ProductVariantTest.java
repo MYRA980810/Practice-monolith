@@ -31,7 +31,7 @@ class ProductVariantTest {
     @Test
     void create_hasIsDefaultFalse_withOptionValues() {
         var product = buildProduct();
-        var option  = ProductOption.of(product, "Color", 0, List.of("Red"));
+        var option  = ProductOption.of(product, "Color", OptionType.COLOR, 0, List.of("Red"));
         var ov      = option.getValues().getFirst();
 
         var variant = ProductVariant.create(product, "SKU-RED", new BigDecimal("15.00"), Set.of(ov), 1);

@@ -3,7 +3,10 @@ package com.livecomerce.store.api;
 import com.livecomerce.store.LoadStoreRatingPort.StoreRatingSummary;
 import com.livecomerce.store.domain.Store;
 
+import java.util.UUID;
+
 public record StoreCardResponse(
+        UUID id,
         String name,
         String slug,
         String description,
@@ -17,6 +20,7 @@ public record StoreCardResponse(
     public static StoreCardResponse from(Store store, StoreRatingSummary rating, Integer rankingPosition,
                                          Long followerCount, boolean liveNow) {
         return new StoreCardResponse(
+                store.getId(),
                 store.getName(),
                 store.getSlug(),
                 store.getDescription(),

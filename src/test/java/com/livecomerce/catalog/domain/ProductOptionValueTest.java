@@ -14,7 +14,7 @@ class ProductOptionValueTest {
     @Test
     void of_setsFieldsCorrectly() {
         var product = Product.create(UUID.randomUUID(), "Shirt", null, BigDecimal.TEN, "MXN", "SKU-1", null);
-        var option  = ProductOption.of(product, "Color", 0, List.of("Red", "Blue"));
+        var option  = ProductOption.of(product, "Color", OptionType.COLOR, 0, List.of("Red", "Blue"));
         var value   = option.getValues().getFirst();
 
         assertThat(value.getId()).isNotNull();
@@ -26,7 +26,7 @@ class ProductOptionValueTest {
     @Test
     void persistable_isNew_trueOnCreate() {
         var product = Product.create(UUID.randomUUID(), "Shirt", null, BigDecimal.TEN, "MXN", "SKU-1", null);
-        var option  = ProductOption.of(product, "Size", 0, List.of("S"));
+        var option  = ProductOption.of(product, "Size", OptionType.SIZE, 0, List.of("S"));
         var value   = option.getValues().getFirst();
 
         assertThat(value.isNew()).isTrue();
@@ -37,7 +37,7 @@ class ProductOptionValueTest {
     @Test
     void swatchHex_defaultsToNull_whenNeverAssigned() {
         var product = Product.create(UUID.randomUUID(), "Shirt", null, BigDecimal.TEN, "MXN", "SKU-1", null);
-        var option  = ProductOption.of(product, "Size", 0, List.of("S"));
+        var option  = ProductOption.of(product, "Size", OptionType.SIZE, 0, List.of("S"));
         var value   = option.getValues().getFirst();
 
         assertThat(value.getSwatchHex()).isNull();
@@ -46,7 +46,7 @@ class ProductOptionValueTest {
     @Test
     void assignSwatchHex_withValidHex_setsField() {
         var product = Product.create(UUID.randomUUID(), "Shirt", null, BigDecimal.TEN, "MXN", "SKU-1", null);
-        var option  = ProductOption.of(product, "Color", 0, List.of("Red"));
+        var option  = ProductOption.of(product, "Color", OptionType.COLOR, 0, List.of("Red"));
         var value   = option.getValues().getFirst();
 
         value.assignSwatchHex("#FF0000");
@@ -57,7 +57,7 @@ class ProductOptionValueTest {
     @Test
     void assignSwatchHex_withNull_clearsField() {
         var product = Product.create(UUID.randomUUID(), "Shirt", null, BigDecimal.TEN, "MXN", "SKU-1", null);
-        var option  = ProductOption.of(product, "Color", 0, List.of("Red"));
+        var option  = ProductOption.of(product, "Color", OptionType.COLOR, 0, List.of("Red"));
         var value   = option.getValues().getFirst();
 
         value.assignSwatchHex("#FF0000");
@@ -69,7 +69,7 @@ class ProductOptionValueTest {
     @Test
     void assignSwatchHex_withInvalidFormat_throwsIllegalArgumentException() {
         var product = Product.create(UUID.randomUUID(), "Shirt", null, BigDecimal.TEN, "MXN", "SKU-1", null);
-        var option  = ProductOption.of(product, "Color", 0, List.of("Red"));
+        var option  = ProductOption.of(product, "Color", OptionType.COLOR, 0, List.of("Red"));
         var value   = option.getValues().getFirst();
 
         assertThatThrownBy(() -> value.assignSwatchHex("red"))

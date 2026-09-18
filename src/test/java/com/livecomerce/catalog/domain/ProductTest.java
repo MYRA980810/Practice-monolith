@@ -50,17 +50,18 @@ class ProductTest {
     @Test
     void addOption_appendsOptionWithValues() {
         var product = Product.create(STORE_ID, "Remera", null, BigDecimal.TEN, "MXN", null, null);
-        var option  = product.addOption("Color", List.of("Red", "Blue"));
+        var option  = product.addOption("Color", OptionType.COLOR, List.of("Red", "Blue"));
 
         assertThat(product.getOptions()).hasSize(1);
         assertThat(option.getName()).isEqualTo("Color");
+        assertThat(option.getType()).isEqualTo(OptionType.COLOR);
         assertThat(option.getValues()).hasSize(2);
     }
 
     @Test
     void assignOptionValueSwatch_setsHexOnMatchingValue() {
         var product = Product.create(STORE_ID, "Remera", null, BigDecimal.TEN, "MXN", null, null);
-        var option = product.addOption("Color", List.of("Red", "Blue"));
+        var option = product.addOption("Color", OptionType.COLOR, List.of("Red", "Blue"));
         var redValue = option.getValues().get(0);
 
         product.assignOptionValueSwatch(option.getId(), redValue.getId(), "#FF0000");
@@ -72,7 +73,7 @@ class ProductTest {
     @Test
     void assignOptionValueSwatch_withUnknownOptionId_throwsIllegalArgument() {
         var product = Product.create(STORE_ID, "Remera", null, BigDecimal.TEN, "MXN", null, null);
-        var option = product.addOption("Color", List.of("Red"));
+        var option = product.addOption("Color", OptionType.COLOR, List.of("Red"));
         var valueId = option.getValues().get(0).getId();
 
         assertThatThrownBy(() -> product.assignOptionValueSwatch(UUID.randomUUID(), valueId, "#FF0000"))
@@ -82,7 +83,7 @@ class ProductTest {
     @Test
     void assignOptionValueSwatch_withUnknownValueId_throwsIllegalArgument() {
         var product = Product.create(STORE_ID, "Remera", null, BigDecimal.TEN, "MXN", null, null);
-        var option = product.addOption("Color", List.of("Red"));
+        var option = product.addOption("Color", OptionType.COLOR, List.of("Red"));
 
         assertThatThrownBy(() -> product.assignOptionValueSwatch(option.getId(), UUID.randomUUID(), "#FF0000"))
                 .isInstanceOf(IllegalArgumentException.class);
@@ -91,7 +92,7 @@ class ProductTest {
     @Test
     void assignOptionValueSwatch_withInvalidHex_throwsIllegalArgument() {
         var product = Product.create(STORE_ID, "Remera", null, BigDecimal.TEN, "MXN", null, null);
-        var option = product.addOption("Color", List.of("Red"));
+        var option = product.addOption("Color", OptionType.COLOR, List.of("Red"));
         var valueId = option.getValues().get(0).getId();
 
         assertThatThrownBy(() -> product.assignOptionValueSwatch(option.getId(), valueId, "red"))
@@ -101,7 +102,7 @@ class ProductTest {
     @Test
     void addVariant_createsNonDefaultVariant() {
         var product = Product.create(STORE_ID, "Remera", null, BigDecimal.TEN, "MXN", null, null);
-        product.addOption("Color", List.of("Red", "Blue"));
+        product.addOption("Color", OptionType.COLOR, List.of("Red", "Blue"));
 
         var variant = product.addVariant(Map.of("Color", "Red"), "SKU-RED", new BigDecimal("15.00"));
 
@@ -113,7 +114,7 @@ class ProductTest {
     @Test
     void addVariant_withDuplicateCombination_throwsDuplicateVariantException() {
         var product = Product.create(STORE_ID, "Remera", null, BigDecimal.TEN, "MXN", null, null);
-        product.addOption("Color", List.of("Red"));
+        product.addOption("Color", OptionType.COLOR, List.of("Red"));
         product.addVariant(Map.of("Color", "Red"), "SKU-RED", null);
 
         assertThatThrownBy(() -> product.addVariant(Map.of("Color", "Red"), "SKU-RED-2", null))
@@ -123,7 +124,7 @@ class ProductTest {
     @Test
     void addVariant_withMissingOption_throwsIllegalArgument() {
         var product = Product.create(STORE_ID, "Remera", null, BigDecimal.TEN, "MXN", null, null);
-        product.addOption("Color", List.of("Red"));
+        product.addOption("Color", OptionType.COLOR, List.of("Red"));
 
         assertThatThrownBy(() -> product.addVariant(Map.of(), "SKU", null))
                 .isInstanceOf(IllegalArgumentException.class)

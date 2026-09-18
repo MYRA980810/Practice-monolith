@@ -595,6 +595,58 @@ class ProductControllerTest {
         assertThat(commandCaptor.getValue().compareAtPrice()).isNull();
     }
 
+    // --- POST /api/products/{id}/options ---
+
+    @Test
+    void addOption_withValidRequest_returns200AndForwardsCommand() throws Exception {
+        when(getStoreUseCase.getStoreIdByUserId(any())).thenReturn(STORE_ID);
+        when(addProductOptionUseCase.addOption(any())).thenReturn(buildProduct());
+        when(getProductUseCase.getById(any())).thenReturn(buildProductView());
+
+        mvc.perform(post("/api/products/{id}/options", PRODUCT_ID)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"name": "Color", "type": "COLOR", "values": ["Red", "Blue"]}
+                                """))
+                .andExpect(status().isOk());
+
+        var commandCaptor = ArgumentCaptor.forClass(AddProductOptionUseCase.AddProductOptionCommand.class);
+        verify(addProductOptionUseCase).addOption(commandCaptor.capture());
+        assertThat(commandCaptor.getValue().name()).isEqualTo("Color");
+        assertThat(commandCaptor.getValue().type()).isEqualTo(com.livecomerce.catalog.domain.OptionType.COLOR);
+        assertThat(commandCaptor.getValue().values()).containsExactly("Red", "Blue");
+    }
+
+    @Test
+    void addOption_withMissingType_returns400() throws Exception {
+        mvc.perform(post("/api/products/{id}/options", PRODUCT_ID)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"name": "Color", "values": ["Red", "Blue"]}
+                                """))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void addOption_withMissingName_returns400() throws Exception {
+        mvc.perform(post("/api/products/{id}/options", PRODUCT_ID)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"type": "COLOR", "values": ["Red", "Blue"]}
+                                """))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void addOption_withEmptyValues_returns400() throws Exception {
+        mvc.perform(post("/api/products/{id}/options", PRODUCT_ID)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"name": "Color", "type": "COLOR", "values": []}
+                                """))
+                .andExpect(status().isBadRequest());
+    }
+
     // --- PATCH /api/products/{id}/options/{optionId}/values/{valueId}/swatch ---
 
     @Test
