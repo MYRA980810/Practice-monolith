@@ -3,6 +3,7 @@ package com.livecomerce.catalog.application;
 import com.livecomerce.catalog.application.port.in.UpdateOptionValueSwatchUseCase.UpdateOptionValueSwatchCommand;
 import com.livecomerce.catalog.application.port.out.LoadProductPort;
 import com.livecomerce.catalog.application.port.out.SaveProductPort;
+import com.livecomerce.catalog.domain.OptionType;
 import com.livecomerce.catalog.domain.Product;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -34,7 +35,7 @@ class UpdateOptionValueSwatchServiceTest {
 
     private static Product buildProductWithColorOption() {
         var product = Product.create(STORE_ID, "Remera", null, BigDecimal.TEN, "MXN", null, null);
-        product.addOption("Color", List.of("Red", "Blue"));
+        product.addOption("Color", OptionType.COLOR, List.of("Red", "Blue"));
         return product;
     }
 

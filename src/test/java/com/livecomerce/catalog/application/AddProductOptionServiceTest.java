@@ -3,6 +3,7 @@ package com.livecomerce.catalog.application;
 import com.livecomerce.catalog.application.port.in.AddProductOptionUseCase.AddProductOptionCommand;
 import com.livecomerce.catalog.application.port.out.LoadProductPort;
 import com.livecomerce.catalog.application.port.out.SaveProductPort;
+import com.livecomerce.catalog.domain.OptionType;
 import com.livecomerce.catalog.domain.Product;
 import org.springframework.security.access.AccessDeniedException;
 import org.junit.jupiter.api.Test;
@@ -43,10 +44,11 @@ class AddProductOptionServiceTest {
         when(loadProductPort.loadById(PRODUCT_ID)).thenReturn(Optional.of(product));
         when(saveProductPort.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        var result = service.addOption(new AddProductOptionCommand(PRODUCT_ID, STORE_ID, "Color", List.of("Red", "Blue")));
+        var result = service.addOption(new AddProductOptionCommand(PRODUCT_ID, STORE_ID, "Color", OptionType.COLOR, List.of("Red", "Blue")));
 
         assertThat(result.getOptions()).hasSize(1);
         assertThat(result.getOptions().getFirst().getName()).isEqualTo("Color");
+        assertThat(result.getOptions().getFirst().getType()).isEqualTo(OptionType.COLOR);
         verify(saveProductPort).save(product);
     }
 
@@ -54,7 +56,7 @@ class AddProductOptionServiceTest {
     void addOption_whenProductNotFound_throwsProductNotFoundException() {
         when(loadProductPort.loadById(PRODUCT_ID)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> service.addOption(new AddProductOptionCommand(PRODUCT_ID, STORE_ID, "Size", List.of("S"))))
+        assertThatThrownBy(() -> service.addOption(new AddProductOptionCommand(PRODUCT_ID, STORE_ID, "Size", OptionType.SIZE, List.of("S"))))
                 .isInstanceOf(ProductNotFoundException.class);
     }
 
@@ -64,7 +66,7 @@ class AddProductOptionServiceTest {
         when(loadProductPort.loadById(PRODUCT_ID)).thenReturn(Optional.of(product));
 
         assertThatThrownBy(() -> service.addOption(
-                new AddProductOptionCommand(PRODUCT_ID, UUID.randomUUID(), "Size", List.of("S"))))
+                new AddProductOptionCommand(PRODUCT_ID, UUID.randomUUID(), "Size", OptionType.SIZE, List.of("S"))))
                 .isInstanceOf(AccessDeniedException.class);
     }
 }

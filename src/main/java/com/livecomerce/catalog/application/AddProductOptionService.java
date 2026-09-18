@@ -26,7 +26,7 @@ public class AddProductOptionService implements AddProductOptionUseCase {
             throw new AccessDeniedException("Product does not belong to this store");
         }
 
-        product.addOption(command.name(), command.values());
+        product.addOption(command.name(), command.type(), command.values());
 
         return saveProductPort.save(product);
     }
