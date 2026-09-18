@@ -163,7 +163,7 @@ public class ProductController {
 
         var storeId = getStoreUseCase.getStoreIdByUserId(principal.getUserId());
         addProductOptionUseCase.addOption(
-                new AddProductOptionUseCase.AddProductOptionCommand(id, storeId, request.name(), request.values()));
+                new AddProductOptionUseCase.AddProductOptionCommand(id, storeId, request.name(), request.type(), request.values()));
         return getProductUseCase.getById(id);
     }
 

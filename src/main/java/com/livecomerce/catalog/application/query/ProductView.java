@@ -1,5 +1,7 @@
 package com.livecomerce.catalog.application.query;
 
+import com.livecomerce.catalog.domain.OptionType;
+
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -36,7 +38,7 @@ public record ProductView(
 
     public record ImageInfo(UUID id, String url, int position, boolean primary) {}
 
-    public record OptionInfo(UUID id, String name, List<OptionValueInfo> values) {
+    public record OptionInfo(UUID id, String name, OptionType type, List<OptionValueInfo> values) {
         public record OptionValueInfo(String value, String swatchHex) {}
     }
 }

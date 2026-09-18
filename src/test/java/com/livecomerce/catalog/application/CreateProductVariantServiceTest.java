@@ -3,6 +3,7 @@ package com.livecomerce.catalog.application;
 import com.livecomerce.catalog.application.port.in.CreateProductVariantUseCase.CreateProductVariantCommand;
 import com.livecomerce.catalog.application.port.out.LoadProductPort;
 import com.livecomerce.catalog.application.port.out.SaveProductPort;
+import com.livecomerce.catalog.domain.OptionType;
 import com.livecomerce.catalog.domain.Product;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -35,7 +36,7 @@ class CreateProductVariantServiceTest {
 
     private static Product buildProductWithColorOption() {
         var p = Product.create(STORE_ID, "Remera", null, BigDecimal.TEN, "MXN", null, null);
-        p.addOption("Color", List.of("Red", "Blue"));
+        p.addOption("Color", OptionType.COLOR, List.of("Red", "Blue"));
         return p;
     }
 

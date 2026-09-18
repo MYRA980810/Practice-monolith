@@ -1,6 +1,7 @@
 package com.livecomerce.catalog.infrastructure.persistence;
 
 import com.livecomerce.catalog.application.port.in.ProductFilter;
+import com.livecomerce.catalog.domain.OptionType;
 import com.livecomerce.catalog.domain.Product;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.Test;
@@ -12,6 +13,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -193,6 +195,23 @@ class ProductPersistenceAdapterTest {
         var reloaded = entityManager.find(Product.class, product.getId());
 
         assertThat(reloaded.getCompareAtPrice()).isNull();
+    }
+
+    // --- options ---
+
+    @Test
+    void addOption_persistsAndReloadsOptionType() {
+        var storeId = seedStore();
+        var product = Product.create(storeId, "Optioned", "desc",
+                new BigDecimal("50.00"), "MXN", "SKU-OPT-" + storeId, null);
+        product.addOption("Color", OptionType.COLOR, List.of("Red", "Blue"));
+        entityManager.persist(product);
+        entityManager.flush();
+        entityManager.clear();
+
+        var reloaded = entityManager.find(Product.class, product.getId());
+
+        assertThat(reloaded.getOptions().get(0).getType()).isEqualTo(OptionType.COLOR);
     }
 
     private UUID seedStore() {

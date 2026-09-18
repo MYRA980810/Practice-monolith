@@ -29,6 +29,10 @@ public class ProductOption implements Persistable<UUID> {
     @Column(nullable = false, length = 100)
     private String name;
 
+    @Column(name = "option_type", nullable = false, length = 20)
+    @Enumerated(EnumType.STRING)
+    private OptionType type;
+
     @Column(nullable = false)
     private int position;
 
@@ -58,11 +62,12 @@ public class ProductOption implements Persistable<UUID> {
         return id;
     }
 
-    static ProductOption of(Product product, String name, int position, List<String> valueNames) {
+    static ProductOption of(Product product, String name, OptionType type, int position, List<String> valueNames) {
         var option = new ProductOption();
         option.id        = UUID.randomUUID();
         option.product   = product;
         option.name      = name;
+        option.type      = type;
         option.position  = position;
         option.createdAt = OffsetDateTime.now();
         option.isNew     = true;

@@ -10,6 +10,7 @@ import com.livecomerce.catalog.application.port.in.ProductFilter.SortBy;
 import com.livecomerce.catalog.application.port.in.ProductFilter.StockLevel;
 import com.livecomerce.catalog.application.port.out.LoadCategoryPort;
 import com.livecomerce.catalog.application.port.out.LoadProductPort;
+import com.livecomerce.catalog.domain.OptionType;
 import com.livecomerce.catalog.domain.Product;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -472,5 +473,19 @@ class GetProductServiceTest {
         assertThat(result.getContent()).hasSize(1);
         assertThat(result.getContent().get(0).pinnedNow()).isFalse();
         assertThat(result.getContent().get(0).exclusiveToActiveLive()).isFalse();
+    }
+
+    // --- options ---
+
+    @Test
+    void getById_whenProductHasOption_optionTypeRoundTripsIntoView() {
+        var product = buildProduct();
+        product.addOption("Color", OptionType.COLOR, List.of("Red", "Blue"));
+        when(loadProductPort.loadById(product.getId())).thenReturn(Optional.of(product));
+
+        var result = service.getById(product.getId());
+
+        assertThat(result.options()).hasSize(1);
+        assertThat(result.options().get(0).type()).isEqualTo(OptionType.COLOR);
     }
 }
