@@ -93,6 +93,31 @@ class GoogleOAuth2SuccessHandlerTest {
     }
 
     @Test
+    void existingUserWithoutRole_storesOauthPendingPayloadAndRedirectsToSelectRole() throws IOException {
+        var user = User.createFromOAuth("user@test.com", "John", "Doe", "google", "sub-123", null);
+        when(loadUserPort.loadByProvider("google", "google-sub-123")).thenReturn(Optional.of(user));
+
+        ArgumentCaptor<String> codeCaptor = ArgumentCaptor.forClass(String.class);
+        ArgumentCaptor<OAuthCodePayload> payloadCaptor = ArgumentCaptor.forClass(OAuthCodePayload.class);
+        ArgumentCaptor<String> redirectCaptor = ArgumentCaptor.forClass(String.class);
+
+        handler.onAuthenticationSuccess(request, response, authentication);
+
+        verify(codeStorePort).store(codeCaptor.capture(), payloadCaptor.capture(), eq(Duration.ofSeconds(90L)));
+        verify(response).sendRedirect(redirectCaptor.capture());
+        verify(saveUserPort, never()).save(any());
+
+        // Payload must be OAUTH_PENDING, not FULL — user never completed role selection
+        assertThat(payloadCaptor.getValue().tokenType()).isEqualTo(OAuthTokenType.OAUTH_PENDING);
+
+        // Redirect must go to select-role with the stored code
+        String redirect = redirectCaptor.getValue();
+        assertThat(redirect).contains("/auth/select-role");
+        assertThat(redirect).contains("?code=" + codeCaptor.getValue());
+        assertThat(redirect).doesNotContain("token=");
+    }
+
+    @Test
     void newUser_storesOauthPendingPayloadAndRedirectsToSelectRole() throws IOException {
         when(loadUserPort.loadByProvider("google", "google-sub-123")).thenReturn(Optional.empty());
         when(loadUserPort.loadByEmail("user@test.com")).thenReturn(Optional.empty());
