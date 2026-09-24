@@ -5,6 +5,7 @@ import com.livecomerce.catalog.LoadCartProductInfoPort.CartLineRef;
 import com.livecomerce.catalog.LoadLiveProductStatusPort;
 import com.livecomerce.catalog.domain.Product;
 import jakarta.persistence.EntityManager;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
@@ -44,6 +45,15 @@ import static org.assertj.core.api.Assertions.assertThat;
  * session before calling the port under test — matching {@code
  * spring.jpa.open-in-view: false} in production, where no request-scoped
  * session is left open either.
+ *
+ * <p><b>{@code TestTransaction.end()} commits for real</b> — unlike
+ * {@code @DataJpaTest}'s default rollback, this data survives past the test
+ * and would otherwise leak into whatever database {@code
+ * spring.datasource.url} points at (dev, since there is no isolated test
+ * profile/container here — see {@code @AutoConfigureTestDatabase(replace =
+ * NONE)} above). {@link #cleanUp()} deletes everything this test commits,
+ * in FK order (stocks before products — {@code stocks.variant_id} has no
+ * cascade; products→variants/images do cascade at the DB level).
  */
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
@@ -54,6 +64,9 @@ class CartProductInfoAdapterIntegrationTest {
     @Autowired LoadCartProductInfoPort loadCartProductInfoPort;
     @Autowired EntityManager entityManager;
     @Autowired JdbcTemplate jdbc;
+
+    private UUID seededUserId;
+    private UUID seededStoreId;
 
     @TestConfiguration
     static class Stubs {
@@ -89,18 +102,42 @@ class CartProductInfoAdapterIntegrationTest {
         assertThat(info.availableStock()).isEqualTo(10);
     }
 
+    /**
+     * Undoes what {@link TestTransaction#end()} committed for real. Runs in
+     * its own fresh (post-{@code TestTransaction.end()}) transaction — the
+     * one {@code @DataJpaTest} would otherwise roll back never covers this
+     * data, since it was committed and closed mid-test on purpose.
+     */
+    @AfterEach
+    void cleanUp() {
+        if (seededStoreId == null) return;
+
+        jdbc.update("""
+                DELETE FROM stocks WHERE variant_id IN (
+                    SELECT id FROM product_variants WHERE product_id IN (
+                        SELECT id FROM products WHERE store_id = ?
+                    )
+                )
+                """, seededStoreId);
+        // Deleting products cascades to product_variants and product_images
+        // at the DB level (ON DELETE CASCADE) — see migration FKs.
+        jdbc.update("DELETE FROM products WHERE store_id = ?", seededStoreId);
+        jdbc.update("DELETE FROM stores WHERE id = ?", seededStoreId);
+        jdbc.update("DELETE FROM users WHERE id = ?", seededUserId);
+    }
+
     private UUID seedStore() {
-        var userId = UUID.randomUUID();
+        seededUserId = UUID.randomUUID();
         jdbc.update("""
                 INSERT INTO users (id, email, password_hash, role, first_name, last_name)
                 VALUES (?, ?, 'hash', 'SELLER', 'Seller', 'Test')
-                """, userId, "seller-" + userId + "@test.com");
+                """, seededUserId, "seller-" + seededUserId + "@test.com");
 
-        var storeId = UUID.randomUUID();
+        seededStoreId = UUID.randomUUID();
         jdbc.update("""
                 INSERT INTO stores (id, user_id, name, slug)
                 VALUES (?, ?, 'Test Store', ?)
-                """, storeId, userId, "store-" + storeId);
-        return storeId;
+                """, seededStoreId, seededUserId, "store-" + seededStoreId);
+        return seededStoreId;
     }
 }
