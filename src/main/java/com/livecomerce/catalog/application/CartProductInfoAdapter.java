@@ -10,6 +10,7 @@ import com.livecomerce.catalog.domain.ProductVariant;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Collection;
 import java.util.LinkedHashMap;
@@ -39,6 +40,7 @@ class CartProductInfoAdapter implements LoadCartProductInfoPort {
     private final LoadLiveProductStatusPort loadLiveProductStatusPort;
 
     @Override
+    @Transactional(readOnly = true)
     public Map<CartLineRef, CartProductInfo> loadForCart(Collection<CartLineRef> refs) {
         if (refs.isEmpty()) return Map.of();
 
