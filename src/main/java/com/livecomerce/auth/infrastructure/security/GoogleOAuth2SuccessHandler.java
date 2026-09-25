@@ -55,11 +55,22 @@ class GoogleOAuth2SuccessHandler implements AuthenticationSuccessHandler {
         String lastName   = oAuth2User.getAttribute("family_name");
         String avatarUrl  = oAuth2User.getAttribute("picture");
 
-        // 1. Existing user by provider → store FULL code → redirect to callback
+        // 1. Existing user by provider
         var existingByProvider = loadUserPort.loadByProvider("google", providerId);
         if (existingByProvider.isPresent()) {
             var user = existingByProvider.get();
             var code = UUID.randomUUID().toString();
+
+            // 1a. Never completed role selection → store OAUTH_PENDING code → redirect to select-role
+            if (user.getRole() == null) {
+                codeStorePort.store(code, new OAuthCodePayload(user.getId(), OAuthTokenType.OAUTH_PENDING),
+                        Duration.ofSeconds(codeTtlSeconds));
+                log.info("Existing Google user still pending role selection: {}", email);
+                response.sendRedirect(frontendUrl + "/auth/select-role?code=" + code);
+                return;
+            }
+
+            // 1b. Fully onboarded → store FULL code → redirect to callback
             codeStorePort.store(code, new OAuthCodePayload(user.getId(), OAuthTokenType.FULL),
                     Duration.ofSeconds(codeTtlSeconds));
             log.info("Existing Google user logged in: {}", email);
