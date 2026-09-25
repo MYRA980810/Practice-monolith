@@ -3,7 +3,9 @@ package com.livecomerce.store.domain;
 import com.livecomerce.store.application.StoreCannotBeReactivatedException;
 import com.livecomerce.store.application.StoreCannotBeReopenedException;
 import org.junit.jupiter.api.Test;
+import org.springframework.test.util.ReflectionTestUtils;
 
+import java.time.OffsetDateTime;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -116,5 +118,36 @@ class StoreTest {
         store.closeTemporarily();
         assertThatThrownBy(store::reopen)
                 .isInstanceOf(StoreCannotBeReopenedException.class);
+    }
+
+    @Test
+    void create_hasNoCategoryOverride() {
+        assertThat(activeStore().getCategoryId()).isNull();
+    }
+
+    @Test
+    void changeCategory_setsOverrideAndBumpsUpdatedAt() {
+        var store = activeStore();
+        var before = OffsetDateTime.now().minusDays(1);
+        ReflectionTestUtils.setField(store, "updatedAt", before);
+        var categoryId = UUID.randomUUID();
+
+        store.changeCategory(categoryId);
+
+        assertThat(store.getCategoryId()).isEqualTo(categoryId);
+        assertThat(store.getUpdatedAt()).isAfter(before);
+    }
+
+    @Test
+    void changeCategory_withNull_clearsOverrideAndBumpsUpdatedAt() {
+        var store = activeStore();
+        store.changeCategory(UUID.randomUUID());
+        var before = OffsetDateTime.now().minusDays(1);
+        ReflectionTestUtils.setField(store, "updatedAt", before);
+
+        store.changeCategory(null);
+
+        assertThat(store.getCategoryId()).isNull();
+        assertThat(store.getUpdatedAt()).isAfter(before);
     }
 }
