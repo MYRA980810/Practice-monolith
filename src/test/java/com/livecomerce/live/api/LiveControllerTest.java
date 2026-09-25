@@ -5,6 +5,7 @@ import com.livecomerce.live.LoadStoreNamesPort;
 import com.livecomerce.live.application.port.in.*;
 import com.livecomerce.live.application.port.out.LoadLivePort;
 import com.livecomerce.live.application.port.out.ViewerCountPort;
+import com.livecomerce.live.domain.CategoryNotAvailableException;
 import com.livecomerce.live.domain.Live;
 import com.livecomerce.live.domain.LiveContext;
 import com.livecomerce.live.domain.LiveStatus;
@@ -12,6 +13,7 @@ import com.livecomerce.shared.UserPrincipal;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.security.oauth2.client.OAuth2ClientAutoConfiguration;
 import org.springframework.boot.autoconfigure.security.oauth2.client.servlet.OAuth2ClientWebSecurityAutoConfiguration;
@@ -39,6 +41,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
@@ -84,6 +87,7 @@ class LiveControllerTest {
     private static final UUID SELLER_ID = UUID.randomUUID();
     private static final UUID LIVE_ID   = UUID.randomUUID();
     private static final UUID STORE_ID  = UUID.randomUUID();
+    private static final UUID CATEGORY_ID = UUID.randomUUID();
 
     @BeforeEach
     void setUpPrincipal() {
@@ -110,6 +114,10 @@ class LiveControllerTest {
 
     private static Live buildLiveWithStore(UUID storeId) {
         return Live.create(SELLER_ID, storeId, LiveContext.SELLER_PROFILE, "Store Live", null, null, 60);
+    }
+
+    private static Live buildLiveWithCategory(UUID categoryId, java.time.Instant scheduledAt) {
+        return Live.create(SELLER_ID, null, LiveContext.SELLER_PROFILE, "Category Live", null, scheduledAt, 60, categoryId);
     }
 
     private static Live buildScheduledLive(java.time.Instant scheduledAt) {
@@ -512,6 +520,139 @@ class LiveControllerTest {
         mvc.perform(get("/api/lives/upcoming"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content[0].sellerName").value("Jane Doe"));
+    }
+
+    // --- Category ---
+
+    @Test
+    void createLive_withCategoryId_passesItToCommandAndReturnsIt() throws Exception {
+        var captor = ArgumentCaptor.forClass(CreateLiveUseCase.CreateLiveCommand.class);
+        when(createLiveUseCase.createLive(captor.capture())).thenReturn(buildLiveWithCategory(CATEGORY_ID, null));
+
+        mvc.perform(post("/api/lives")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "context": "SELLER_PROFILE",
+                                  "title": "My Test Live",
+                                  "thumbnailUrl": "https://cdn.example.com/thumb.jpg",
+                                  "categoryId": "%s"
+                                }
+                                """.formatted(CATEGORY_ID)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.categoryId").value(CATEGORY_ID.toString()));
+
+        assertThat(captor.getValue().categoryId()).isEqualTo(CATEGORY_ID);
+    }
+
+    @Test
+    void createLive_withoutCategoryId_passesNullToCommand() throws Exception {
+        var captor = ArgumentCaptor.forClass(CreateLiveUseCase.CreateLiveCommand.class);
+        when(createLiveUseCase.createLive(captor.capture())).thenReturn(buildLive());
+
+        mvc.perform(post("/api/lives")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"context": "SELLER_PROFILE", "title": "T", "thumbnailUrl": "https://cdn.example.com/t.jpg"}
+                                """))
+                .andExpect(status().isCreated());
+
+        assertThat(captor.getValue().categoryId()).isNull();
+    }
+
+    @Test
+    void createLive_withUnavailableCategory_returns422ProblemDetail() throws Exception {
+        when(createLiveUseCase.createLive(any())).thenThrow(new CategoryNotAvailableException(CATEGORY_ID));
+
+        mvc.perform(post("/api/lives")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "context": "SELLER_PROFILE",
+                                  "title": "My Test Live",
+                                  "thumbnailUrl": "https://cdn.example.com/thumb.jpg",
+                                  "categoryId": "%s"
+                                }
+                                """.formatted(CATEGORY_ID)))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.type").value("https://livecomerce.com/errors/category-not-available"))
+                .andExpect(jsonPath("$.status").value(422));
+    }
+
+    @Test
+    void listActiveLives_withCategoryId_queriesByStatusAndCategory() throws Exception {
+        var live = buildLiveWithCategory(CATEGORY_ID, null);
+        live.start();
+        when(loadLivePort.loadByStatusAndCategory(
+                eq(LiveStatus.LIVE), eq(CATEGORY_ID),
+                eq(PageRequest.of(0, 20, Sort.by(Sort.Direction.DESC, "startedAt")))))
+                .thenReturn(new PageImpl<>(List.of(live)));
+        when(viewerCountPort.get(any())).thenReturn(0L);
+
+        mvc.perform(get("/api/lives/active").param("categoryId", CATEGORY_ID.toString()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].categoryId").value(CATEGORY_ID.toString()));
+
+        verify(loadLivePort, never()).loadByStatus(any(), any());
+    }
+
+    @Test
+    void listActiveLives_withoutCategoryId_usesUnfilteredQuery() throws Exception {
+        when(loadLivePort.loadByStatus(eq(LiveStatus.LIVE), any())).thenReturn(new PageImpl<>(List.of()));
+
+        mvc.perform(get("/api/lives/active"))
+                .andExpect(status().isOk());
+
+        verify(loadLivePort, never()).loadByStatusAndCategory(any(), any(), any());
+    }
+
+    @Test
+    void listActiveLives_cardIncludesNullCategoryIdWhenUncategorized() throws Exception {
+        var live = buildLive();
+        live.start();
+        when(loadLivePort.loadByStatus(eq(LiveStatus.LIVE), any())).thenReturn(new PageImpl<>(List.of(live)));
+        when(viewerCountPort.get(any())).thenReturn(0L);
+
+        mvc.perform(get("/api/lives/active"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].categoryId").isEmpty());
+    }
+
+    @Test
+    void listActiveLives_withMalformedCategoryId_returns400() throws Exception {
+        mvc.perform(get("/api/lives/active").param("categoryId", "not-a-uuid"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void listUpcomingLives_withCategoryId_queriesUpcomingByCategory() throws Exception {
+        var live = buildLiveWithCategory(CATEGORY_ID, java.time.Instant.now().plusSeconds(3600));
+        when(loadLivePort.loadUpcomingByCategory(
+                eq(CATEGORY_ID),
+                eq(PageRequest.of(0, 20, Sort.by(Sort.Direction.ASC, "scheduledAt")))))
+                .thenReturn(new PageImpl<>(List.of(live)));
+
+        mvc.perform(get("/api/lives/upcoming").param("categoryId", CATEGORY_ID.toString()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].categoryId").value(CATEGORY_ID.toString()));
+
+        verify(loadLivePort, never()).loadUpcoming(any());
+    }
+
+    @Test
+    void listUpcomingLives_withoutCategoryId_usesUnfilteredQuery() throws Exception {
+        when(loadLivePort.loadUpcoming(any())).thenReturn(new PageImpl<>(List.of()));
+
+        mvc.perform(get("/api/lives/upcoming"))
+                .andExpect(status().isOk());
+
+        verify(loadLivePort, never()).loadUpcomingByCategory(any(), any());
+    }
+
+    @Test
+    void listUpcomingLives_withMalformedCategoryId_returns400() throws Exception {
+        mvc.perform(get("/api/lives/upcoming").param("categoryId", "not-a-uuid"))
+                .andExpect(status().isBadRequest());
     }
 
     // --- GET /api/lives?sellerId= ---

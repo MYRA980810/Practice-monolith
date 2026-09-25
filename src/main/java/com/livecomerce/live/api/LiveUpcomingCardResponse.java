@@ -13,7 +13,8 @@ public record LiveUpcomingCardResponse(
         String title,
         @Nullable String sellerName,
         @Nullable String thumbnailUrl,
-        Instant scheduledAt
+        Instant scheduledAt,
+        @Nullable UUID categoryId
 ) {
     public static LiveUpcomingCardResponse from(Live live, @Nullable String sellerName) {
         return new LiveUpcomingCardResponse(
@@ -23,7 +24,8 @@ public record LiveUpcomingCardResponse(
                 live.getTitle(),
                 sellerName,
                 live.getThumbnailUrl(),
-                live.getScheduledAt()
+                live.getScheduledAt(),
+                live.getCategoryId()
         );
     }
 }

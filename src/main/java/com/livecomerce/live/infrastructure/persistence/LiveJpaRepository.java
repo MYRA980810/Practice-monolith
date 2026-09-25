@@ -30,5 +30,9 @@ interface LiveJpaRepository extends JpaRepository<Live, UUID> {
 
     Page<Live> findByStatusAndScheduledAtIsNotNull(LiveStatus status, Pageable pageable);
 
+    Page<Live> findByStatusAndCategoryId(LiveStatus status, UUID categoryId, Pageable pageable);
+
+    Page<Live> findByStatusAndCategoryIdAndScheduledAtIsNotNull(LiveStatus status, UUID categoryId, Pageable pageable);
+
     List<Live> findByStatusAndStreamEndedAtLessThanEqual(LiveStatus status, Instant cutoff);
 }

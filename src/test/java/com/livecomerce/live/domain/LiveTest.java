@@ -46,6 +46,21 @@ class LiveTest {
         assertThat(live.getScheduledAt()).isEqualTo(scheduledAt);
     }
 
+    @Test
+    void create_withCategory_storesCategoryId() {
+        var categoryId = UUID.randomUUID();
+        var live = Live.create(SELLER_ID, STORE_ID, LiveContext.STORE, "My Live", null, null, 60, categoryId);
+
+        assertThat(live.getCategoryId()).isEqualTo(categoryId);
+    }
+
+    @Test
+    void create_withoutCategoryArgument_leavesCategoryNull() {
+        var live = Live.create(SELLER_ID, STORE_ID, LiveContext.STORE, "My Live", null, null, 60);
+
+        assertThat(live.getCategoryId()).isNull();
+    }
+
     // ── State Machine ─────────────────────────────────────────────────────────
 
     @Test

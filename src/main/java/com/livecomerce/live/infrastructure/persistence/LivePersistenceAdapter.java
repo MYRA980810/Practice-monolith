@@ -74,6 +74,16 @@ class LivePersistenceAdapter implements SaveLivePort, LoadLivePort {
     }
 
     @Override
+    public Page<Live> loadByStatusAndCategory(LiveStatus status, UUID categoryId, Pageable pageable) {
+        return repository.findByStatusAndCategoryId(status, categoryId, pageable);
+    }
+
+    @Override
+    public Page<Live> loadUpcomingByCategory(UUID categoryId, Pageable pageable) {
+        return repository.findByStatusAndCategoryIdAndScheduledAtIsNotNull(LiveStatus.SCHEDULED, categoryId, pageable);
+    }
+
+    @Override
     public List<Live> loadStaleLive(Instant cutoff) {
         return repository.findByStatusAndStreamEndedAtLessThanEqual(LiveStatus.LIVE, cutoff);
     }

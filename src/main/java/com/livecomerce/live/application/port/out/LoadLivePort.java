@@ -30,6 +30,12 @@ public interface LoadLivePort {
 
     Page<Live> loadUpcoming(Pageable pageable);
 
+    /** Same as {@link #loadByStatus} but restricted to one category; uncategorized lives are excluded. */
+    Page<Live> loadByStatusAndCategory(LiveStatus status, UUID categoryId, Pageable pageable);
+
+    /** Same as {@link #loadUpcoming} but restricted to one category; uncategorized lives are excluded. */
+    Page<Live> loadUpcomingByCategory(UUID categoryId, Pageable pageable);
+
     /** Lives still marked LIVE whose stream-ended signal is older than {@code cutoff}. */
     List<Live> loadStaleLive(Instant cutoff);
 

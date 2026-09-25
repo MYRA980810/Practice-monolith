@@ -22,7 +22,8 @@ public record LiveResponse(
         int peakViewers,
         int displayDurationSeconds,
         OffsetDateTime createdAt,
-        @Nullable String ivsPlaybackUrl
+        @Nullable String ivsPlaybackUrl,
+        @Nullable UUID categoryId
 ) {
     public static LiveResponse from(Live live) {
         return new LiveResponse(
@@ -40,7 +41,8 @@ public record LiveResponse(
                 live.getPeakViewers(),
                 live.getDisplayDurationSeconds(),
                 live.getCreatedAt(),
-                live.getIvsPlaybackUrl()
+                live.getIvsPlaybackUrl(),
+                live.getCategoryId()
         );
     }
 }
