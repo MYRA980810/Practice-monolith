@@ -79,6 +79,10 @@ public class Live implements Persistable<UUID> {
     @Column(name = "display_duration_seconds", nullable = false)
     private int displayDurationSeconds;
 
+    @Nullable
+    @Column(name = "category_id")
+    private UUID categoryId;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private OffsetDateTime createdAt;
 
@@ -105,6 +109,13 @@ public class Live implements Persistable<UUID> {
     public static Live create(UUID sellerId, @Nullable UUID storeId, LiveContext context,
                               String title, String thumbnailUrl, @Nullable Instant scheduledAt,
                               int displayDurationSeconds) {
+        return create(sellerId, storeId, context, title, thumbnailUrl, scheduledAt,
+                displayDurationSeconds, null);
+    }
+
+    public static Live create(UUID sellerId, @Nullable UUID storeId, LiveContext context,
+                              String title, String thumbnailUrl, @Nullable Instant scheduledAt,
+                              int displayDurationSeconds, @Nullable UUID categoryId) {
         var live = new Live();
         live.id                      = UUID.randomUUID();
         live.isNew                   = true;
@@ -117,7 +128,8 @@ public class Live implements Persistable<UUID> {
         live.thumbnailUrl            = thumbnailUrl;
         live.scheduledAt             = scheduledAt;
         live.displayDurationSeconds  = displayDurationSeconds;
-        live.createdAt               = OffsetDateTime.now();
+        live.categoryId              = categoryId;
+        live.createdAt              = OffsetDateTime.now();
         live.updatedAt               = OffsetDateTime.now();
         return live;
     }
