@@ -14,7 +14,8 @@ public record LiveFeedCardResponse(
         @Nullable String sellerName,
         @Nullable String thumbnailUrl,
         long currentViewers,
-        Instant startedAt
+        Instant startedAt,
+        @Nullable UUID categoryId
 ) {
     public static LiveFeedCardResponse from(Live live, long currentViewers, @Nullable String sellerName) {
         return new LiveFeedCardResponse(
@@ -25,7 +26,8 @@ public record LiveFeedCardResponse(
                 sellerName,
                 live.getThumbnailUrl(),
                 currentViewers,
-                live.getStartedAt()
+                live.getStartedAt(),
+                live.getCategoryId()
         );
     }
 }

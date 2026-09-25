@@ -22,12 +22,13 @@ class LivePortsTest {
         var sellerId = UUID.randomUUID();
         var storeId  = UUID.randomUUID();
         var cmd = new CreateLiveUseCase.CreateLiveCommand(
-                sellerId, storeId, LiveContext.STORE, "Test Live", null, Instant.now(), 60);
+                sellerId, storeId, LiveContext.STORE, "Test Live", null, Instant.now(), 60, null);
 
         assertThat(cmd.sellerId()).isEqualTo(sellerId);
         assertThat(cmd.storeId()).isEqualTo(storeId);
         assertThat(cmd.context()).isEqualTo(LiveContext.STORE);
         assertThat(cmd.title()).isEqualTo("Test Live");
+        assertThat(cmd.categoryId()).isNull();
     }
 
     @Test

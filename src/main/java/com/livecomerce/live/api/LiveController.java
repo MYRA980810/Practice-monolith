@@ -60,7 +60,8 @@ class LiveController {
                 request.title(),
                 request.thumbnailUrl(),
                 request.scheduledAt(),
-                Objects.requireNonNullElse(request.displayDurationSeconds(), 60)
+                Objects.requireNonNullElse(request.displayDurationSeconds(), 60),
+                request.categoryId()
         ));
         return ResponseEntity.status(HttpStatus.CREATED).body(LiveResponse.from(live));
     }
@@ -118,9 +119,12 @@ class LiveController {
 
     @GetMapping("/api/lives/active")
     ResponseEntity<Page<LiveFeedCardResponse>> listActiveLives(
+            @RequestParam(required = false) UUID categoryId,
             @PageableDefault(size = 20, sort = "startedAt", direction = Sort.Direction.DESC) Pageable pageable) {
 
-        var page = loadLivePort.loadByStatus(LiveStatus.LIVE, pageable);
+        var page = categoryId != null
+                ? loadLivePort.loadByStatusAndCategory(LiveStatus.LIVE, categoryId, pageable)
+                : loadLivePort.loadByStatus(LiveStatus.LIVE, pageable);
         var sellerNames = resolveSellerNames(page.getContent());
         var enrichedPage = page.map(live -> LiveFeedCardResponse.from(
                 live, viewerCountPort.get(live.getId()), sellerNames.get(live.getId())));
@@ -129,9 +133,12 @@ class LiveController {
 
     @GetMapping("/api/lives/upcoming")
     ResponseEntity<Page<LiveUpcomingCardResponse>> listUpcomingLives(
+            @RequestParam(required = false) UUID categoryId,
             @PageableDefault(size = 20, sort = "scheduledAt", direction = Sort.Direction.ASC) Pageable pageable) {
 
-        var page = loadLivePort.loadUpcoming(pageable);
+        var page = categoryId != null
+                ? loadLivePort.loadUpcomingByCategory(categoryId, pageable)
+                : loadLivePort.loadUpcoming(pageable);
         var sellerNames = resolveSellerNames(page.getContent());
         var enrichedPage = page.map(live -> LiveUpcomingCardResponse.from(live, sellerNames.get(live.getId())));
         return ResponseEntity.ok(enrichedPage);
