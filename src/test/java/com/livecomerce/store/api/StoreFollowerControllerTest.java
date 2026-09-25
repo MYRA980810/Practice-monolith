@@ -2,6 +2,7 @@ package com.livecomerce.store.api;
 
 import com.livecomerce.shared.UserPrincipal;
 import com.livecomerce.store.LoadStoreRatingPort;
+import com.livecomerce.store.StoreCategoryPort;
 import com.livecomerce.store.application.StoreNotFoundException;
 import com.livecomerce.store.application.port.in.*;
 import com.livecomerce.store.application.port.out.LoadStoreLiveStatusPort;
@@ -66,6 +67,8 @@ class StoreFollowerControllerTest {
     @MockitoBean LoadStoreRatingPort loadStoreRatingPort;
     @MockitoBean LoadStoreRankPort loadStoreRankPort;
     @MockitoBean LoadStoreLiveStatusPort loadStoreLiveStatusPort;
+    @MockitoBean StoreCategoryPort storeCategoryPort;
+    @MockitoBean SetStoreCategoryUseCase setStoreCategoryUseCase;
 
     private static final UUID USER_ID = UUID.randomUUID();
     private static final UUID STORE_ID = UUID.randomUUID();

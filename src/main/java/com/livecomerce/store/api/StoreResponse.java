@@ -16,9 +16,10 @@ public record StoreResponse(
         boolean active,
         boolean suspended,
         boolean temporarilyClosed,
-        OffsetDateTime createdAt
+        OffsetDateTime createdAt,
+        StoreCategoryResponse category
 ) {
-    public static StoreResponse from(Store store) {
+    public static StoreResponse from(Store store, StoreCategoryResponse category) {
         return new StoreResponse(
                 store.getId(),
                 store.getUserId(),
@@ -30,7 +31,8 @@ public record StoreResponse(
                 store.isActive(),
                 store.isSuspended(),
                 store.isTemporarilyClosed(),
-                store.getCreatedAt()
+                store.getCreatedAt(),
+                category
         );
     }
 }

@@ -1,6 +1,7 @@
 package com.livecomerce.auth.infrastructure.security;
 
 import com.livecomerce.store.LoadStoreRatingPort;
+import com.livecomerce.store.StoreCategoryPort;
 import com.livecomerce.store.api.StoreController;
 import com.livecomerce.store.application.port.in.ChangePlanUseCase;
 import com.livecomerce.store.application.port.in.CloseStoreTemporarilyUseCase;
@@ -12,6 +13,7 @@ import com.livecomerce.store.application.port.in.GetStoreUseCase;
 import com.livecomerce.store.application.port.in.ListStoresUseCase;
 import com.livecomerce.store.application.port.in.ReactivateStoreUseCase;
 import com.livecomerce.store.application.port.in.ReopenStoreUseCase;
+import com.livecomerce.store.application.port.in.SetStoreCategoryUseCase;
 import com.livecomerce.store.application.port.in.UnfollowStoreUseCase;
 import com.livecomerce.store.application.port.in.UpdateStoreUseCase;
 import com.livecomerce.store.application.port.out.LoadStoreLiveStatusPort;
@@ -90,6 +92,8 @@ class StoreFollowerPermitAllTest {
     @MockitoBean LoadStoreRatingPort loadStoreRatingPort;
     @MockitoBean LoadStoreRankPort loadStoreRankPort;
     @MockitoBean LoadStoreLiveStatusPort loadStoreLiveStatusPort;
+    @MockitoBean StoreCategoryPort storeCategoryPort;
+    @MockitoBean SetStoreCategoryUseCase setStoreCategoryUseCase;
 
     private static final UUID STORE_ID = UUID.randomUUID();
 

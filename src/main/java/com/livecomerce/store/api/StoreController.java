@@ -2,6 +2,7 @@ package com.livecomerce.store.api;
 
 import com.livecomerce.shared.UserPrincipal;
 import com.livecomerce.store.LoadStoreRatingPort;
+import com.livecomerce.store.StoreCategoryPort;
 import com.livecomerce.store.application.port.in.ChangePlanUseCase;
 import com.livecomerce.store.application.port.in.CloseStoreTemporarilyUseCase;
 import com.livecomerce.store.application.port.in.CreateStoreUseCase;
@@ -12,6 +13,7 @@ import com.livecomerce.store.application.port.in.GetStoreUseCase;
 import com.livecomerce.store.application.port.in.ListStoresUseCase;
 import com.livecomerce.store.application.port.in.ReactivateStoreUseCase;
 import com.livecomerce.store.application.port.in.ReopenStoreUseCase;
+import com.livecomerce.store.application.port.in.SetStoreCategoryUseCase;
 import com.livecomerce.store.application.port.in.UnfollowStoreUseCase;
 import com.livecomerce.store.application.port.in.UpdateStoreUseCase;
 import com.livecomerce.store.application.port.out.LoadStoreLiveStatusPort;
@@ -35,8 +37,11 @@ import org.springframework.data.web.PageableDefault;
 
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -66,6 +71,8 @@ public class StoreController {
     private final LoadStoreRatingPort loadStoreRatingPort;
     private final LoadStoreRankPort loadStoreRankPort;
     private final LoadStoreLiveStatusPort loadStoreLiveStatusPort;
+    private final StoreCategoryPort storeCategoryPort;
+    private final SetStoreCategoryUseCase setStoreCategoryUseCase;
 
     @GetMapping
     ResponseEntity<Page<StoreCardResponse>> listStores(
@@ -76,9 +83,10 @@ public class StoreController {
         var ranks = loadRanksSafely(storeIds);
         var followerCounts = loadFollowerCountsSafely(storeIds);
         var activeLiveIds = loadLiveNowSafely(storeIds);
+        var categories = loadCategoriesSafely(page.getContent());
         return ResponseEntity.ok(page.map(store -> StoreCardResponse.from(
                 store, ratings.get(store.getId()), ranks.get(store.getId()), followerCounts.get(store.getId()),
-                activeLiveIds.containsKey(store.getId()))));
+                activeLiveIds.containsKey(store.getId()), categories.get(store.getId()))));
     }
 
     @PostMapping
@@ -94,14 +102,14 @@ public class StoreController {
                 request.description(),
                 request.logoUrl()
         ));
-        return ResponseEntity.status(HttpStatus.CREATED).body(StoreResponse.from(store));
+        return ResponseEntity.status(HttpStatus.CREATED).body(toStoreResponse(store));
     }
 
     @GetMapping("/me")
     @PreAuthorize("hasRole('SELLER')")
     ResponseEntity<StoreResponse> getMyStore(@AuthenticationPrincipal UserPrincipal principal) {
         var store = getStoreUseCase.getByUserId(principal.getUserId());
-        return ResponseEntity.ok(StoreResponse.from(store));
+        return ResponseEntity.ok(toStoreResponse(store));
     }
 
     @GetMapping("/{slug}")
@@ -112,7 +120,8 @@ public class StoreController {
         var rank = loadRanksSafely(Set.of(storeId)).get(storeId);
         var followerCount = loadFollowerCountsSafely(Set.of(storeId)).get(storeId);
         var liveNow = loadLiveNowSafely(Set.of(storeId)).containsKey(storeId);
-        return ResponseEntity.ok(StoreCardResponse.from(store, rating, rank, followerCount, liveNow));
+        var category = loadCategoriesSafely(List.of(store)).get(storeId);
+        return ResponseEntity.ok(StoreCardResponse.from(store, rating, rank, followerCount, liveNow, category));
     }
 
     @PutMapping("/me")
@@ -127,7 +136,17 @@ public class StoreController {
                 request.description(),
                 request.logoUrl()
         ));
-        return ResponseEntity.ok(StoreResponse.from(store));
+        return ResponseEntity.ok(toStoreResponse(store));
+    }
+
+    @PutMapping("/me/category")
+    @PreAuthorize("hasRole('SELLER')")
+    ResponseEntity<StoreResponse> setMyCategory(
+            @RequestBody SetStoreCategoryRequest request,
+            @AuthenticationPrincipal UserPrincipal principal) {
+
+        var store = setStoreCategoryUseCase.setCategory(principal.getUserId(), request.categoryId());
+        return ResponseEntity.ok(toStoreResponse(store));
     }
 
     @GetMapping("/plans")
@@ -158,7 +177,7 @@ public class StoreController {
     ResponseEntity<StoreResponse> reactivateMyStore(@AuthenticationPrincipal UserPrincipal principal) {
         reactivateStoreUseCase.reactivate(principal.getUserId());
         var store = getStoreUseCase.getByUserId(principal.getUserId());
-        return ResponseEntity.ok(StoreResponse.from(store));
+        return ResponseEntity.ok(toStoreResponse(store));
     }
 
     @PatchMapping("/me/close")
@@ -185,7 +204,7 @@ public class StoreController {
                 principal.getUserId(),
                 request.plan()
         ));
-        return ResponseEntity.ok(StoreResponse.from(store));
+        return ResponseEntity.ok(toStoreResponse(store));
     }
 
     @PostMapping("/{storeId}/follow")
@@ -261,6 +280,44 @@ public class StoreController {
             return loadStoreLiveStatusPort.loadActiveLiveIds(storeIds);
         } catch (Exception e) {
             log.error("Failed to load live status for {} stores; defaulting liveNow to false for this response", storeIds.size(), e);
+            return Map.of();
+        }
+    }
+
+    // Every /me-style response goes through here so none of them reports category=null
+    // just because it skipped resolution (the frontend would read that as "cleared").
+    private StoreResponse toStoreResponse(Store store) {
+        return StoreResponse.from(store, loadCategoriesSafely(List.of(store)).get(store.getId()));
+    }
+
+    // Effective category per store in at most 2 batched queries: manual overrides that are
+    // still ACTIVE win (MANUAL); every other store (no override, or override since
+    // deactivated) falls back to its dominant product category (INFERRED).
+    private Map<UUID, StoreCategoryResponse> loadCategoriesSafely(Collection<Store> stores) {
+        try {
+            var overrideIds = stores.stream()
+                    .map(Store::getCategoryId)
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toSet());
+            var manualRefs = storeCategoryPort.loadActiveByIds(overrideIds);
+
+            Map<UUID, StoreCategoryResponse> result = new HashMap<>();
+            Set<UUID> toInfer = new HashSet<>();
+            for (Store store : stores) {
+                var manual = store.getCategoryId() != null ? manualRefs.get(store.getCategoryId()) : null;
+                if (manual != null) {
+                    result.put(store.getId(), StoreCategoryResponse.of(manual, StoreCategoryResponse.Source.MANUAL));
+                } else {
+                    toInfer.add(store.getId());
+                }
+            }
+            if (!toInfer.isEmpty()) {
+                storeCategoryPort.inferTopByStore(toInfer).forEach((storeId, ref) ->
+                        result.put(storeId, StoreCategoryResponse.of(ref, StoreCategoryResponse.Source.INFERRED)));
+            }
+            return result;
+        } catch (Exception e) {
+            log.error("Failed to load categories for {} stores; defaulting category to null for this response", stores.size(), e);
             return Map.of();
         }
     }

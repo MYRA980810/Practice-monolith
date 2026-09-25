@@ -2,6 +2,7 @@ package com.livecomerce.store.api;
 
 import com.livecomerce.shared.UserPrincipal;
 import com.livecomerce.store.LoadStoreRatingPort;
+import com.livecomerce.store.StoreCategoryPort;
 import com.livecomerce.store.application.SlugAlreadyTakenException;
 import com.livecomerce.store.application.StoreAlreadyExistsException;
 import com.livecomerce.store.application.StoreNotFoundException;
@@ -14,6 +15,7 @@ import com.livecomerce.store.application.port.in.GetStoreUseCase;
 import com.livecomerce.store.application.port.in.ListStoresUseCase;
 import com.livecomerce.store.application.port.in.ReactivateStoreUseCase;
 import com.livecomerce.store.application.port.in.ReopenStoreUseCase;
+import com.livecomerce.store.application.port.in.SetStoreCategoryUseCase;
 import com.livecomerce.store.application.port.in.UnfollowStoreUseCase;
 import com.livecomerce.store.application.port.in.UpdateStoreUseCase;
 import com.livecomerce.store.application.port.in.FollowStoreUseCase;
@@ -90,6 +92,8 @@ class StoreControllerTest {
     @MockitoBean LoadStoreRatingPort loadStoreRatingPort;
     @MockitoBean LoadStoreRankPort loadStoreRankPort;
     @MockitoBean LoadStoreLiveStatusPort loadStoreLiveStatusPort;
+    @MockitoBean StoreCategoryPort storeCategoryPort;
+    @MockitoBean SetStoreCategoryUseCase setStoreCategoryUseCase;
 
     private static final UUID USER_ID = UUID.randomUUID();
 

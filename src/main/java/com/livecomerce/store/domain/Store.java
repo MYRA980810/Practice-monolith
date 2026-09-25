@@ -3,6 +3,7 @@ package com.livecomerce.store.domain;
 import com.livecomerce.shared.Plan;
 import com.livecomerce.store.application.StoreCannotBeReactivatedException;
 import com.livecomerce.store.application.StoreCannotBeReopenedException;
+import jakarta.annotation.Nullable;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -55,6 +56,11 @@ public class Store implements Persistable<UUID> {
     @Column(name = "suspension_reason", length = 20)
     @Enumerated(EnumType.STRING)
     private SuspensionReason suspensionReason;
+
+    // Seller-chosen category override; null means "infer from active products".
+    @Nullable
+    @Column(name = "category_id")
+    private UUID categoryId;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private OffsetDateTime createdAt;
@@ -138,6 +144,11 @@ public class Store implements Persistable<UUID> {
         this.description = description;
         this.logoUrl     = logoUrl;
         this.updatedAt   = OffsetDateTime.now();
+    }
+
+    public void changeCategory(@Nullable UUID categoryId) {
+        this.categoryId = categoryId;
+        this.updatedAt  = OffsetDateTime.now();
     }
 
     /** @deprecated superseded by {@code SellerAddress} (keyed by userId, not by store). */
