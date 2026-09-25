@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.OffsetDateTime;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -40,6 +41,15 @@ interface ProductJpaRepository extends JpaRepository<Product, UUID>, JpaSpecific
 
     @Query("SELECT DISTINCT p FROM Product p LEFT JOIN FETCH p.options WHERE p.id IN :ids")
     List<Product> findByIdsWithOptions(@Param("ids") List<UUID> ids);
+
+    /**
+     * Rows of {storeId, categoryId, count} over buyer-visible (active AND non-paused),
+     * categorized products of the given stores.
+     */
+    @Query("SELECT p.storeId, p.categoryId, COUNT(p) FROM Product p " +
+           "WHERE p.storeId IN :ids AND p.active = true AND p.paused = false AND p.categoryId IS NOT NULL " +
+           "GROUP BY p.storeId, p.categoryId")
+    List<Object[]> countActiveByStoreAndCategory(@Param("ids") Collection<UUID> storeIds);
 
     @Modifying
     @Query("UPDATE Product p SET p.active = false, p.updatedAt = :now WHERE p.storeId = :storeId AND p.active = true")
