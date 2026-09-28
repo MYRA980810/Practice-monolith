@@ -7,7 +7,6 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 
 interface CategoryJpaRepository extends JpaRepository<Category, UUID> {
@@ -15,7 +14,6 @@ interface CategoryJpaRepository extends JpaRepository<Category, UUID> {
            "ORDER BY c.displayOrder ASC NULLS LAST, c.name ASC")
     List<Category> findAllByStatusOrderedForDisplay(@Param("status") CategoryStatus status);
 
-    Optional<Category> findBySlug(String slug);
 
     @Query("SELECT DISTINCT c FROM Category c WHERE c.id IN " +
            "(SELECT DISTINCT p.categoryId FROM Product p WHERE p.storeId = :storeId AND p.active = true AND p.paused = false)")

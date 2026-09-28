@@ -1,7 +1,5 @@
 package com.livecomerce.catalog.api;
 
-import com.livecomerce.catalog.application.CategorySlugAlreadyTakenException;
-import com.livecomerce.catalog.application.port.in.CreateCategoryUseCase;
 import com.livecomerce.catalog.application.port.in.ListCategoriesUseCase;
 import com.livecomerce.catalog.domain.Category;
 import com.livecomerce.shared.UserPrincipal;
@@ -30,7 +28,6 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 import java.util.List;
 import java.util.UUID;
 
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -56,7 +53,6 @@ class CategoryControllerTest {
     @Autowired MockMvc mvc;
 
     @MockitoBean ListCategoriesUseCase listCategoriesUseCase;
-    @MockitoBean CreateCategoryUseCase createCategoryUseCase;
 
     private static final UUID USER_ID = UUID.randomUUID();
 
@@ -100,41 +96,12 @@ class CategoryControllerTest {
     // --- POST /api/categories ---
 
     @Test
-    void createCategory_asSeller_returns201() throws Exception {
-        var category = Category.create("Electrónica", "electronica", USER_ID);
-        when(createCategoryUseCase.create(any())).thenReturn(category);
-
+    void createCategory_isNoLongerSupported_returns405() throws Exception {
         mvc.perform(post("/api/categories")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"name": "Electrónica", "slug": "electronica"}
                                 """))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.name").value("Electrónica"))
-                .andExpect(jsonPath("$.slug").value("electronica"));
-    }
-
-    @Test
-    void createCategory_duplicateSlug_returns409() throws Exception {
-        when(createCategoryUseCase.create(any())).thenThrow(new CategorySlugAlreadyTakenException("electronica"));
-
-        mvc.perform(post("/api/categories")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {"name": "Electrónica", "slug": "electronica"}
-                                """))
-                .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.type").value("https://livecomerce.com/errors/category-slug-already-taken"));
-    }
-
-    @Test
-    void createCategory_withInvalidSlug_returns400() throws Exception {
-        mvc.perform(post("/api/categories")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {"name": "Electrónica", "slug": "Electrónica con Espacios"}
-                                """))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.errors").isArray());
+                .andExpect(status().isMethodNotAllowed());
     }
 }
