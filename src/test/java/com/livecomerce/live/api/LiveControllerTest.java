@@ -625,6 +625,33 @@ class LiveControllerTest {
     }
 
     @Test
+    void countActiveLivesByCategory_returnsCountsInPortOrder() throws Exception {
+        var otherCategoryId = UUID.randomUUID();
+        when(loadLivePort.countByStatusGroupedByCategory(LiveStatus.LIVE)).thenReturn(List.of(
+                new LoadLivePort.CategoryLiveCount(CATEGORY_ID, 3L),
+                new LoadLivePort.CategoryLiveCount(otherCategoryId, 1L)));
+
+        mvc.perform(get("/api/lives/active/category-counts"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(2))
+                .andExpect(jsonPath("$[0].categoryId").value(CATEGORY_ID.toString()))
+                .andExpect(jsonPath("$[0].count").value(3))
+                .andExpect(jsonPath("$[1].categoryId").value(otherCategoryId.toString()))
+                .andExpect(jsonPath("$[1].count").value(1));
+
+        verify(loadLivePort).countByStatusGroupedByCategory(LiveStatus.LIVE);
+    }
+
+    @Test
+    void countActiveLivesByCategory_withNoActiveLives_returnsEmptyArray() throws Exception {
+        when(loadLivePort.countByStatusGroupedByCategory(LiveStatus.LIVE)).thenReturn(List.of());
+
+        mvc.perform(get("/api/lives/active/category-counts"))
+                .andExpect(status().isOk())
+                .andExpect(content().json("[]"));
+    }
+
+    @Test
     void listUpcomingLives_withCategoryId_queriesUpcomingByCategory() throws Exception {
         var live = buildLiveWithCategory(CATEGORY_ID, java.time.Instant.now().plusSeconds(3600));
         when(loadLivePort.loadUpcomingByCategory(

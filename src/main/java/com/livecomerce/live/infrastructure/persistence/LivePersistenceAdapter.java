@@ -92,4 +92,11 @@ class LivePersistenceAdapter implements SaveLivePort, LoadLivePort {
     public List<Live> loadStaleReconnecting(Instant cutoff) {
         return repository.findByStatusAndStreamEndedAtLessThanEqual(LiveStatus.RECONNECTING, cutoff);
     }
+
+    @Override
+    public List<CategoryLiveCount> countByStatusGroupedByCategory(LiveStatus status) {
+        return repository.countByStatusGroupedByCategory(status).stream()
+                .map(row -> new CategoryLiveCount((UUID) row[0], ((Number) row[1]).longValue()))
+                .toList();
+    }
 }
