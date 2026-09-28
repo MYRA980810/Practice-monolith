@@ -1,7 +1,6 @@
 package com.livecomerce.catalog.infrastructure.persistence;
 
 import com.livecomerce.catalog.domain.Category;
-import com.livecomerce.catalog.domain.CategoryStatus;
 import com.livecomerce.store.StoreCategoryPort;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -70,7 +69,7 @@ class StoreCategoryAdapter implements StoreCategoryPort {
             return Map.of();
         }
         return categoryRepository.findAllById(ids).stream()
-                .filter(category -> category.getStatus() == CategoryStatus.ACTIVE)
+                .filter(Category::isActive)
                 .collect(Collectors.toMap(Category::getId, StoreCategoryAdapter::toRef, (a, b) -> a));
     }
 
@@ -78,7 +77,7 @@ class StoreCategoryAdapter implements StoreCategoryPort {
     @SuppressWarnings("null") // UUID is non-null by contract; JPA findById expects @NonNull
     public boolean isActive(UUID categoryId) {
         return categoryRepository.findById(categoryId)
-                .map(category -> category.getStatus() == CategoryStatus.ACTIVE)
+                .map(Category::isActive)
                 .orElse(false);
     }
 

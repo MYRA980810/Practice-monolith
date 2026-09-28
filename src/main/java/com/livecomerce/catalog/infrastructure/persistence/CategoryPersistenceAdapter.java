@@ -1,7 +1,6 @@
 package com.livecomerce.catalog.infrastructure.persistence;
 
 import com.livecomerce.catalog.application.port.out.LoadCategoryPort;
-import com.livecomerce.catalog.application.port.out.SaveCategoryPort;
 import com.livecomerce.catalog.domain.Category;
 import com.livecomerce.catalog.domain.CategoryStatus;
 import lombok.RequiredArgsConstructor;
@@ -13,7 +12,7 @@ import java.util.UUID;
 
 @Component
 @RequiredArgsConstructor
-class CategoryPersistenceAdapter implements LoadCategoryPort, SaveCategoryPort {
+class CategoryPersistenceAdapter implements LoadCategoryPort {
 
     private final CategoryJpaRepository repository;
 
@@ -25,22 +24,11 @@ class CategoryPersistenceAdapter implements LoadCategoryPort, SaveCategoryPort {
 
     @Override
     public List<Category> loadAllActive() {
-        return repository.findAllByStatus(CategoryStatus.ACTIVE);
-    }
-
-    @Override
-    public Optional<Category> findBySlug(String slug) {
-        return repository.findBySlug(slug);
+        return repository.findAllByStatusOrderedForDisplay(CategoryStatus.ACTIVE);
     }
 
     @Override
     public List<Category> loadCategoriesInUseByStore(UUID storeId) {
         return repository.findCategoriesInUseByStore(storeId);
-    }
-
-    @Override
-    @SuppressWarnings("null")
-    public Category save(Category category) {
-        return repository.save(category);
     }
 }

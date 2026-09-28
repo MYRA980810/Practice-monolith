@@ -9,6 +9,5 @@ import java.util.UUID;
 public interface LoadCategoryPort {
     Optional<Category> loadById(UUID id);
     List<Category> loadAllActive();
-    Optional<Category> findBySlug(String slug);
     List<Category> loadCategoriesInUseByStore(UUID storeId);
 }
