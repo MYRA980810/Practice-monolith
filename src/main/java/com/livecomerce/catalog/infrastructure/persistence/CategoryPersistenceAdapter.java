@@ -25,7 +25,7 @@ class CategoryPersistenceAdapter implements LoadCategoryPort, SaveCategoryPort {
 
     @Override
     public List<Category> loadAllActive() {
-        return repository.findAllByStatus(CategoryStatus.ACTIVE);
+        return repository.findAllByStatusOrderedForDisplay(CategoryStatus.ACTIVE);
     }
 
     @Override

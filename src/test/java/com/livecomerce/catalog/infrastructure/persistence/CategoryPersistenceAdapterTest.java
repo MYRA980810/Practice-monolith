@@ -39,11 +39,11 @@ class CategoryPersistenceAdapterTest {
     void loadAllActive_returnsActiveCategories() {
         var c1 = Category.create("Electrónica", "electronica", null);
         var c2 = Category.create("Moda Femenina", "moda-femenina", null);
-        when(repository.findAllByStatus(CategoryStatus.ACTIVE)).thenReturn(List.of(c1, c2));
+        when(repository.findAllByStatusOrderedForDisplay(CategoryStatus.ACTIVE)).thenReturn(List.of(c1, c2));
 
         var result = adapter.loadAllActive();
 
-        assertThat(result).hasSize(2);
+        assertThat(result).containsExactly(c1, c2);
     }
 
     @Test

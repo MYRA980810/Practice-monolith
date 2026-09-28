@@ -28,6 +28,12 @@ public class Category implements Persistable<UUID> {
     @Column(nullable = false, length = 20)
     private CategoryStatus status;
 
+    @Column(name = "display_order")
+    private Integer displayOrder;
+
+    @Column(nullable = false)
+    private boolean featured;
+
     @Column(name = "created_by")
     private UUID createdBy;
 
@@ -45,6 +51,10 @@ public class Category implements Persistable<UUID> {
     @PostLoad
     void markNotNew() {
         this.isNew = false;
+    }
+
+    public boolean isActive() {
+        return status == CategoryStatus.ACTIVE;
     }
 
     public static Category create(String name, String slug, UUID createdBy) {

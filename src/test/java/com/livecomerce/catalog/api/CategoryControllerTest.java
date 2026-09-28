@@ -22,6 +22,7 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.method.annotation.AuthenticationPrincipalArgumentResolver;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.method.support.HandlerMethodArgumentResolver;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
@@ -77,16 +78,23 @@ class CategoryControllerTest {
     // --- GET /api/categories ---
 
     @Test
-    void listCategories_returnsOk_withCategories() throws Exception {
-        var c1 = Category.create("Electrónica", "electronica", null);
-        var c2 = Category.create("Moda Femenina", "moda-femenina", null);
-        when(listCategoriesUseCase.listActive()).thenReturn(List.of(c1, c2));
+    void listCategories_returnsOk_withCategoriesInPortOrder() throws Exception {
+        var featured = Category.create("Moda Femenina", "moda-femenina", null);
+        ReflectionTestUtils.setField(featured, "displayOrder", 1);
+        ReflectionTestUtils.setField(featured, "featured", true);
+        var unordered = Category.create("Electrónica", "electronica", null);
+        when(listCategoriesUseCase.listActive()).thenReturn(List.of(featured, unordered));
 
         mvc.perform(get("/api/categories"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(2))
-                .andExpect(jsonPath("$[0].name").value("Electrónica"))
-                .andExpect(jsonPath("$[0].slug").value("electronica"));
+                .andExpect(jsonPath("$[0].name").value("Moda Femenina"))
+                .andExpect(jsonPath("$[0].slug").value("moda-femenina"))
+                .andExpect(jsonPath("$[0].displayOrder").value(1))
+                .andExpect(jsonPath("$[0].featured").value(true))
+                .andExpect(jsonPath("$[1].slug").value("electronica"))
+                .andExpect(jsonPath("$[1].displayOrder").isEmpty())
+                .andExpect(jsonPath("$[1].featured").value(false));
     }
 
     // --- POST /api/categories ---

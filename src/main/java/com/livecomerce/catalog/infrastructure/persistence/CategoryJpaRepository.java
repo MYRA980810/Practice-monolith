@@ -11,7 +11,10 @@ import java.util.Optional;
 import java.util.UUID;
 
 interface CategoryJpaRepository extends JpaRepository<Category, UUID> {
-    List<Category> findAllByStatus(CategoryStatus status);
+    @Query("SELECT c FROM Category c WHERE c.status = :status " +
+           "ORDER BY c.displayOrder ASC NULLS LAST, c.name ASC")
+    List<Category> findAllByStatusOrderedForDisplay(@Param("status") CategoryStatus status);
+
     Optional<Category> findBySlug(String slug);
 
     @Query("SELECT DISTINCT c FROM Category c WHERE c.id IN " +
