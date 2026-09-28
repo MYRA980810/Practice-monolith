@@ -5,6 +5,8 @@ import com.livecomerce.live.domain.LiveStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.time.Instant;
 import java.util.Collection;
@@ -35,4 +37,10 @@ interface LiveJpaRepository extends JpaRepository<Live, UUID> {
     Page<Live> findByStatusAndCategoryIdAndScheduledAtIsNotNull(LiveStatus status, UUID categoryId, Pageable pageable);
 
     List<Live> findByStatusAndStreamEndedAtLessThanEqual(LiveStatus status, Instant cutoff);
+
+    /** Rows of {@code [categoryId, count]}; uncategorized lives excluded, busiest category first. */
+    @Query("SELECT l.categoryId, COUNT(l) FROM Live l " +
+           "WHERE l.status = :status AND l.categoryId IS NOT NULL " +
+           "GROUP BY l.categoryId ORDER BY COUNT(l) DESC, l.categoryId ASC")
+    List<Object[]> countByStatusGroupedByCategory(@Param("status") LiveStatus status);
 }

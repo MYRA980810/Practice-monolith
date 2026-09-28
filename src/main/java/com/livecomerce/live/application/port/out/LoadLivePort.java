@@ -41,4 +41,12 @@ public interface LoadLivePort {
 
     /** Lives in RECONNECTING whose reconnection window has expired — second timeout. */
     List<Live> loadStaleReconnecting(Instant cutoff);
+
+    /**
+     * Number of lives in {@code status} per category; uncategorized lives are excluded.
+     * Ordered by count descending, ties broken by category id ascending.
+     */
+    List<CategoryLiveCount> countByStatusGroupedByCategory(LiveStatus status);
+
+    record CategoryLiveCount(UUID categoryId, long count) {}
 }
