@@ -1,5 +1,6 @@
 package com.livecomerce.catalog.api;
 
+import com.livecomerce.catalog.application.CategoryNotAvailableException;
 import com.livecomerce.catalog.application.ProductNotFoundException;
 import com.livecomerce.catalog.application.ProductVariantNotFoundException;
 import com.livecomerce.catalog.application.port.in.AddProductImageUseCase;
@@ -252,6 +253,38 @@ class ProductControllerTest {
                                 """.formatted(STORE_ID)))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.errors").isArray());
+    }
+
+    @Test
+    void create_withUnavailableCategory_returns422() throws Exception {
+        var categoryId = UUID.randomUUID();
+        when(createProductUseCase.create(any())).thenThrow(new CategoryNotAvailableException(categoryId));
+
+        mvc.perform(post("/api/products")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"name": "Remera", "basePrice": 100.00, "categoryId": "%s"}
+                                """.formatted(categoryId)))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.type").value("https://livecomerce.com/errors/category-not-available"))
+                .andExpect(jsonPath("$.status").value(422));
+    }
+
+    // --- PUT /api/products/{id} ---
+
+    @Test
+    void update_withUnavailableCategory_returns422() throws Exception {
+        var categoryId = UUID.randomUUID();
+        when(updateProductUseCase.update(any())).thenThrow(new CategoryNotAvailableException(categoryId));
+
+        mvc.perform(put("/api/products/{id}", PRODUCT_ID)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"name": "Remera", "basePrice": 100.00, "categoryId": "%s"}
+                                """.formatted(categoryId)))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.type").value("https://livecomerce.com/errors/category-not-available"))
+                .andExpect(jsonPath("$.status").value(422));
     }
 
     // --- GET /api/products/{id} ---
