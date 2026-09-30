@@ -137,6 +137,12 @@ class LiveController {
                 .stream().map(LiveCategoryCountResponse::from).toList());
     }
 
+    @GetMapping("/api/lives/upcoming/category-counts")
+    ResponseEntity<List<LiveCategoryCountResponse>> countUpcomingLivesByCategory() {
+        return ResponseEntity.ok(loadLivePort.countUpcomingGroupedByCategory()
+                .stream().map(LiveCategoryCountResponse::from).toList());
+    }
+
     @GetMapping("/api/lives/upcoming")
     ResponseEntity<Page<LiveUpcomingCardResponse>> listUpcomingLives(
             @RequestParam(required = false) UUID categoryId,

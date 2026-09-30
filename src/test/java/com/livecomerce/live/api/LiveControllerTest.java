@@ -652,6 +652,43 @@ class LiveControllerTest {
     }
 
     @Test
+    void countUpcomingLivesByCategory_returnsCountsInPortOrder() throws Exception {
+        var otherCategoryId = UUID.randomUUID();
+        when(loadLivePort.countUpcomingGroupedByCategory()).thenReturn(List.of(
+                new LoadLivePort.CategoryLiveCount(CATEGORY_ID, 4L),
+                new LoadLivePort.CategoryLiveCount(otherCategoryId, 2L)));
+
+        mvc.perform(get("/api/lives/upcoming/category-counts"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(2))
+                .andExpect(jsonPath("$[0].categoryId").value(CATEGORY_ID.toString()))
+                .andExpect(jsonPath("$[0].count").value(4))
+                .andExpect(jsonPath("$[1].categoryId").value(otherCategoryId.toString()))
+                .andExpect(jsonPath("$[1].count").value(2));
+
+        verify(loadLivePort).countUpcomingGroupedByCategory();
+        verify(loadLivePort, never()).countByStatusGroupedByCategory(any());
+    }
+
+    @Test
+    void countUpcomingLivesByCategory_withNoUpcomingLives_returnsEmptyArray() throws Exception {
+        when(loadLivePort.countUpcomingGroupedByCategory()).thenReturn(List.of());
+
+        mvc.perform(get("/api/lives/upcoming/category-counts"))
+                .andExpect(status().isOk())
+                .andExpect(content().json("[]"));
+    }
+
+    @Test
+    void countUpcomingLivesByCategory_requiresNoSellerRole() throws Exception {
+        setPrincipal(UUID.randomUUID(), "ROLE_BUYER");
+        when(loadLivePort.countUpcomingGroupedByCategory()).thenReturn(List.of());
+
+        mvc.perform(get("/api/lives/upcoming/category-counts"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
     void listUpcomingLives_withCategoryId_queriesUpcomingByCategory() throws Exception {
         var live = buildLiveWithCategory(CATEGORY_ID, java.time.Instant.now().plusSeconds(3600));
         when(loadLivePort.loadUpcomingByCategory(

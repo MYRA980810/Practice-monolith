@@ -41,4 +41,26 @@ class LivePersistenceAdapterCategoryCountTest {
 
         assertThat(adapter.countByStatusGroupedByCategory(LiveStatus.LIVE)).isEmpty();
     }
+
+    @Test
+    void countUpcomingGroupedByCategory_mapsRowsPreservingOrder() {
+        var cat1 = UUID.randomUUID();
+        var cat2 = UUID.randomUUID();
+
+        when(repository.countUpcomingGroupedByCategory())
+                .thenReturn(List.of(new Object[]{cat1, 2L}, new Object[]{cat2, 1L}));
+
+        var result = adapter.countUpcomingGroupedByCategory();
+
+        assertThat(result).containsExactly(
+                new CategoryLiveCount(cat1, 2L),
+                new CategoryLiveCount(cat2, 1L));
+    }
+
+    @Test
+    void countUpcomingGroupedByCategory_returnsEmptyWhenNoRows() {
+        when(repository.countUpcomingGroupedByCategory()).thenReturn(List.of());
+
+        assertThat(adapter.countUpcomingGroupedByCategory()).isEmpty();
+    }
 }

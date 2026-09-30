@@ -95,7 +95,17 @@ class LivePersistenceAdapter implements SaveLivePort, LoadLivePort {
 
     @Override
     public List<CategoryLiveCount> countByStatusGroupedByCategory(LiveStatus status) {
-        return repository.countByStatusGroupedByCategory(status).stream()
+        return toCategoryLiveCounts(repository.countByStatusGroupedByCategory(status));
+    }
+
+    @Override
+    public List<CategoryLiveCount> countUpcomingGroupedByCategory() {
+        return toCategoryLiveCounts(repository.countUpcomingGroupedByCategory());
+    }
+
+    /** Maps {@code [categoryId, count]} rows, preserving the query's ordering. */
+    private static List<CategoryLiveCount> toCategoryLiveCounts(List<Object[]> rows) {
+        return rows.stream()
                 .map(row -> new CategoryLiveCount((UUID) row[0], ((Number) row[1]).longValue()))
                 .toList();
     }
