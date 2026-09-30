@@ -24,7 +24,7 @@ public class CreateLiveService implements CreateLiveUseCase {
             throw new IllegalArgumentException(
                     "storeId must not be null when context is STORE");
         }
-        if (command.categoryId() != null && !categoryLookupPort.isActive(command.categoryId())) {
+        if (!categoryLookupPort.isActive(command.categoryId())) {
             throw new CategoryNotAvailableException(command.categoryId());
         }
 

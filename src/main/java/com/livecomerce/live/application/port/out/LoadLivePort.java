@@ -48,5 +48,12 @@ public interface LoadLivePort {
      */
     List<CategoryLiveCount> countByStatusGroupedByCategory(LiveStatus status);
 
+    /**
+     * Number of upcoming lives per category, using the same filter as {@link #loadUpcoming}
+     * (SCHEDULED with a scheduled date); uncategorized lives are excluded.
+     * Ordered by count descending, ties broken by category id ascending.
+     */
+    List<CategoryLiveCount> countUpcomingGroupedByCategory();
+
     record CategoryLiveCount(UUID categoryId, long count) {}
 }

@@ -33,20 +33,21 @@ class CreateLiveServiceTest {
 
     @Test
     void storeContext_withNullStoreId_throwsIllegalArgument() {
-        var cmd = new CreateLiveCommand(SELLER_ID, null, LiveContext.STORE, "My Live", null, null, 60, null);
+        var cmd = new CreateLiveCommand(SELLER_ID, null, LiveContext.STORE, "My Live", null, null, 60, CATEGORY_ID);
 
         assertThatThrownBy(() -> sut.createLive(cmd))
                 .isInstanceOf(IllegalArgumentException.class);
 
-        verifyNoInteractions(saveLivePort);
+        verifyNoInteractions(saveLivePort, categoryLookupPort);
     }
 
     @Test
     void storeContext_withStoreId_savesAndReturnsLive() {
+        when(categoryLookupPort.isActive(CATEGORY_ID)).thenReturn(true);
         var captor = ArgumentCaptor.forClass(Live.class);
         when(saveLivePort.save(captor.capture())).thenAnswer(inv -> inv.getArgument(0));
 
-        var cmd = new CreateLiveCommand(SELLER_ID, STORE_ID, LiveContext.STORE, "My Live", null, null, 60, null);
+        var cmd = new CreateLiveCommand(SELLER_ID, STORE_ID, LiveContext.STORE, "My Live", null, null, 60, CATEGORY_ID);
         var result = sut.createLive(cmd);
 
         assertThat(result.getStatus()).isEqualTo(LiveStatus.SCHEDULED);
@@ -58,9 +59,10 @@ class CreateLiveServiceTest {
 
     @Test
     void sellerProfileContext_withNullStoreId_succeeds() {
+        when(categoryLookupPort.isActive(CATEGORY_ID)).thenReturn(true);
         when(saveLivePort.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        var cmd = new CreateLiveCommand(SELLER_ID, null, LiveContext.SELLER_PROFILE, "Profile Live", null, null, 60, null);
+        var cmd = new CreateLiveCommand(SELLER_ID, null, LiveContext.SELLER_PROFILE, "Profile Live", null, null, 60, CATEGORY_ID);
         var result = sut.createLive(cmd);
 
         assertThat(result.getStoreId()).isNull();
@@ -91,16 +93,5 @@ class CreateLiveServiceTest {
         assertThatThrownBy(() -> sut.createLive(cmd))
                 .isInstanceOf(CategoryNotAvailableException.class);
         verifyNoInteractions(saveLivePort);
-    }
-
-    @Test
-    void withoutCategory_neverQueriesCategoryLookup() {
-        when(saveLivePort.save(any())).thenAnswer(inv -> inv.getArgument(0));
-
-        var cmd = new CreateLiveCommand(SELLER_ID, null, LiveContext.SELLER_PROFILE, "Profile Live", null, null, 60, null);
-        var result = sut.createLive(cmd);
-
-        assertThat(result.getCategoryId()).isNull();
-        verifyNoInteractions(categoryLookupPort);
     }
 }

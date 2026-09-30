@@ -282,4 +282,72 @@ class LiveTest {
 
         assertThat(live.getPeakViewers()).isEqualTo(60);
     }
+
+    // ── Category ─────────────────────────────────────────────────────────────
+
+    @Test
+    void changeCategory_whileScheduled_updatesCategoryAndTimestamp() {
+        var live        = Live.create(SELLER_ID, STORE_ID, LiveContext.STORE, "My Live", null, null, 60, UUID.randomUUID());
+        var categoryId  = UUID.randomUUID();
+        var beforeEdit  = live.getUpdatedAt();
+
+        live.changeCategory(categoryId);
+
+        assertThat(live.getCategoryId()).isEqualTo(categoryId);
+        assertThat(live.getUpdatedAt()).isAfterOrEqualTo(beforeEdit);
+    }
+
+    @Test
+    void changeCategory_whileLive_updatesCategory() {
+        var live       = Live.create(SELLER_ID, STORE_ID, LiveContext.STORE, "My Live", null, null, 60);
+        var categoryId = UUID.randomUUID();
+        live.start();
+
+        live.changeCategory(categoryId);
+
+        assertThat(live.getCategoryId()).isEqualTo(categoryId);
+    }
+
+    @Test
+    void changeCategory_whileReconnecting_updatesCategory() {
+        var live       = Live.create(SELLER_ID, STORE_ID, LiveContext.STORE, "My Live", null, null, 60);
+        var categoryId = UUID.randomUUID();
+        live.start();
+        live.beginReconnecting();
+
+        live.changeCategory(categoryId);
+
+        assertThat(live.getCategoryId()).isEqualTo(categoryId);
+    }
+
+    @Test
+    void changeCategory_whenEnded_throwsInvalidLiveStateException() {
+        var live = Live.create(SELLER_ID, STORE_ID, LiveContext.STORE, "My Live", null, null, 60);
+        live.start();
+        live.end();
+
+        assertThatThrownBy(() -> live.changeCategory(UUID.randomUUID()))
+                .isInstanceOf(InvalidLiveStateException.class);
+        assertThat(live.getCategoryId()).isNull();
+    }
+
+    @Test
+    void changeCategory_whenCancelled_throwsInvalidLiveStateException() {
+        var live = Live.create(SELLER_ID, STORE_ID, LiveContext.STORE, "My Live", null, null, 60);
+        live.cancel();
+
+        assertThatThrownBy(() -> live.changeCategory(UUID.randomUUID()))
+                .isInstanceOf(InvalidLiveStateException.class);
+        assertThat(live.getCategoryId()).isNull();
+    }
+
+    @Test
+    void changeCategory_withNull_throwsNullPointerException() {
+        var categoryId = UUID.randomUUID();
+        var live       = Live.create(SELLER_ID, STORE_ID, LiveContext.STORE, "My Live", null, null, 60, categoryId);
+
+        assertThatThrownBy(() -> live.changeCategory(null))
+                .isInstanceOf(NullPointerException.class);
+        assertThat(live.getCategoryId()).isEqualTo(categoryId);
+    }
 }

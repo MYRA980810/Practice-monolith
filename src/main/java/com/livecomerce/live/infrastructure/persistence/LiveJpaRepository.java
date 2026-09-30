@@ -43,4 +43,14 @@ interface LiveJpaRepository extends JpaRepository<Live, UUID> {
            "WHERE l.status = :status AND l.categoryId IS NOT NULL " +
            "GROUP BY l.categoryId ORDER BY COUNT(l) DESC, l.categoryId ASC")
     List<Object[]> countByStatusGroupedByCategory(@Param("status") LiveStatus status);
+
+    /**
+     * Rows of {@code [categoryId, count]} using the same filter as the upcoming feed
+     * (SCHEDULED with a {@code scheduledAt}); uncategorized lives excluded, busiest category first.
+     */
+    @Query("SELECT l.categoryId, COUNT(l) FROM Live l " +
+           "WHERE l.status = com.livecomerce.live.domain.LiveStatus.SCHEDULED " +
+           "AND l.scheduledAt IS NOT NULL AND l.categoryId IS NOT NULL " +
+           "GROUP BY l.categoryId ORDER BY COUNT(l) DESC, l.categoryId ASC")
+    List<Object[]> countUpcomingGroupedByCategory();
 }

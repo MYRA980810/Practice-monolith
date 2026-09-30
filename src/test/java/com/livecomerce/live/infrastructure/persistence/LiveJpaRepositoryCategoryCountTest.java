@@ -12,6 +12,8 @@ import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.jdbc.core.JdbcTemplate;
 
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.UUID;
 import java.util.function.Consumer;
 
@@ -19,10 +21,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.tuple;
 
 /**
- * Exercises the JPQL of {@link LiveJpaRepository#countByStatusGroupedByCategory}
- * against a real PostgreSQL instance (Flyway-migrated). The query is global (not scoped
- * to a seller or store), so pre-existing LIVE rows are ended inside the test transaction;
- * default {@code @DataJpaTest} rollback restores them and leaves no committed rows.
+ * Exercises the JPQL of {@link LiveJpaRepository#countByStatusGroupedByCategory} and
+ * {@link LiveJpaRepository#countUpcomingGroupedByCategory} against a real PostgreSQL instance
+ * (Flyway-migrated). The queries are global (not scoped to a seller or store), so pre-existing
+ * LIVE rows are ended and SCHEDULED rows cancelled inside the test transaction; default
+ * {@code @DataJpaTest} rollback restores them and leaves no committed rows.
  */
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
@@ -32,11 +35,14 @@ class LiveJpaRepositoryCategoryCountTest {
     @Autowired JdbcTemplate jdbc;
     @Autowired EntityManager entityManager;
 
+    private static final Instant IN_ONE_HOUR = Instant.now().plus(1, ChronoUnit.HOURS);
+
     private UUID sellerId;
 
     @BeforeEach
     void isolateFromExistingLives() {
         jdbc.update("UPDATE lives SET status = 'ENDED' WHERE status = 'LIVE'");
+        jdbc.update("UPDATE lives SET status = 'CANCELLED' WHERE status = 'SCHEDULED'");
         sellerId = seedSeller();
     }
 
@@ -123,8 +129,88 @@ class LiveJpaRepositoryCategoryCountTest {
         }
     }
 
+    // ── Upcoming ─────────────────────────────────────────────────────────────
+
+    @Test
+    void upcoming_countsOnlyScheduledWithScheduledAt() {
+        var categoryId = seedCategory();
+
+        persistScheduled(categoryId, IN_ONE_HOUR, live -> { });
+        persistScheduled(categoryId, null, live -> { });
+        persistScheduled(categoryId, IN_ONE_HOUR, Live::start);
+        persistScheduled(categoryId, IN_ONE_HOUR, live -> { live.start(); live.end(); });
+        persistScheduled(categoryId, IN_ONE_HOUR, Live::cancel);
+        flushAndClear();
+
+        var rows = repository.countUpcomingGroupedByCategory();
+
+        assertThat(rows).extracting(r -> r[0], r -> ((Number) r[1]).longValue())
+                .containsExactly(tuple(categoryId, 1L));
+    }
+
+    @Test
+    void upcoming_excludesLivesWithoutCategory() {
+        persistScheduled(null, IN_ONE_HOUR, live -> { });
+        flushAndClear();
+
+        var rows = repository.countUpcomingGroupedByCategory();
+
+        assertThat(rows).isEmpty();
+    }
+
+    @Test
+    void upcoming_ordersByCountDescendingThenCategoryIdAscending() {
+        var busiest = seedCategory();
+        var tiedA = seedCategory();
+        var tiedB = seedCategory();
+        var lower = tiedA.toString().compareTo(tiedB.toString()) < 0 ? tiedA : tiedB;
+        var higher = lower == tiedA ? tiedB : tiedA;
+
+        persistScheduled(busiest, IN_ONE_HOUR, live -> { });
+        persistScheduled(busiest, IN_ONE_HOUR, live -> { });
+        persistScheduled(higher, IN_ONE_HOUR, live -> { });
+        persistScheduled(lower, IN_ONE_HOUR, live -> { });
+        flushAndClear();
+
+        var rows = repository.countUpcomingGroupedByCategory();
+
+        assertThat(rows).extracting(r -> r[0], r -> ((Number) r[1]).longValue())
+                .containsExactly(
+                        tuple(busiest, 2L),
+                        tuple(lower, 1L),
+                        tuple(higher, 1L));
+    }
+
+    @Test
+    void upcoming_countsMatchCategoryFilteredUpcomingFeedTotals() {
+        var cat1 = seedCategory();
+        var cat2 = seedCategory();
+
+        persistScheduled(cat1, IN_ONE_HOUR, live -> { });
+        persistScheduled(cat1, IN_ONE_HOUR, live -> { });
+        persistScheduled(cat1, null, live -> { });
+        persistScheduled(cat2, IN_ONE_HOUR, live -> { });
+        persistScheduled(cat2, IN_ONE_HOUR, Live::start);
+        flushAndClear();
+
+        var rows = repository.countUpcomingGroupedByCategory();
+
+        assertThat(rows).hasSize(2);
+        for (var row : rows) {
+            var categoryId = (UUID) row[0];
+            var feedTotal = repository.findByStatusAndCategoryIdAndScheduledAtIsNotNull(
+                            LiveStatus.SCHEDULED, categoryId, PageRequest.of(0, 20))
+                    .getTotalElements();
+            assertThat(((Number) row[1]).longValue()).isEqualTo(feedTotal);
+        }
+    }
+
     private void persist(UUID categoryId, Consumer<Live> transition) {
-        var live = Live.create(sellerId, null, LiveContext.SELLER_PROFILE, "Live", null, null, 60, categoryId);
+        persistScheduled(categoryId, null, transition);
+    }
+
+    private void persistScheduled(UUID categoryId, Instant scheduledAt, Consumer<Live> transition) {
+        var live = Live.create(sellerId, null, LiveContext.SELLER_PROFILE, "Live", null, scheduledAt, 60, categoryId);
         transition.accept(live);
         entityManager.persist(live);
     }

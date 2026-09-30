@@ -9,6 +9,7 @@ import org.springframework.data.domain.Persistable;
 
 import java.time.Instant;
 import java.time.OffsetDateTime;
+import java.util.Objects;
 import java.util.UUID;
 
 @Entity
@@ -189,6 +190,20 @@ public class Live implements Persistable<UUID> {
         }
         this.status    = LiveStatus.CANCELLED;
         this.updatedAt = OffsetDateTime.now();
+    }
+
+    /**
+     * Re-categorizes the live so it shows under the right feed chip. Allowed while the live
+     * can still appear in a feed (SCHEDULED, LIVE, RECONNECTING); finished lives are frozen.
+     */
+    public void changeCategory(UUID categoryId) {
+        Objects.requireNonNull(categoryId, "categoryId must not be null");
+        if (this.status == LiveStatus.ENDED || this.status == LiveStatus.CANCELLED) {
+            throw new InvalidLiveStateException(
+                    "Cannot change category of live in status: " + this.status);
+        }
+        this.categoryId = categoryId;
+        this.updatedAt  = OffsetDateTime.now();
     }
 
     /**

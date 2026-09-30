@@ -3,6 +3,7 @@ package com.livecomerce.live.api;
 import com.livecomerce.live.LoadSellerNamesPort;
 import com.livecomerce.live.LoadStoreNamesPort;
 import com.livecomerce.live.application.port.in.CancelLiveUseCase;
+import com.livecomerce.live.application.port.in.ChangeLiveCategoryUseCase;
 import com.livecomerce.live.application.port.in.CreateLiveUseCase;
 import com.livecomerce.live.application.port.in.EndLiveUseCase;
 import com.livecomerce.live.application.port.in.RecordViewerHeartbeatUseCase;
@@ -41,6 +42,7 @@ class LiveController {
     private final StartLiveUseCase startLiveUseCase;
     private final EndLiveUseCase endLiveUseCase;
     private final CancelLiveUseCase cancelLiveUseCase;
+    private final ChangeLiveCategoryUseCase changeLiveCategoryUseCase;
     private final RecordViewerHeartbeatUseCase recordViewerHeartbeatUseCase;
     private final LoadLivePort loadLivePort;
     private final ViewerCountPort viewerCountPort;
@@ -99,6 +101,19 @@ class LiveController {
         return ResponseEntity.ok(LiveResponse.from(live));
     }
 
+    @PatchMapping("/api/lives/{id}/category")
+    @PreAuthorize("hasRole('SELLER')")
+    ResponseEntity<LiveResponse> changeCategory(
+            @PathVariable UUID id,
+            @Valid @RequestBody ChangeLiveCategoryRequest request,
+            @AuthenticationPrincipal UserPrincipal principal) {
+
+        var live = changeLiveCategoryUseCase.changeCategory(new ChangeLiveCategoryUseCase.ChangeLiveCategoryCommand(
+                id, principal.getUserId(), request.categoryId()
+        ));
+        return ResponseEntity.ok(LiveResponse.from(live));
+    }
+
     @PostMapping("/api/lives/{id}/heartbeat")
     ResponseEntity<HeartbeatResponse> heartbeat(
             @PathVariable UUID id,
@@ -134,6 +149,12 @@ class LiveController {
     @GetMapping("/api/lives/active/category-counts")
     ResponseEntity<List<LiveCategoryCountResponse>> countActiveLivesByCategory() {
         return ResponseEntity.ok(loadLivePort.countByStatusGroupedByCategory(LiveStatus.LIVE)
+                .stream().map(LiveCategoryCountResponse::from).toList());
+    }
+
+    @GetMapping("/api/lives/upcoming/category-counts")
+    ResponseEntity<List<LiveCategoryCountResponse>> countUpcomingLivesByCategory() {
+        return ResponseEntity.ok(loadLivePort.countUpcomingGroupedByCategory()
                 .stream().map(LiveCategoryCountResponse::from).toList());
     }
 
