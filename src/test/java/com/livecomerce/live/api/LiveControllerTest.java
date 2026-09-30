@@ -27,6 +27,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.method.annotation.AuthenticationPrincipalArgumentResolver;
@@ -65,6 +66,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class LiveControllerTest {
 
     @TestConfiguration
+    @EnableMethodSecurity
     static class SecurityResolverConfig implements WebMvcConfigurer {
         @Override
         public void addArgumentResolvers(List<HandlerMethodArgumentResolver> resolvers) {
@@ -78,6 +80,7 @@ class LiveControllerTest {
     @MockitoBean StartLiveUseCase startLiveUseCase;
     @MockitoBean EndLiveUseCase endLiveUseCase;
     @MockitoBean CancelLiveUseCase cancelLiveUseCase;
+    @MockitoBean ChangeLiveCategoryUseCase changeLiveCategoryUseCase;
     @MockitoBean RecordViewerHeartbeatUseCase recordViewerHeartbeatUseCase;
     @MockitoBean LoadLivePort loadLivePort;
     @MockitoBean ViewerCountPort viewerCountPort;
@@ -136,9 +139,10 @@ class LiveControllerTest {
                                 {
                                   "context": "SELLER_PROFILE",
                                   "title": "My Test Live",
-                                  "thumbnailUrl": "https://cdn.example.com/thumb.jpg"
+                                  "thumbnailUrl": "https://cdn.example.com/thumb.jpg",
+                                  "categoryId": "%s"
                                 }
-                                """))
+                                """.formatted(CATEGORY_ID)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.title").value("Test Live"))
                 .andExpect(jsonPath("$.status").value("SCHEDULED"));
@@ -149,8 +153,8 @@ class LiveControllerTest {
         mvc.perform(post("/api/lives")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"context": "SELLER_PROFILE", "thumbnailUrl": "https://cdn.example.com/thumb.jpg"}
-                                """))
+                                {"context": "SELLER_PROFILE", "thumbnailUrl": "https://cdn.example.com/thumb.jpg", "categoryId": "%s"}
+                                """.formatted(CATEGORY_ID)))
                 .andExpect(status().isBadRequest());
     }
 
@@ -159,8 +163,8 @@ class LiveControllerTest {
         mvc.perform(post("/api/lives")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"context": "SELLER_PROFILE", "title": "My Test Live"}
-                                """))
+                                {"context": "SELLER_PROFILE", "title": "My Test Live", "categoryId": "%s"}
+                                """.formatted(CATEGORY_ID)))
                 .andExpect(status().isBadRequest());
     }
 
@@ -546,18 +550,15 @@ class LiveControllerTest {
     }
 
     @Test
-    void createLive_withoutCategoryId_passesNullToCommand() throws Exception {
-        var captor = ArgumentCaptor.forClass(CreateLiveUseCase.CreateLiveCommand.class);
-        when(createLiveUseCase.createLive(captor.capture())).thenReturn(buildLive());
-
+    void createLive_withoutCategoryId_returns400() throws Exception {
         mvc.perform(post("/api/lives")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"context": "SELLER_PROFILE", "title": "T", "thumbnailUrl": "https://cdn.example.com/t.jpg"}
                                 """))
-                .andExpect(status().isCreated());
+                .andExpect(status().isBadRequest());
 
-        assertThat(captor.getValue().categoryId()).isNull();
+        verify(createLiveUseCase, never()).createLive(any());
     }
 
     @Test
@@ -717,6 +718,65 @@ class LiveControllerTest {
     void listUpcomingLives_withMalformedCategoryId_returns400() throws Exception {
         mvc.perform(get("/api/lives/upcoming").param("categoryId", "not-a-uuid"))
                 .andExpect(status().isBadRequest());
+    }
+
+    // --- PATCH /api/lives/{id}/category ---
+
+    @Test
+    void changeCategory_asOwnerSeller_returns200WithUpdatedLive() throws Exception {
+        var captor = ArgumentCaptor.forClass(ChangeLiveCategoryUseCase.ChangeLiveCategoryCommand.class);
+        when(changeLiveCategoryUseCase.changeCategory(captor.capture()))
+                .thenReturn(buildLiveWithCategory(CATEGORY_ID, null));
+
+        mvc.perform(patch("/api/lives/{id}/category", LIVE_ID)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"categoryId": "%s"}
+                                """.formatted(CATEGORY_ID)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.categoryId").value(CATEGORY_ID.toString()));
+
+        var command = captor.getValue();
+        assertThat(command.liveId()).isEqualTo(LIVE_ID);
+        assertThat(command.sellerId()).isEqualTo(SELLER_ID);
+        assertThat(command.categoryId()).isEqualTo(CATEGORY_ID);
+    }
+
+    @Test
+    void changeCategory_withMissingCategoryId_returns400() throws Exception {
+        mvc.perform(patch("/api/lives/{id}/category", LIVE_ID)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isBadRequest());
+
+        verify(changeLiveCategoryUseCase, never()).changeCategory(any());
+    }
+
+    @Test
+    void changeCategory_asNonSeller_returns403() throws Exception {
+        setPrincipal(UUID.randomUUID(), "ROLE_BUYER");
+
+        mvc.perform(patch("/api/lives/{id}/category", LIVE_ID)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"categoryId": "%s"}
+                                """.formatted(CATEGORY_ID)))
+                .andExpect(status().isForbidden());
+
+        verify(changeLiveCategoryUseCase, never()).changeCategory(any());
+    }
+
+    @Test
+    void changeCategory_withUnavailableCategory_returns422() throws Exception {
+        when(changeLiveCategoryUseCase.changeCategory(any()))
+                .thenThrow(new CategoryNotAvailableException(CATEGORY_ID));
+
+        mvc.perform(patch("/api/lives/{id}/category", LIVE_ID)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"categoryId": "%s"}
+                                """.formatted(CATEGORY_ID)))
+                .andExpect(status().isUnprocessableEntity());
     }
 
     // --- GET /api/lives?sellerId= ---

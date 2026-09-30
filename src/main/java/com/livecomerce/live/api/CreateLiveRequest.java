@@ -17,5 +17,5 @@ public record CreateLiveRequest(
         @NotBlank String thumbnailUrl,
         @Nullable Instant scheduledAt,
         @Nullable @Min(15) @Max(120) Integer displayDurationSeconds,
-        @Nullable UUID categoryId
+        @NotNull UUID categoryId
 ) {}
