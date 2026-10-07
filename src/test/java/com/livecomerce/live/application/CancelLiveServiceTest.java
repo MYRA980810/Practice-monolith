@@ -30,6 +30,7 @@ class CancelLiveServiceTest {
     @Mock SaveLivePort              saveLivePort;
     @Mock LoadLiveSubscriptionPort  loadLiveSubscriptionPort;
     @Mock SaveLiveSubscriptionPort  saveLiveSubscriptionPort;
+    @Mock LiveRoomCloser            liveRoomCloser;
     @Mock ApplicationEventPublisher eventPublisher;
     @InjectMocks CancelLiveService sut;
 
@@ -87,6 +88,10 @@ class CancelLiveServiceTest {
         assertThat(event.liveId()).isEqualTo(live.getId());
         assertThat(event.title()).isEqualTo("My Live");
         assertThat(event.subscriberIds()).containsExactlyInAnyOrder(subscriber1, subscriber2);
+        assertThat(event.sellerId()).isEqualTo(SELLER_ID);
+        assertThat(event.storeId()).isEqualTo(STORE_ID);
+        assertThat(event.occurredAt()).isNotNull();
+        assertThat(event.wasLive()).isFalse();
         verify(saveLiveSubscriptionPort).deleteAllByLiveId(live.getId());
     }
 
@@ -103,5 +108,56 @@ class CancelLiveServiceTest {
         verify(eventPublisher).publishEvent(captor.capture());
         assertThat(captor.getValue().subscriberIds()).isEmpty();
         verify(saveLiveSubscriptionPort).deleteAllByLiveId(live.getId());
+    }
+
+    private Live startedLive() {
+        var live = Live.create(SELLER_ID, STORE_ID, LiveContext.STORE, "My Live", null, null, 60);
+        live.start();
+        return live;
+    }
+
+    @Test
+    void cancelLive_fromScheduled_doesNotCloseRoom() {
+        var live = Live.create(SELLER_ID, STORE_ID, LiveContext.STORE, "My Live", null, null, 60);
+        live.setIvsChannel("arn:ivs:channel", "rtmps://ingest", "arn:ivs:key", "sk_stream_key", "https://playback.url");
+        when(loadLivePort.loadById(live.getId())).thenReturn(Optional.of(live));
+        when(saveLivePort.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        sut.cancelLive(new CancelLiveCommand(live.getId(), SELLER_ID));
+
+        verifyNoInteractions(liveRoomCloser);
+    }
+
+    @Test
+    void cancelLive_fromLive_closesRoomAndFlagsEventAsWasLive() {
+        var live = startedLive();
+        when(loadLivePort.loadById(live.getId())).thenReturn(Optional.of(live));
+        when(saveLivePort.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(loadLiveSubscriptionPort.loadSubscriberIdsByLiveId(live.getId())).thenReturn(List.of());
+
+        var result = sut.cancelLive(new CancelLiveCommand(live.getId(), SELLER_ID));
+
+        assertThat(result.getStatus()).isEqualTo(LiveStatus.CANCELLED);
+        verify(liveRoomCloser).closeRoom(live);
+        var captor = ArgumentCaptor.forClass(LiveCancelledEvent.class);
+        verify(eventPublisher).publishEvent(captor.capture());
+        assertThat(captor.getValue().wasLive()).isTrue();
+        assertThat(captor.getValue().storeId()).isEqualTo(STORE_ID);
+    }
+
+    @Test
+    void cancelLive_fromReconnecting_closesRoomAndFlagsEventAsWasLive() {
+        var live = startedLive();
+        live.beginReconnecting();
+        when(loadLivePort.loadById(live.getId())).thenReturn(Optional.of(live));
+        when(saveLivePort.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(loadLiveSubscriptionPort.loadSubscriberIdsByLiveId(live.getId())).thenReturn(List.of());
+
+        sut.cancelLive(new CancelLiveCommand(live.getId(), SELLER_ID));
+
+        verify(liveRoomCloser).closeRoom(live);
+        var captor = ArgumentCaptor.forClass(LiveCancelledEvent.class);
+        verify(eventPublisher).publishEvent(captor.capture());
+        assertThat(captor.getValue().wasLive()).isTrue();
     }
 }

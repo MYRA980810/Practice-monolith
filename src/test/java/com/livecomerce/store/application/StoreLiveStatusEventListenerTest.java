@@ -1,5 +1,6 @@
 package com.livecomerce.store.application;
 
+import com.livecomerce.live.LiveCancelledEvent;
 import com.livecomerce.live.LiveEndedEvent;
 import com.livecomerce.live.LiveStartedEvent;
 import com.livecomerce.store.application.port.out.SaveStoreLiveStatusPort;
@@ -61,6 +62,39 @@ class StoreLiveStatusEventListenerTest {
     @Test
     void onLiveEndedEvent_withoutStoreId_doesNothing() {
         var event = new LiveEndedEvent(UUID.randomUUID(), UUID.randomUUID(), null, Instant.now());
+
+        listener.on(event);
+
+        verify(saveStoreLiveStatusPort, never()).markEnded(any(), any(), any());
+    }
+
+    @Test
+    void onLiveCancelledEvent_whenWasLive_withStoreId_marksLiveEnded() {
+        var storeId = UUID.randomUUID();
+        var liveId = UUID.randomUUID();
+        var occurredAt = Instant.now();
+        var event = new LiveCancelledEvent(liveId, UUID.randomUUID(), storeId, "Título", List.of(), true, occurredAt);
+
+        listener.on(event);
+
+        verify(saveStoreLiveStatusPort).markEnded(storeId, liveId, occurredAt);
+    }
+
+    @Test
+    void onLiveCancelledEvent_whenNotLive_doesNothing() {
+        // A SCHEDULED live never marked the store live, so there is nothing to clear.
+        var event = new LiveCancelledEvent(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(),
+                "Título", List.of(), false, Instant.now());
+
+        listener.on(event);
+
+        verify(saveStoreLiveStatusPort, never()).markEnded(any(), any(), any());
+    }
+
+    @Test
+    void onLiveCancelledEvent_whenWasLive_withoutStoreId_doesNothing() {
+        var event = new LiveCancelledEvent(UUID.randomUUID(), UUID.randomUUID(), null,
+                "Título", List.of(), true, Instant.now());
 
         listener.on(event);
 

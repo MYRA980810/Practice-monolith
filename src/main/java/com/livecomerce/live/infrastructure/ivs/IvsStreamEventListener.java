@@ -1,6 +1,7 @@
 package com.livecomerce.live.infrastructure.ivs;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.livecomerce.live.application.EndLiveService;
 import com.livecomerce.live.application.port.out.LoadLivePort;
 import com.livecomerce.live.application.port.out.SaveLivePort;
 import com.livecomerce.live.domain.LiveStatus;
@@ -21,7 +22,9 @@ import java.time.Instant;
  * "Stream End"/"Session Ended" — a brief reconnect would otherwise look like a false end.
  * Instead it records the disconnect timestamp via {@code live.markStreamEnded(...)}; the
  * stale-live reconciliation job is what actually ends a live whose signal outlives the grace
- * period. A subsequent "Stream Start" clears the signal via {@code live.clearStreamEndedSignal()}.
+ * period. A subsequent "Stream Start" clears the signal via {@code live.clearStreamEndedSignal()},
+ * or, when the live already escalated to RECONNECTING, revives it through
+ * {@code EndLiveService.reviveLive}, which publishes {@code LiveRevivedEvent}.
  * The seller's explicit end action remains unaffected either way.
  */
 @Component
@@ -32,6 +35,7 @@ class IvsStreamEventListener {
 
     private final LoadLivePort loadLivePort;
     private final SaveLivePort saveLivePort;
+    private final EndLiveService endLiveService;
     private final ObjectMapper objectMapper;
 
     @SqsListener("${ivs.stream-events-queue-name}")
@@ -64,11 +68,11 @@ class IvsStreamEventListener {
             switch (eventName) {
                 case "Stream Start" -> {
                     if (live.getStatus() == LiveStatus.RECONNECTING) {
-                        live.revive();
+                        endLiveService.reviveLive(live);
                     } else {
                         live.clearStreamEndedSignal();
+                        saveLivePort.save(live);
                     }
-                    saveLivePort.save(live);
                     log.info("IVS stream started: liveId={}, channelArn={}, streamId={}",
                             live.getId(), channelArn, streamId);
                 }

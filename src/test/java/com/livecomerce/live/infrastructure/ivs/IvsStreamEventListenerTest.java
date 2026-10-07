@@ -1,11 +1,11 @@
 package com.livecomerce.live.infrastructure.ivs;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.livecomerce.live.application.EndLiveService;
 import com.livecomerce.live.application.port.out.LoadLivePort;
 import com.livecomerce.live.application.port.out.SaveLivePort;
 import com.livecomerce.live.domain.Live;
 import com.livecomerce.live.domain.LiveContext;
-import com.livecomerce.live.domain.LiveStatus;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -16,6 +16,7 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -26,6 +27,7 @@ class IvsStreamEventListenerTest {
 
     @Mock LoadLivePort loadLivePort;
     @Mock SaveLivePort saveLivePort;
+    @Mock EndLiveService endLiveService;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -63,7 +65,7 @@ class IvsStreamEventListenerTest {
         live.start();
         when(loadLivePort.loadActiveByIvsChannelArn(CHANNEL_ARN)).thenReturn(Optional.of(live));
 
-        var listener = new IvsStreamEventListener(loadLivePort, saveLivePort, objectMapper);
+        var listener = new IvsStreamEventListener(loadLivePort, saveLivePort, endLiveService, objectMapper);
         var json = streamStateEventJson("Stream Start", CHANNEL_ARN);
 
         assertThatCode(() -> listener.onStreamStateEvent(json)).doesNotThrowAnyException();
@@ -77,7 +79,7 @@ class IvsStreamEventListenerTest {
         live.markStreamEnded(java.time.Instant.now());
         when(loadLivePort.loadActiveByIvsChannelArn(CHANNEL_ARN)).thenReturn(Optional.of(live));
 
-        var listener = new IvsStreamEventListener(loadLivePort, saveLivePort, objectMapper);
+        var listener = new IvsStreamEventListener(loadLivePort, saveLivePort, endLiveService, objectMapper);
         var json = streamStateEventJson("Stream Start", CHANNEL_ARN);
 
         listener.onStreamStateEvent(json);
@@ -87,34 +89,33 @@ class IvsStreamEventListenerTest {
     }
 
     @Test
-    void streamStart_whenReconnecting_revivesLiveToLive() {
+    void streamStart_whenReconnecting_delegatesReviveToApplicationService() {
         var live = buildLive();
         live.start();
         live.beginReconnecting();
         when(loadLivePort.loadActiveByIvsChannelArn(CHANNEL_ARN)).thenReturn(Optional.of(live));
 
-        var listener = new IvsStreamEventListener(loadLivePort, saveLivePort, objectMapper);
+        var listener = new IvsStreamEventListener(loadLivePort, saveLivePort, endLiveService, objectMapper);
         var json = streamStateEventJson("Stream Start", CHANNEL_ARN);
 
         listener.onStreamStateEvent(json);
 
-        assertThat(live.getStatus()).isEqualTo(LiveStatus.LIVE);
-        verify(saveLivePort).save(live);
+        verify(endLiveService).reviveLive(live);
+        verify(saveLivePort, never()).save(any());
     }
 
     @Test
-    void streamStart_whenReconnecting_clearsStreamEndedAt() {
+    void streamStart_whenLive_doesNotRevive() {
         var live = buildLive();
         live.start();
-        live.beginReconnecting();
         when(loadLivePort.loadActiveByIvsChannelArn(CHANNEL_ARN)).thenReturn(Optional.of(live));
 
-        var listener = new IvsStreamEventListener(loadLivePort, saveLivePort, objectMapper);
+        var listener = new IvsStreamEventListener(loadLivePort, saveLivePort, endLiveService, objectMapper);
         var json = streamStateEventJson("Stream Start", CHANNEL_ARN);
 
         listener.onStreamStateEvent(json);
 
-        assertThat(live.getStreamEndedAt()).isNull();
+        verifyNoInteractions(endLiveService);
     }
 
     @Test
@@ -123,7 +124,7 @@ class IvsStreamEventListenerTest {
         live.start();
         when(loadLivePort.loadActiveByIvsChannelArn(CHANNEL_ARN)).thenReturn(Optional.of(live));
 
-        var listener = new IvsStreamEventListener(loadLivePort, saveLivePort, objectMapper);
+        var listener = new IvsStreamEventListener(loadLivePort, saveLivePort, endLiveService, objectMapper);
         var json = streamStateEventJson("Stream End", CHANNEL_ARN);
 
         listener.onStreamStateEvent(json);
@@ -138,7 +139,7 @@ class IvsStreamEventListenerTest {
         live.start();
         when(loadLivePort.loadActiveByIvsChannelArn(CHANNEL_ARN)).thenReturn(Optional.of(live));
 
-        var listener = new IvsStreamEventListener(loadLivePort, saveLivePort, objectMapper);
+        var listener = new IvsStreamEventListener(loadLivePort, saveLivePort, endLiveService, objectMapper);
         var json = streamStateEventJson("Session Ended", CHANNEL_ARN);
 
         listener.onStreamStateEvent(json);
@@ -153,7 +154,7 @@ class IvsStreamEventListenerTest {
         live.start();
         when(loadLivePort.loadActiveByIvsChannelArn(CHANNEL_ARN)).thenReturn(Optional.of(live));
 
-        var listener = new IvsStreamEventListener(loadLivePort, saveLivePort, objectMapper);
+        var listener = new IvsStreamEventListener(loadLivePort, saveLivePort, endLiveService, objectMapper);
         var json = streamStateEventJson("Stream Failure", CHANNEL_ARN);
 
         listener.onStreamStateEvent(json);
@@ -166,7 +167,7 @@ class IvsStreamEventListenerTest {
     void unknownChannelArn_logsWarning_andDoesNotThrow() {
         when(loadLivePort.loadActiveByIvsChannelArn(CHANNEL_ARN)).thenReturn(Optional.empty());
 
-        var listener = new IvsStreamEventListener(loadLivePort, saveLivePort, objectMapper);
+        var listener = new IvsStreamEventListener(loadLivePort, saveLivePort, endLiveService, objectMapper);
         var json = streamStateEventJson("Stream Start", CHANNEL_ARN);
 
         assertThatCode(() -> listener.onStreamStateEvent(json)).doesNotThrowAnyException();
@@ -174,7 +175,7 @@ class IvsStreamEventListenerTest {
 
     @Test
     void malformedJson_isCaught_andDoesNotPropagate() {
-        var listener = new IvsStreamEventListener(loadLivePort, saveLivePort, objectMapper);
+        var listener = new IvsStreamEventListener(loadLivePort, saveLivePort, endLiveService, objectMapper);
 
         assertThatCode(() -> listener.onStreamStateEvent("{ not valid json"))
                 .doesNotThrowAnyException();

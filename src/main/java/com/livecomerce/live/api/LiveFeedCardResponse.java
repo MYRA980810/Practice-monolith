@@ -1,6 +1,6 @@
 package com.livecomerce.live.api;
 
-import com.livecomerce.live.domain.Live;
+import com.livecomerce.live.application.LiveFeedCard;
 import jakarta.annotation.Nullable;
 
 import java.time.Instant;
@@ -17,17 +17,17 @@ public record LiveFeedCardResponse(
         Instant startedAt,
         @Nullable UUID categoryId
 ) {
-    public static LiveFeedCardResponse from(Live live, long currentViewers, @Nullable String sellerName) {
+    public static LiveFeedCardResponse from(LiveFeedCard card) {
         return new LiveFeedCardResponse(
-                live.getId(),
-                live.getSellerId(),
-                live.getStoreId(),
-                live.getTitle(),
-                sellerName,
-                live.getThumbnailUrl(),
-                currentViewers,
-                live.getStartedAt(),
-                live.getCategoryId()
+                card.id(),
+                card.sellerId(),
+                card.storeId(),
+                card.title(),
+                card.sellerName(),
+                card.thumbnailUrl(),
+                card.currentViewers(),
+                card.startedAt(),
+                card.categoryId()
         );
     }
 }

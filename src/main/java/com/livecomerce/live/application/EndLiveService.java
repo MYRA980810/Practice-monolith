@@ -3,11 +3,11 @@ package com.livecomerce.live.application;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.livecomerce.live.LiveEndedEvent;
 import com.livecomerce.live.LiveReconnectingEvent;
+import com.livecomerce.live.LiveRevivedEvent;
 import com.livecomerce.live.application.port.in.EndLiveUseCase;
 import com.livecomerce.live.application.port.out.AgoraRtmMessagePort;
 import com.livecomerce.live.application.port.out.LoadLivePort;
 import com.livecomerce.live.application.port.out.SaveLivePort;
-import com.livecomerce.live.application.port.out.VideoBroadcastPort;
 import com.livecomerce.live.domain.Live;
 import com.livecomerce.live.domain.LiveNotFoundException;
 import com.livecomerce.live.domain.LiveNotOwnedBySellerException;
@@ -33,7 +33,7 @@ public class EndLiveService implements EndLiveUseCase {
     private final LoadLivePort              loadLivePort;
     private final SaveLivePort              saveLivePort;
     private final AgoraRtmMessagePort       agoraRtmMessagePort;
-    private final VideoBroadcastPort        videoBroadcastPort;
+    private final LiveRoomCloser            liveRoomCloser;
     private final ObjectMapper              objectMapper;
     private final ApplicationEventPublisher eventPublisher;
 
@@ -81,6 +81,22 @@ public class EndLiveService implements EndLiveUseCase {
         return saved;
     }
 
+    /**
+     * The seller's IVS stream came back while the live was RECONNECTING:
+     * returns it to LIVE and publishes {@link LiveRevivedEvent} so feed
+     * consumers can show it again.
+     */
+    public Live reviveLive(Live live) {
+        live.revive();
+
+        var saved = saveLivePort.save(live);
+
+        eventPublisher.publishEvent(new LiveRevivedEvent(
+                saved.getId(), saved.getSellerId(), saved.getStoreId(), saved.getUpdatedAt().toInstant()));
+
+        return saved;
+    }
+
     private Live close(Live live) {
         live.end();
 
@@ -88,23 +104,7 @@ public class EndLiveService implements EndLiveUseCase {
 
         eventPublisher.publishEvent(new LiveEndedEvent(saved.getId(), saved.getSellerId(), saved.getStoreId(), saved.getEndedAt()));
 
-        try {
-            String payload = objectMapper.writeValueAsString(Map.of(
-                    "type",   "live-ended",
-                    "liveId", saved.getId()
-            ));
-            agoraRtmMessagePort.sendChannelMessage("live-chat:" + saved.getId(), payload);
-        } catch (Exception e) {
-            log.warn("Agora RTM live-ended failed: {}", e.getMessage());
-        }
-
-        if (live.getIvsChannelArn() != null) {
-            try {
-                videoBroadcastPort.stopStream(live.getIvsChannelArn());
-            } catch (Exception e) {
-                log.warn("IVS stopStream failed: {}", e.getMessage());
-            }
-        }
+        liveRoomCloser.closeRoom(live);
 
         return saved;
     }

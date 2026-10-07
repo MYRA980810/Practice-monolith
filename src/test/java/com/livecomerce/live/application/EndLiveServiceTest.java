@@ -3,15 +3,16 @@ package com.livecomerce.live.application;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.livecomerce.live.LiveEndedEvent;
 import com.livecomerce.live.LiveReconnectingEvent;
+import com.livecomerce.live.LiveRevivedEvent;
 import com.livecomerce.live.application.port.in.EndLiveUseCase.EndLiveCommand;
 import com.livecomerce.live.application.port.out.AgoraRtmMessagePort;
 import com.livecomerce.live.application.port.out.LoadLivePort;
 import com.livecomerce.live.application.port.out.SaveLivePort;
-import com.livecomerce.live.application.port.out.VideoBroadcastPort;
 import com.livecomerce.live.domain.*;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Spy;
@@ -33,7 +34,7 @@ class EndLiveServiceTest {
     @Mock LoadLivePort              loadLivePort;
     @Mock SaveLivePort              saveLivePort;
     @Mock AgoraRtmMessagePort       agoraRtmMessagePort;
-    @Mock VideoBroadcastPort        videoBroadcastPort;
+    @Mock LiveRoomCloser            liveRoomCloser;
     @Mock ApplicationEventPublisher eventPublisher;
     @Spy  ObjectMapper              objectMapper = new ObjectMapper();
     @InjectMocks EndLiveService sut;
@@ -63,33 +64,22 @@ class EndLiveServiceTest {
 
         assertThat(result.getStatus()).isEqualTo(LiveStatus.ENDED);
         assertThat(result.getEndedAt()).isNotNull();
-        verify(agoraRtmMessagePort).sendChannelMessage(
-                eq("live-chat:" + live.getId()),
-                contains("\"type\":\"live-ended\""));
-        verifyNoInteractions(videoBroadcastPort);
+        verify(liveRoomCloser).closeRoom(live);
+        verifyNoInteractions(agoraRtmMessagePort);
     }
 
     @Test
-    void endLive_withIvsChannel_stopsIvsStream() {
+    void endLive_closesRoomAfterSavingAndPublishingEndedEvent() {
         var live = ivsLive();
         when(loadLivePort.loadById(live.getId())).thenReturn(Optional.of(live));
         when(saveLivePort.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         sut.endLive(new EndLiveCommand(live.getId(), SELLER_ID));
 
-        verify(videoBroadcastPort).stopStream("arn:ivs:channel");
-    }
-
-    @Test
-    void endLive_withIvsChannel_stopStreamFailure_isSwallowed() {
-        var live = ivsLive();
-        when(loadLivePort.loadById(live.getId())).thenReturn(Optional.of(live));
-        when(saveLivePort.save(any())).thenAnswer(inv -> inv.getArgument(0));
-        doThrow(new RuntimeException("IVS error")).when(videoBroadcastPort).stopStream("arn:ivs:channel");
-
-        var result = sut.endLive(new EndLiveCommand(live.getId(), SELLER_ID));
-
-        assertThat(result.getStatus()).isEqualTo(LiveStatus.ENDED);
+        InOrder inOrder = inOrder(saveLivePort, eventPublisher, liveRoomCloser);
+        inOrder.verify(saveLivePort).save(live);
+        inOrder.verify(eventPublisher).publishEvent(any(LiveEndedEvent.class));
+        inOrder.verify(liveRoomCloser).closeRoom(live);
     }
 
     @Test
@@ -115,9 +105,7 @@ class EndLiveServiceTest {
         var result = sut.endStaleLive(live);
 
         assertThat(result.getStatus()).isEqualTo(LiveStatus.ENDED);
-        verify(agoraRtmMessagePort).sendChannelMessage(
-                eq("live-chat:" + live.getId()),
-                contains("\"type\":\"live-ended\""));
+        verify(liveRoomCloser).closeRoom(live);
         var captor = ArgumentCaptor.forClass(LiveEndedEvent.class);
         verify(eventPublisher).publishEvent(captor.capture());
         assertThat(captor.getValue().liveId()).isEqualTo(live.getId());
@@ -175,6 +163,45 @@ class EndLiveServiceTest {
         var result = sut.beginReconnecting(live);
 
         assertThat(result.getStatus()).isEqualTo(LiveStatus.RECONNECTING);
+    }
+
+    @Test
+    void reviveLive_fromReconnectingStatus_transitionsToLiveAndSaves() {
+        var live = liveLive();
+        live.beginReconnecting();
+        when(saveLivePort.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        var result = sut.reviveLive(live);
+
+        assertThat(result.getStatus()).isEqualTo(LiveStatus.LIVE);
+        assertThat(result.getStreamEndedAt()).isNull();
+        verify(saveLivePort).save(live);
+    }
+
+    @Test
+    void reviveLive_publishesLiveRevivedEvent() {
+        var live = liveLive();
+        live.beginReconnecting();
+        when(saveLivePort.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        sut.reviveLive(live);
+
+        var captor = ArgumentCaptor.forClass(LiveRevivedEvent.class);
+        verify(eventPublisher).publishEvent(captor.capture());
+        var event = captor.getValue();
+        assertThat(event.liveId()).isEqualTo(live.getId());
+        assertThat(event.sellerId()).isEqualTo(SELLER_ID);
+        assertThat(event.storeId()).isEqualTo(STORE_ID);
+        assertThat(event.occurredAt()).isNotNull();
+    }
+
+    @Test
+    void reviveLive_fromLiveStatus_throwsAndPublishesNothing() {
+        var live = liveLive();
+
+        assertThatThrownBy(() -> sut.reviveLive(live))
+                .isInstanceOf(InvalidLiveStateException.class);
+        verifyNoInteractions(saveLivePort, eventPublisher);
     }
 
     @Test

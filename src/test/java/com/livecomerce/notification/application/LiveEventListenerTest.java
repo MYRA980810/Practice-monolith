@@ -76,7 +76,8 @@ class LiveEventListenerTest {
     @SuppressWarnings("null")
     void onLiveCancelled_withSubscribers_savesNotificationsAndSendsPeerMessages() {
         var subscriber1 = UUID.randomUUID();
-        var event = new LiveCancelledEvent(LIVE_ID, "My Show", List.of(subscriber1));
+        var event = new LiveCancelledEvent(
+                LIVE_ID, UUID.randomUUID(), null, "My Show", List.of(subscriber1), false, Instant.now());
         when(saveNotificationPort.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         sut.on(event);
@@ -93,7 +94,8 @@ class LiveEventListenerTest {
 
     @Test
     void onLiveCancelled_withNoSubscribers_doesNothing() {
-        var event = new LiveCancelledEvent(LIVE_ID, "Empty", List.of());
+        var event = new LiveCancelledEvent(
+                LIVE_ID, UUID.randomUUID(), null, "Empty", List.of(), false, Instant.now());
 
         sut.on(event);
 
