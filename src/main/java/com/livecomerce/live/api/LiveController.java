@@ -1,7 +1,6 @@
 package com.livecomerce.live.api;
 
-import com.livecomerce.live.LoadSellerNamesPort;
-import com.livecomerce.live.LoadStoreNamesPort;
+import com.livecomerce.live.application.LiveFeedCardAssembler;
 import com.livecomerce.live.application.port.in.CancelLiveUseCase;
 import com.livecomerce.live.application.port.in.ChangeLiveCategoryUseCase;
 import com.livecomerce.live.application.port.in.CreateLiveUseCase;
@@ -9,8 +8,6 @@ import com.livecomerce.live.application.port.in.EndLiveUseCase;
 import com.livecomerce.live.application.port.in.RecordViewerHeartbeatUseCase;
 import com.livecomerce.live.application.port.in.StartLiveUseCase;
 import com.livecomerce.live.application.port.out.LoadLivePort;
-import com.livecomerce.live.application.port.out.ViewerCountPort;
-import com.livecomerce.live.domain.Live;
 import com.livecomerce.live.domain.LiveNotFoundException;
 import com.livecomerce.live.domain.LiveStatus;
 import com.livecomerce.shared.UserPrincipal;
@@ -26,13 +23,9 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 @RestController
 @RequiredArgsConstructor
@@ -45,9 +38,7 @@ class LiveController {
     private final ChangeLiveCategoryUseCase changeLiveCategoryUseCase;
     private final RecordViewerHeartbeatUseCase recordViewerHeartbeatUseCase;
     private final LoadLivePort loadLivePort;
-    private final ViewerCountPort viewerCountPort;
-    private final LoadStoreNamesPort loadStoreNamesPort;
-    private final LoadSellerNamesPort loadSellerNamesPort;
+    private final LiveFeedCardAssembler liveFeedCardAssembler;
 
     @PostMapping("/api/lives")
     @PreAuthorize("hasRole('SELLER')")
@@ -140,10 +131,7 @@ class LiveController {
         var page = categoryId != null
                 ? loadLivePort.loadByStatusAndCategory(LiveStatus.LIVE, categoryId, pageable)
                 : loadLivePort.loadByStatus(LiveStatus.LIVE, pageable);
-        var sellerNames = resolveSellerNames(page.getContent());
-        var enrichedPage = page.map(live -> LiveFeedCardResponse.from(
-                live, viewerCountPort.get(live.getId()), sellerNames.get(live.getId())));
-        return ResponseEntity.ok(enrichedPage);
+        return ResponseEntity.ok(liveFeedCardAssembler.assembleFeedCards(page).map(LiveFeedCardResponse::from));
     }
 
     @GetMapping("/api/lives/active/category-counts")
@@ -166,40 +154,7 @@ class LiveController {
         var page = categoryId != null
                 ? loadLivePort.loadUpcomingByCategory(categoryId, pageable)
                 : loadLivePort.loadUpcoming(pageable);
-        var sellerNames = resolveSellerNames(page.getContent());
-        var enrichedPage = page.map(live -> LiveUpcomingCardResponse.from(live, sellerNames.get(live.getId())));
-        return ResponseEntity.ok(enrichedPage);
-    }
-
-    /**
-     * Resolves each live's display name in at most two batch lookups (one per store,
-     * one for sellers without a store) regardless of page size, instead of one lookup per card.
-     */
-    private Map<UUID, String> resolveSellerNames(List<Live> lives) {
-        Set<UUID> storeIds = lives.stream()
-                .map(Live::getStoreId)
-                .filter(Objects::nonNull)
-                .collect(Collectors.toSet());
-        Set<UUID> sellerIdsWithoutStore = lives.stream()
-                .filter(live -> live.getStoreId() == null)
-                .map(Live::getSellerId)
-                .collect(Collectors.toSet());
-
-        Map<UUID, String> storeNames = storeIds.isEmpty()
-                ? Map.of()
-                : loadStoreNamesPort.loadNames(storeIds);
-        Map<UUID, String> sellerNames = sellerIdsWithoutStore.isEmpty()
-                ? Map.of()
-                : loadSellerNamesPort.loadNames(sellerIdsWithoutStore);
-
-        Map<UUID, String> namesByLiveId = new HashMap<>();
-        for (var live : lives) {
-            var name = live.getStoreId() != null
-                    ? storeNames.get(live.getStoreId())
-                    : sellerNames.get(live.getSellerId());
-            namesByLiveId.put(live.getId(), name);
-        }
-        return namesByLiveId;
+        return ResponseEntity.ok(liveFeedCardAssembler.assembleUpcomingCards(page).map(LiveUpcomingCardResponse::from));
     }
 
     @GetMapping("/api/lives")

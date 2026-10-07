@@ -2,6 +2,7 @@ package com.livecomerce.live.api;
 
 import com.livecomerce.live.LoadSellerNamesPort;
 import com.livecomerce.live.LoadStoreNamesPort;
+import com.livecomerce.live.application.LiveFeedCardAssembler;
 import com.livecomerce.live.application.port.in.*;
 import com.livecomerce.live.application.port.out.LoadLivePort;
 import com.livecomerce.live.application.port.out.ViewerCountPort;
@@ -62,7 +63,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
                 OAuth2ClientWebSecurityAutoConfiguration.class
         }
 )
-@Import(LiveControllerTest.SecurityResolverConfig.class)
+@Import({LiveControllerTest.SecurityResolverConfig.class, LiveFeedCardAssembler.class})
 class LiveControllerTest {
 
     @TestConfiguration

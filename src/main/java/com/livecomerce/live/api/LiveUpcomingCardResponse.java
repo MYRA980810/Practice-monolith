@@ -1,6 +1,6 @@
 package com.livecomerce.live.api;
 
-import com.livecomerce.live.domain.Live;
+import com.livecomerce.live.application.LiveUpcomingCard;
 import jakarta.annotation.Nullable;
 
 import java.time.Instant;
@@ -16,16 +16,16 @@ public record LiveUpcomingCardResponse(
         Instant scheduledAt,
         @Nullable UUID categoryId
 ) {
-    public static LiveUpcomingCardResponse from(Live live, @Nullable String sellerName) {
+    public static LiveUpcomingCardResponse from(LiveUpcomingCard card) {
         return new LiveUpcomingCardResponse(
-                live.getId(),
-                live.getSellerId(),
-                live.getStoreId(),
-                live.getTitle(),
-                sellerName,
-                live.getThumbnailUrl(),
-                live.getScheduledAt(),
-                live.getCategoryId()
+                card.id(),
+                card.sellerId(),
+                card.storeId(),
+                card.title(),
+                card.sellerName(),
+                card.thumbnailUrl(),
+                card.scheduledAt(),
+                card.categoryId()
         );
     }
 }
