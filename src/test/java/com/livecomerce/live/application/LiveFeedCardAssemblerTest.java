@@ -112,6 +112,21 @@ class LiveFeedCardAssemblerTest {
     }
 
     @Test
+    void assembleSnapshotCards_resolvesNames_withoutViewerCountLookups() {
+        var a = storeLive();
+        var b = profileLive();
+        when(loadStoreNamesPort.loadNames(Set.of(STORE_ID))).thenReturn(Map.of(STORE_ID, "My Store"));
+        when(loadSellerNamesPort.loadNames(Set.of(SELLER_ID))).thenReturn(Map.of(SELLER_ID, "Jane"));
+
+        var cards = sut.assembleSnapshotCards(List.of(a, b));
+
+        assertThat(cards).extracting(LiveFeedCard::id).containsExactly(a.getId(), b.getId());
+        assertThat(cards).extracting(LiveFeedCard::sellerName).containsExactly("My Store", "Jane");
+        assertThat(cards).extracting(LiveFeedCard::currentViewers).containsOnly(0L);
+        verifyNoInteractions(viewerCountPort);
+    }
+
+    @Test
     void assembleUpcomingCards_mapsScheduledAtAndNames_withoutViewerCounts() {
         var scheduledAt = Instant.now().plusSeconds(3600);
         var live = Live.create(SELLER_ID, STORE_ID, LiveContext.STORE, "Soon", null, scheduledAt, 60, CATEGORY_ID);

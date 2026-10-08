@@ -16,4 +16,9 @@ public record LiveFeedCard(
         long currentViewers,
         Instant startedAt,
         @Nullable UUID categoryId
-) {}
+) {
+
+    public LiveFeedCard withCurrentViewers(long viewers) {
+        return new LiveFeedCard(id, sellerId, storeId, title, sellerName, thumbnailUrl, viewers, startedAt, categoryId);
+    }
+}

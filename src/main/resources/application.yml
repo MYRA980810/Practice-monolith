@@ -51,6 +51,15 @@ spring:
       host: ${REDIS_HOST:localhost}
       port: ${REDIS_PORT:6379}
       password: ${REDIS_PASSWORD:}
+      # Fail fast instead of hanging request and scheduler threads when Redis is unreachable.
+      timeout: ${REDIS_TIMEOUT:2s}
+      connect-timeout: ${REDIS_CONNECT_TIMEOUT:2s}
+
+  task:
+    scheduling:
+      pool:
+        # Several @Scheduled jobs (billing, stale lives, feed reconciliation); one thread would serialize them.
+        size: ${SCHEDULING_POOL_SIZE:4}
 
   kafka:
     bootstrap-servers: ${KAFKA_SERVERS:localhost:9092}
@@ -123,6 +132,14 @@ ivs:
 
 live:
   video-provider: ${LIVE_VIDEO_PROVIDER}
+  feed:
+    agora:
+      # Legacy Agora RTM "lives-feed" broadcast (LiveFeedBroadcastListener). Superseded by the
+      # SSE live feed; turn off once the frontend no longer subscribes to the Agora channel.
+      enabled: ${LIVE_FEED_AGORA_ENABLED:true}
+    # Interval of the feed snapshot drift reconciliation (LiveFeedReconciliationJob); its
+    # cross-replica lease lasts 90% of it.
+    reconcile-ms: ${LIVE_FEED_RECONCILE_MS:60000}
 
 cloudinary:
   cloud-name: ${CLOUDINARY_CLOUD_NAME:placeholder}

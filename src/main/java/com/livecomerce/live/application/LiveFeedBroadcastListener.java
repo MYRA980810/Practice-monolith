@@ -7,6 +7,7 @@ import com.livecomerce.live.application.port.out.AgoraRtmMessagePort;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.modulith.events.ApplicationModuleListener;
 import org.springframework.stereotype.Component;
 
@@ -22,8 +23,12 @@ import java.util.Map;
  * <p>
  * Tolerant of Modulith's at-least-once event redelivery: re-sending the same
  * signal twice is a no-op for a client that indexes cards by liveId.
+ * <p>
+ * Superseded by the SSE feed ({@link LiveFeedEventListener}); kept behind
+ * {@code live.feed.agora.enabled} (default on) until the frontend migrates.
  */
 @Component
+@ConditionalOnProperty(name = "live.feed.agora.enabled", havingValue = "true", matchIfMissing = true)
 @RequiredArgsConstructor
 public class LiveFeedBroadcastListener {
 

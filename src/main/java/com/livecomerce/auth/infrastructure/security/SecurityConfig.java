@@ -87,7 +87,8 @@ class SecurityConfig {
         config.setAllowCredentials(true);
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-Requested-With"));
-        config.setExposedHeaders(List.of("Authorization"));
+        // X-Feed-Version: live-feed snapshot version on GET /api/lives/active, read by the frontend.
+        config.setExposedHeaders(List.of("Authorization", "X-Feed-Version"));
 
         var source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);

@@ -4,6 +4,7 @@ import com.livecomerce.live.LoadSellerNamesPort;
 import com.livecomerce.live.LoadStoreNamesPort;
 import com.livecomerce.live.application.LiveFeedCardAssembler;
 import com.livecomerce.live.application.port.in.*;
+import com.livecomerce.live.application.port.out.LiveFeedPort;
 import com.livecomerce.live.application.port.out.LoadLivePort;
 import com.livecomerce.live.application.port.out.ViewerCountPort;
 import com.livecomerce.live.domain.CategoryNotAvailableException;
@@ -24,6 +25,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Import;
 import org.springframework.data.domain.PageImpl;
+import org.springframework.data.redis.RedisConnectionFailureException;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.MediaType;
@@ -46,6 +48,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -84,6 +87,7 @@ class LiveControllerTest {
     @MockitoBean ChangeLiveCategoryUseCase changeLiveCategoryUseCase;
     @MockitoBean RecordViewerHeartbeatUseCase recordViewerHeartbeatUseCase;
     @MockitoBean LoadLivePort loadLivePort;
+    @MockitoBean LiveFeedPort liveFeedPort;
     @MockitoBean ViewerCountPort viewerCountPort;
     @MockitoBean LoadStoreNamesPort loadStoreNamesPort;
     @MockitoBean LoadSellerNamesPort loadSellerNamesPort;
@@ -300,6 +304,35 @@ class LiveControllerTest {
     }
 
     // --- GET /api/lives/active ---
+
+    @Test
+    void listActiveLives_exposesFeedVersionHeader_readBeforeTheQuery() throws Exception {
+        when(liveFeedPort.currentVersion()).thenReturn(42L);
+        when(loadLivePort.loadByStatus(eq(LiveStatus.LIVE), any()))
+                .thenReturn(new PageImpl<>(List.of()));
+
+        mvc.perform(get("/api/lives/active"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("X-Feed-Version", "42"))
+                .andExpect(jsonPath("$.content").isArray());
+
+        // Version first: an event landing between the two reads is re-applied (idempotent), never skipped.
+        var inOrder = inOrder(liveFeedPort, loadLivePort);
+        inOrder.verify(liveFeedPort).currentVersion();
+        inOrder.verify(loadLivePort).loadByStatus(eq(LiveStatus.LIVE), any());
+    }
+
+    @Test
+    void listActiveLives_feedVersionUnavailable_servesBodyWithoutVersionHeader() throws Exception {
+        when(liveFeedPort.currentVersion()).thenThrow(new RedisConnectionFailureException("redis down"));
+        when(loadLivePort.loadByStatus(eq(LiveStatus.LIVE), any()))
+                .thenReturn(new PageImpl<>(List.of()));
+
+        mvc.perform(get("/api/lives/active"))
+                .andExpect(status().isOk())
+                .andExpect(header().doesNotExist("X-Feed-Version"))
+                .andExpect(jsonPath("$.content").isArray());
+    }
 
     @Test
     void listActiveLives_whenEmpty_returns200EmptyPage() throws Exception {
