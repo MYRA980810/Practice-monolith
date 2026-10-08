@@ -19,6 +19,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 @ExtendWith(MockitoExtension.class)
@@ -64,5 +65,26 @@ class RedisLiveFeedSubscriberTest {
         assertThatCode(() -> subscriber.onMessage(message("not-json"), null)).doesNotThrowAnyException();
 
         verify(dispatcher, never()).deliver(any());
+    }
+
+    // --- re-subscription after a connection loss (events published meanwhile were lost) ---
+
+    private static final byte[] CHANNEL = "live:feed".getBytes(StandardCharsets.UTF_8);
+
+    @Test
+    void onChannelSubscribed_firstSubscription_dispatchesNothing() {
+        subscriber.onChannelSubscribed(CHANNEL, 1L);
+
+        verify(dispatcher, never()).deliver(any());
+    }
+
+    @Test
+    void onChannelSubscribed_resubscription_dispatchesLocalResyncAtLastSeenSeq() {
+        subscriber.onChannelSubscribed(CHANNEL, 1L);
+        subscriber.onMessage(message("{\"type\":\"resync\",\"seq\":30}"), null);
+
+        subscriber.onChannelSubscribed(CHANNEL, 1L);
+
+        verify(dispatcher, times(2)).deliver(new LiveFeedEvent.Resynced(30L));
     }
 }
