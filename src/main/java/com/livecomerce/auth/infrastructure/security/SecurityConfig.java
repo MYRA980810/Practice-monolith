@@ -1,5 +1,6 @@
 package com.livecomerce.auth.infrastructure.security;
 
+import jakarta.servlet.DispatcherType;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -50,6 +51,10 @@ class SecurityConfig {
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .exceptionHandling(e -> e.authenticationEntryPoint(restAuthenticationEntryPoint))
                 .authorizeHttpRequests(auth -> auth
+                        // Async/error re-dispatches of an already-authorized request (e.g. the SSE live
+                        // feed): the JWT filter only runs on the initial dispatch, so re-checking would
+                        // reject a stream that was authorized when it started.
+                        .dispatcherTypeMatchers(DispatcherType.ASYNC, DispatcherType.ERROR).permitAll()
                         .requestMatchers("/api/auth/**", "/actuator/health", "/error").permitAll()
                         .requestMatchers("/oauth2/**", "/login/oauth2/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/stores", "/api/stores/plans", "/api/stores/address-types",
@@ -86,7 +91,8 @@ class SecurityConfig {
         config.setAllowedOrigins(List.of(frontendUrl));
         config.setAllowCredentials(true);
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
-        config.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-Requested-With"));
+        // Last-Event-ID: sent by the live feed SSE client when it reconnects to /api/lives/feed/stream.
+        config.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-Requested-With", "Last-Event-ID"));
         // X-Feed-Version: live-feed snapshot version on GET /api/lives/active, read by the frontend.
         config.setExposedHeaders(List.of("Authorization", "X-Feed-Version"));
 
