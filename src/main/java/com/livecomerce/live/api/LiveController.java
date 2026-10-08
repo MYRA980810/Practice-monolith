@@ -7,12 +7,16 @@ import com.livecomerce.live.application.port.in.CreateLiveUseCase;
 import com.livecomerce.live.application.port.in.EndLiveUseCase;
 import com.livecomerce.live.application.port.in.RecordViewerHeartbeatUseCase;
 import com.livecomerce.live.application.port.in.StartLiveUseCase;
+import com.livecomerce.live.application.port.out.LiveFeedPort;
 import com.livecomerce.live.application.port.out.LoadLivePort;
 import com.livecomerce.live.domain.LiveNotFoundException;
 import com.livecomerce.live.domain.LiveStatus;
 import com.livecomerce.shared.UserPrincipal;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataAccessException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -31,6 +35,10 @@ import java.util.UUID;
 @RequiredArgsConstructor
 class LiveController {
 
+    static final String FEED_VERSION_HEADER = "X-Feed-Version";
+
+    private static final Logger log = LoggerFactory.getLogger(LiveController.class);
+
     private final CreateLiveUseCase createLiveUseCase;
     private final StartLiveUseCase startLiveUseCase;
     private final EndLiveUseCase endLiveUseCase;
@@ -39,6 +47,7 @@ class LiveController {
     private final RecordViewerHeartbeatUseCase recordViewerHeartbeatUseCase;
     private final LoadLivePort loadLivePort;
     private final LiveFeedCardAssembler liveFeedCardAssembler;
+    private final LiveFeedPort liveFeedPort;
 
     @PostMapping("/api/lives")
     @PreAuthorize("hasRole('SELLER')")
@@ -128,10 +137,31 @@ class LiveController {
             @RequestParam(required = false) UUID categoryId,
             @PageableDefault(size = 20, sort = "startedAt", direction = Sort.Direction.DESC) Pageable pageable) {
 
+        // Read before the query: an event landing in between is then re-applied by the client
+        // (idempotent by live id) instead of being skipped as already included.
+        Long feedVersion = readFeedVersion();
         var page = categoryId != null
                 ? loadLivePort.loadByStatusAndCategory(LiveStatus.LIVE, categoryId, pageable)
                 : loadLivePort.loadByStatus(LiveStatus.LIVE, pageable);
-        return ResponseEntity.ok(liveFeedCardAssembler.assembleFeedCards(page).map(LiveFeedCardResponse::from));
+        var response = ResponseEntity.ok();
+        if (feedVersion != null) {
+            response.header(FEED_VERSION_HEADER, String.valueOf(feedVersion));
+        }
+        return response.body(liveFeedCardAssembler.assembleFeedCards(page).map(LiveFeedCardResponse::from));
+    }
+
+    /**
+     * The feed version lives in Redis; when it's unreachable the list is still served from the
+     * database, just without the header (clients then can't align it with the live stream).
+     */
+    private Long readFeedVersion() {
+        try {
+            return liveFeedPort.currentVersion();
+        } catch (DataAccessException e) {
+            log.warn("Live feed version unavailable, serving active lives without {}: {}",
+                    FEED_VERSION_HEADER, e.getMessage());
+            return null;
+        }
     }
 
     @GetMapping("/api/lives/active/category-counts")
