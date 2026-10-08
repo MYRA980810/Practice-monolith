@@ -3,6 +3,8 @@ package com.livecomerce.live.infrastructure.redis;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -34,6 +36,15 @@ class InMemoryViewerCountAdapterTest {
     @Test
     void get_whenNoActivity_returnsZero() {
         assertThat(adapter.get(LIVE_ID)).isZero();
+    }
+
+    @Test
+    void getAll_returnsEachCount_zeroWhenNoActivity() {
+        var idle = UUID.randomUUID();
+        adapter.increment(LIVE_ID);
+        adapter.increment(LIVE_ID);
+
+        assertThat(adapter.getAll(List.of(LIVE_ID, idle))).isEqualTo(Map.of(LIVE_ID, 2L, idle, 0L));
     }
 
     @Test

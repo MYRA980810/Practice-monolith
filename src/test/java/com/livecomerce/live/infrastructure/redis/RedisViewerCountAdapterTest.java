@@ -10,6 +10,9 @@ import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.data.redis.core.ZSetOperations;
 
 import java.time.Duration;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -87,6 +90,27 @@ class RedisViewerCountAdapterTest {
         long result = adapter.get(LIVE_ID);
 
         assertThat(result).isZero();
+    }
+
+    @Test
+    void getAll_readsEveryCountInOneMultiGet_missingOrMalformedAsZero() {
+        var second = UUID.randomUUID();
+        var third  = UUID.randomUUID();
+        var keys = List.of(KEY, "live:" + second + ":viewers", "live:" + third + ":viewers");
+        when(redisTemplate.opsForValue()).thenReturn(valueOps);
+        when(valueOps.multiGet(keys)).thenReturn(Arrays.asList("4", null, "oops"));
+
+        var result = adapter.getAll(List.of(LIVE_ID, second, third));
+
+        assertThat(result).isEqualTo(Map.of(LIVE_ID, 4L, second, 0L, third, 0L));
+        verify(valueOps, never()).get(any());
+    }
+
+    @Test
+    void getAll_noLives_skipsRedis() {
+        assertThat(adapter.getAll(List.of())).isEmpty();
+
+        verifyNoInteractions(redisTemplate);
     }
 
     // --- heartbeat ---

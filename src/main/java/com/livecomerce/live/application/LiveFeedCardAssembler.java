@@ -51,6 +51,16 @@ public class LiveFeedCardAssembler {
                 .toList();
     }
 
+    /** Fills the snapshot's {@code currentViewers} (always 0 when stored) from one batch lookup. */
+    public LiveFeedSnapshot withViewerCounts(LiveFeedSnapshot snapshot) {
+        if (snapshot.cards().isEmpty()) return snapshot;
+        var viewers = viewerCountPort.getAll(snapshot.cards().stream().map(LiveFeedCard::id).toList());
+        var cards = snapshot.cards().stream()
+                .map(card -> card.withCurrentViewers(viewers.getOrDefault(card.id(), 0L)))
+                .toList();
+        return new LiveFeedSnapshot(snapshot.version(), cards, snapshot.counts());
+    }
+
     public Page<LiveUpcomingCard> assembleUpcomingCards(Page<Live> lives) {
         var names = resolveSellerNames(lives.getContent());
         return lives.map(live -> toUpcomingCard(live, names.get(live.getId())));

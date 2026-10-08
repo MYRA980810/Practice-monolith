@@ -1,5 +1,7 @@
 package com.livecomerce.live.application.port.out;
 
+import java.util.Collection;
+import java.util.Map;
 import java.util.UUID;
 
 public interface ViewerCountPort {
@@ -9,6 +11,9 @@ public interface ViewerCountPort {
     long decrement(UUID liveId);
 
     long get(UUID liveId);
+
+    /** Current count of every given live in one round trip; lives without a count map to 0. */
+    Map<UUID, Long> getAll(Collection<UUID> liveIds);
 
     long heartbeat(UUID liveId, String viewerId);
 
