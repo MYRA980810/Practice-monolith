@@ -1,6 +1,7 @@
 package com.livecomerce.live.application;
 
 import com.livecomerce.live.CategoryLookupPort;
+import com.livecomerce.live.LiveCategoryChangedEvent;
 import com.livecomerce.live.application.port.in.ChangeLiveCategoryUseCase.ChangeLiveCategoryCommand;
 import com.livecomerce.live.application.port.out.LoadLivePort;
 import com.livecomerce.live.application.port.out.SaveLivePort;
@@ -10,6 +11,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 
 import java.util.Optional;
 import java.util.UUID;
@@ -24,6 +26,7 @@ class ChangeLiveCategoryServiceTest {
     @Mock LoadLivePort       loadLivePort;
     @Mock SaveLivePort       saveLivePort;
     @Mock CategoryLookupPort categoryLookupPort;
+    @Mock ApplicationEventPublisher eventPublisher;
     @InjectMocks ChangeLiveCategoryService sut;
 
     private static final UUID SELLER_ID       = UUID.randomUUID();
@@ -91,5 +94,30 @@ class ChangeLiveCategoryServiceTest {
         assertThatThrownBy(() -> sut.changeCategory(new ChangeLiveCategoryCommand(live.getId(), SELLER_ID, NEW_CATEGORY_ID)))
                 .isInstanceOf(InvalidLiveStateException.class);
         verifyNoInteractions(saveLivePort);
+    }
+
+    @Test
+    void changeCategory_onLiveLive_publishesCategoryChangedEventForTheFeed() {
+        var live = scheduledLive();
+        live.start();
+        when(loadLivePort.loadById(live.getId())).thenReturn(Optional.of(live));
+        when(categoryLookupPort.isActive(NEW_CATEGORY_ID)).thenReturn(true);
+        when(saveLivePort.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        sut.changeCategory(new ChangeLiveCategoryCommand(live.getId(), SELLER_ID, NEW_CATEGORY_ID));
+
+        verify(eventPublisher).publishEvent(new LiveCategoryChangedEvent(live.getId(), NEW_CATEGORY_ID));
+    }
+
+    @Test
+    void changeCategory_onScheduledLive_publishesNothing() {
+        var live = scheduledLive();
+        when(loadLivePort.loadById(live.getId())).thenReturn(Optional.of(live));
+        when(categoryLookupPort.isActive(NEW_CATEGORY_ID)).thenReturn(true);
+        when(saveLivePort.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        sut.changeCategory(new ChangeLiveCategoryCommand(live.getId(), SELLER_ID, NEW_CATEGORY_ID));
+
+        verifyNoInteractions(eventPublisher);
     }
 }

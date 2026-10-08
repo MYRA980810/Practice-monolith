@@ -40,12 +40,27 @@ public class LiveFeedCardAssembler {
         return toFeedCard(live, names.get(live.getId()));
     }
 
+    /**
+     * Cards for the feed snapshot, which never carries viewer counts ({@code currentViewers} is
+     * 0): only the batched name lookups run, none of the per-live viewer-count reads.
+     */
+    public List<LiveFeedCard> assembleSnapshotCards(List<Live> lives) {
+        var names = resolveSellerNames(lives);
+        return lives.stream()
+                .map(live -> toFeedCard(live, names.get(live.getId()), 0L))
+                .toList();
+    }
+
     public Page<LiveUpcomingCard> assembleUpcomingCards(Page<Live> lives) {
         var names = resolveSellerNames(lives.getContent());
         return lives.map(live -> toUpcomingCard(live, names.get(live.getId())));
     }
 
     private LiveFeedCard toFeedCard(Live live, String sellerName) {
+        return toFeedCard(live, sellerName, viewerCountPort.get(live.getId()));
+    }
+
+    private LiveFeedCard toFeedCard(Live live, String sellerName, long currentViewers) {
         return new LiveFeedCard(
                 live.getId(),
                 live.getSellerId(),
@@ -53,7 +68,7 @@ public class LiveFeedCardAssembler {
                 live.getTitle(),
                 sellerName,
                 live.getThumbnailUrl(),
-                viewerCountPort.get(live.getId()),
+                currentViewers,
                 live.getStartedAt(),
                 live.getCategoryId()
         );
