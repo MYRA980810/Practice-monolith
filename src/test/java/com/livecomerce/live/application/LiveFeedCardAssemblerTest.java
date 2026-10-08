@@ -2,6 +2,7 @@ package com.livecomerce.live.application;
 
 import com.livecomerce.live.LoadSellerNamesPort;
 import com.livecomerce.live.LoadStoreNamesPort;
+import com.livecomerce.live.application.port.out.LoadLivePort.CategoryLiveCount;
 import com.livecomerce.live.application.port.out.ViewerCountPort;
 import com.livecomerce.live.domain.Live;
 import com.livecomerce.live.domain.LiveContext;
@@ -124,6 +125,34 @@ class LiveFeedCardAssemblerTest {
         assertThat(cards).extracting(LiveFeedCard::sellerName).containsExactly("My Store", "Jane");
         assertThat(cards).extracting(LiveFeedCard::currentViewers).containsOnly(0L);
         verifyNoInteractions(viewerCountPort);
+    }
+
+    @Test
+    void withViewerCounts_fillsEveryCardFromOneBatchLookup() {
+        var a = card(UUID.randomUUID());
+        var b = card(UUID.randomUUID());
+        var counts = List.of(new CategoryLiveCount(CATEGORY_ID, 2));
+        when(viewerCountPort.getAll(List.of(a.id(), b.id()))).thenReturn(Map.of(a.id(), 9L));
+
+        var snapshot = sut.withViewerCounts(new LiveFeedSnapshot(12L, List.of(a, b), counts));
+
+        assertThat(snapshot.version()).isEqualTo(12L);
+        assertThat(snapshot.counts()).isEqualTo(counts);
+        assertThat(snapshot.cards()).extracting(LiveFeedCard::id).containsExactly(a.id(), b.id());
+        assertThat(snapshot.cards()).extracting(LiveFeedCard::currentViewers).containsExactly(9L, 0L);
+        verify(viewerCountPort, never()).get(any());
+    }
+
+    @Test
+    void withViewerCounts_emptySnapshot_skipsLookup() {
+        var empty = new LiveFeedSnapshot(3L, List.of(), List.of());
+
+        assertThat(sut.withViewerCounts(empty)).isEqualTo(empty);
+        verifyNoInteractions(viewerCountPort);
+    }
+
+    private static LiveFeedCard card(UUID id) {
+        return new LiveFeedCard(id, SELLER_ID, STORE_ID, "Live", "My Store", null, 0L, Instant.now(), CATEGORY_ID);
     }
 
     @Test

@@ -5,6 +5,9 @@ import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
 import java.time.Instant;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
@@ -38,6 +41,13 @@ class InMemoryViewerCountAdapter implements ViewerCountPort {
     public long get(UUID liveId) {
         AtomicLong counter = store.get(liveId);
         return counter == null ? 0L : counter.get();
+    }
+
+    @Override
+    public Map<UUID, Long> getAll(Collection<UUID> liveIds) {
+        Map<UUID, Long> counts = new HashMap<>();
+        liveIds.forEach(liveId -> counts.put(liveId, get(liveId)));
+        return counts;
     }
 
     @Override
