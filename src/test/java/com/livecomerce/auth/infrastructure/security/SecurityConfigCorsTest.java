@@ -4,6 +4,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import java.util.List;
+
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
@@ -24,5 +26,19 @@ class SecurityConfigCorsTest {
         assertThat(config).isNotNull();
         assertThat(config.getExposedHeaders()).contains("Authorization", "X-Feed-Version");
         assertThat(config.getAllowedOrigins()).containsExactly("http://localhost:3000");
+    }
+
+    /** The live feed SSE client resends its last seq in Last-Event-ID on reconnect (CORS-preflighted). */
+    @Test
+    void corsConfiguration_allowsLastEventIdRequestHeader() {
+        var securityConfig = new SecurityConfig(null, null, null, null, null);
+        ReflectionTestUtils.setField(securityConfig, "frontendUrl", "http://localhost:3000");
+
+        var config = securityConfig.corsConfigurationSource()
+                .getCorsConfiguration(new MockHttpServletRequest("GET", "/api/lives/feed/stream"));
+
+        assertThat(config).isNotNull();
+        assertThat(config.checkHeaders(List.of("Authorization", "Last-Event-ID")))
+                .containsExactlyInAnyOrder("Authorization", "Last-Event-ID");
     }
 }

@@ -61,6 +61,12 @@ spring:
         # Several @Scheduled jobs (billing, stale lives, feed reconciliation); one thread would serialize them.
         size: ${SCHEDULING_POOL_SIZE:4}
 
+  mvc:
+    async:
+      # Async requests are the live feed SSE stream: same as live.feed.sse.timeout-ms so the
+      # container never times it out before the emitter does.
+      request-timeout: ${live.feed.sse.timeout-ms}
+
   kafka:
     bootstrap-servers: ${KAFKA_SERVERS:localhost:9092}
     producer:
@@ -140,6 +146,21 @@ live:
     # Interval of the feed snapshot drift reconciliation (LiveFeedReconciliationJob); its
     # cross-replica lease lasts 90% of it.
     reconcile-ms: ${LIVE_FEED_RECONCILE_MS:60000}
+    sse:
+      # GET /api/lives/feed/stream. Emitter lifetime: under Railway's 15 min request cap; the
+      # client reconnects with Last-Event-ID. Keep server.compression off (or exclude
+      # text/event-stream): gzip buffers the stream.
+      timeout-ms: ${LIVE_FEED_SSE_TIMEOUT_MS:840000}
+      # ": ping" comment interval; keeps the edge from idling the connection out and drops dead ones.
+      ping-ms: ${LIVE_FEED_SSE_PING_MS:20000}
+      # Run the fan-out/ping executor on a virtual thread. Off: check pinning first.
+      virtual-threads: ${LIVE_FEED_SSE_VIRTUAL_THREADS:false}
+      # Open streams one user may hold per instance; the next one gets 429 (none is evicted).
+      max-connections-per-user: ${LIVE_FEED_SSE_MAX_CONNECTIONS_PER_USER:5}
+      # SSE retry: sent only with the resync that closes a stream whose handshake couldn't read the
+      # feed (e.g. Redis down): base plus random jitter up to the second value, so clients back off.
+      handshake-retry-ms: ${LIVE_FEED_SSE_HANDSHAKE_RETRY_MS:15000}
+      handshake-retry-jitter-ms: ${LIVE_FEED_SSE_HANDSHAKE_RETRY_JITTER_MS:5000}
 
 cloudinary:
   cloud-name: ${CLOUDINARY_CLOUD_NAME:placeholder}
