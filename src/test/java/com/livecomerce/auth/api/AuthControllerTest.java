@@ -5,6 +5,7 @@ import com.livecomerce.auth.application.EmailAlreadyTakenException;
 import com.livecomerce.auth.application.InvalidCredentialsException;
 import com.livecomerce.auth.application.OAuthCodeInvalidException;
 import com.livecomerce.auth.application.RefreshTokenInvalidException;
+import com.livecomerce.auth.application.RefreshTokenRetryException;
 import com.livecomerce.auth.application.RefreshTokenReuseException;
 import com.livecomerce.auth.application.port.in.AuthResult;
 import com.livecomerce.auth.application.port.in.AuthenticateUserUseCase;
@@ -484,6 +485,18 @@ class AuthControllerTest {
                         .header("X-Requested-With", "XMLHttpRequest"))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.type").value("https://livecomerce.com/errors/refresh-reuse"));
+    }
+
+    @Test
+    void refresh_whenTokenJustRotated_returns409WithRetryCode() throws Exception {
+        when(refreshAccessTokenUseCase.refresh(any()))
+                .thenThrow(new RefreshTokenRetryException());
+
+        mvc.perform(post("/api/auth/refresh")
+                        .cookie(new Cookie("refresh_token", "just-rotated-token"))
+                        .header("X-Requested-With", "XMLHttpRequest"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.type").value("https://livecomerce.com/errors/refresh-retry"));
     }
 
     // --- /logout ---

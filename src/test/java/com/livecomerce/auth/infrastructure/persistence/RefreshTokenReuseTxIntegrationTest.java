@@ -26,6 +26,7 @@ import org.springframework.test.context.junit.jupiter.SpringJUnitConfig;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
+import java.time.Clock;
 import java.util.List;
 import java.util.UUID;
 
@@ -69,7 +70,7 @@ class RefreshTokenReuseTxIntegrationTest {
         @Bean
         JwtProperties jwtProperties() {
             // 30 days in ms — single source of truth matching jwt.refresh-expiration-ms
-            return new JwtProperties("test-secret-key-at-least-32-chars!!", 900_000L, 30L * 24 * 60 * 60 * 1000);
+            return new JwtProperties("test-secret-key-at-least-32-chars!!", 900_000L, 30L * 24 * 60 * 60 * 1000, 30_000L);
         }
 
         @Bean
@@ -80,8 +81,9 @@ class RefreshTokenReuseTxIntegrationTest {
         @Bean
         RefreshTokenPersistenceAdapter refreshTokenPersistenceAdapter(
                 RefreshTokenJpaRepository repository,
-                RefreshTokenHasher hasher) {
-            return new RefreshTokenPersistenceAdapter(repository, hasher);
+                RefreshTokenHasher hasher,
+                EntityManager entityManager) {
+            return new RefreshTokenPersistenceAdapter(repository, hasher, new RowLockTimeout(entityManager, 3000L));
         }
 
         @Bean
@@ -101,7 +103,7 @@ class RefreshTokenReuseTxIntegrationTest {
                 TokenGeneratorPort tokenGenerator,
                 RefreshTokenHasher hasher,
                 JwtProperties props) {
-            return new RefreshAccessTokenService(store, loadUser, tokenGenerator, hasher, props);
+            return new RefreshAccessTokenService(store, loadUser, tokenGenerator, hasher, props, Clock.systemUTC());
         }
     }
 
