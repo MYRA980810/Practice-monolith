@@ -7,6 +7,7 @@ import org.springframework.http.CacheControl;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
@@ -14,8 +15,9 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 /**
- * Real-time feed of active lives over SSE (authenticated like every non-public endpoint; the
- * frontend sends the usual Bearer header). On reconnect the client sends {@code Last-Event-ID}
+ * Real-time feed of active lives over SSE, BUYER-only like the rest of the lives feed (the
+ * frontend sends the usual Bearer header). The role check runs before the emitter is registered,
+ * so a non-buyer gets a plain 403 ProblemDetail instead of a stream. On reconnect the client sends {@code Last-Event-ID}
  * and gets a {@code snapshot} event unless it is already at the current version — see
  * {@link LiveFeedEmitterRegistry#connect}. A user over the per-instance connection cap gets 429.
  */
@@ -28,6 +30,7 @@ class LiveFeedStreamController {
 
     private final LiveFeedEmitterRegistry registry;
 
+    @PreAuthorize("hasRole('BUYER')")
     @GetMapping(path = "/api/lives/feed/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     ResponseEntity<SseEmitter> stream(
             @AuthenticationPrincipal UserPrincipal principal,

@@ -132,6 +132,7 @@ class LiveController {
                 .orElseThrow(() -> new LiveNotFoundException(id));
     }
 
+    @PreAuthorize("hasRole('BUYER')")
     @GetMapping("/api/lives/active")
     ResponseEntity<Page<LiveFeedCardResponse>> listActiveLives(
             @RequestParam(required = false) UUID categoryId,
@@ -164,18 +165,21 @@ class LiveController {
         }
     }
 
+    @PreAuthorize("hasRole('BUYER')")
     @GetMapping("/api/lives/active/category-counts")
     ResponseEntity<List<LiveCategoryCountResponse>> countActiveLivesByCategory() {
         return ResponseEntity.ok(loadLivePort.countByStatusGroupedByCategory(LiveStatus.LIVE)
                 .stream().map(LiveCategoryCountResponse::from).toList());
     }
 
+    @PreAuthorize("hasRole('BUYER')")
     @GetMapping("/api/lives/upcoming/category-counts")
     ResponseEntity<List<LiveCategoryCountResponse>> countUpcomingLivesByCategory() {
         return ResponseEntity.ok(loadLivePort.countUpcomingGroupedByCategory()
                 .stream().map(LiveCategoryCountResponse::from).toList());
     }
 
+    @PreAuthorize("hasRole('BUYER')")
     @GetMapping("/api/lives/upcoming")
     ResponseEntity<Page<LiveUpcomingCardResponse>> listUpcomingLives(
             @RequestParam(required = false) UUID categoryId,
