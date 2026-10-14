@@ -50,14 +50,15 @@ class RefreshTokenTest {
     }
 
     @Test
-    void rotate_setsReplacedByAndMarksUsedAndRevoked() {
+    void rotate_withExplicitInstant_recordsThatInstantAsUsedAt() {
         var token = RefreshToken.issue(USER_ID, FAMILY_ID, HASH, 30L * 24 * 60 * 60 * 1000);
         var replacementId = UUID.randomUUID();
+        var at = Instant.parse("2026-01-01T00:00:00Z");
 
-        token.rotate(replacementId);
+        token.rotate(replacementId, at);
 
         assertThat(token.getReplacedBy()).isEqualTo(replacementId);
-        assertThat(token.getUsedAt()).isNotNull();
+        assertThat(token.getUsedAt()).isEqualTo(at);
         assertThat(token.isRevoked()).isTrue();
     }
 

@@ -2,6 +2,7 @@ package com.livecomerce.auth.infrastructure.persistence;
 
 import com.livecomerce.auth.domain.RefreshToken;
 import com.livecomerce.auth.infrastructure.security.RefreshTokenHasher;
+import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
@@ -58,8 +59,9 @@ class RefreshTokenRevokeAllForUserExceptIntegrationTest {
         @Bean
         RefreshTokenPersistenceAdapter refreshTokenPersistenceAdapter(
                 RefreshTokenJpaRepository repository,
-                RefreshTokenHasher hasher) {
-            return new RefreshTokenPersistenceAdapter(repository, hasher);
+                RefreshTokenHasher hasher,
+                EntityManager entityManager) {
+            return new RefreshTokenPersistenceAdapter(repository, hasher, new RowLockTimeout(entityManager, 3000L));
         }
     }
 

@@ -80,11 +80,11 @@ public class RefreshToken {
     }
 
     /**
-     * Marks this token as rotated: sets replacedBy, records usedAt, and revokes it.
+     * Marks this token as rotated at the given instant: sets replacedBy, records usedAt, and revokes it.
      */
-    public void rotate(UUID replacementId) {
+    public void rotate(UUID replacementId, Instant at) {
         this.replacedBy = replacementId;
-        this.usedAt = Instant.now();
+        this.usedAt = at;
         this.revoked = true;
     }
 }

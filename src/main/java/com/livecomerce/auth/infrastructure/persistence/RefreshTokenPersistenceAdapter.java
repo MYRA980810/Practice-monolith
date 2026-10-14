@@ -17,6 +17,7 @@ class RefreshTokenPersistenceAdapter implements RefreshTokenStorePort, IssueRefr
 
     private final RefreshTokenJpaRepository repository;
     private final RefreshTokenHasher refreshTokenHasher;
+    private final RowLockTimeout rowLockTimeout;
 
     @Value("${jwt.refresh-expiration-ms:2592000000}")
     private long refreshExpirationMs;
@@ -29,6 +30,18 @@ class RefreshTokenPersistenceAdapter implements RefreshTokenStorePort, IssueRefr
     @Override
     public Optional<RefreshToken> loadByTokenHash(String tokenHash) {
         return repository.findByTokenHash(tokenHash);
+    }
+
+    @Override
+    public Optional<RefreshToken> loadByTokenHashForUpdate(String tokenHash) {
+        // Without a bound, waiters block indefinitely while each holds a pooled connection.
+        rowLockTimeout.applyToCurrentTransaction();
+        return repository.findForUpdateByTokenHash(tokenHash);
+    }
+
+    @Override
+    public Optional<RefreshToken> loadById(UUID id) {
+        return repository.findById(id);
     }
 
     @Override
