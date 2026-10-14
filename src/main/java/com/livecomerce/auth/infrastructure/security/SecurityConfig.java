@@ -11,6 +11,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -92,7 +93,8 @@ class SecurityConfig {
                         })
                 )
                 // Ticket filter first: JwtAuthFilter only authenticates an empty security context.
-                .addFilterBefore(new StreamTicketAuthFilter(streamTicketPort, userDetailsAdapter),
+                .addFilterBefore(new StreamTicketAuthFilter(streamTicketPort, userDetailsAdapter,
+                                restAuthenticationEntryPoint),
                         UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(new JwtAuthFilter(jwtService, userDetailsAdapter),
                         UsernamePasswordAuthenticationFilter.class)
@@ -127,6 +129,8 @@ class SecurityConfig {
         config.setAllowCredentials(false);
         config.setAllowedMethods(List.of("GET"));
         config.setAllowedHeaders(List.of(StreamTicketAuthFilter.TICKET_HEADER, "Last-Event-ID"));
+        // Not CORS-safelisted: without this the browser can't read the back-off of a 503.
+        config.setExposedHeaders(List.of(HttpHeaders.RETRY_AFTER));
         config.setMaxAge(600L);
         return config;
     }

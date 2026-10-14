@@ -1,6 +1,7 @@
 package com.livecomerce.auth.infrastructure.security;
 
 import com.livecomerce.live.StreamTicketPort;
+import com.livecomerce.live.StreamTicketStoreUnavailableException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -8,10 +9,13 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataAccessException;
+import org.springframework.http.HttpHeaders;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.transaction.TransactionException;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
@@ -27,6 +31,11 @@ import java.io.IOException;
  * chain continues: {@link RestAuthenticationEntryPoint} answers 401 with that code, telling the
  * client to fetch a new ticket instead of refreshing its session.
  * <p>
+ * If the ticket store or the user store is down, the request is answered right here with 503
+ * {@code TICKET_STORE_UNAVAILABLE} and {@code Retry-After} (never {@code TICKET_INVALID}, which
+ * would send the client into a ticket-fetching loop against a dead store), and nobody is
+ * authenticated.
+ * <p>
  * Runs once per request: {@link OncePerRequestFilter} skips the ASYNC/ERROR re-dispatches of the SSE
  * response, so the ticket is redeemed only on the initial dispatch.
  */
@@ -41,6 +50,7 @@ class StreamTicketAuthFilter extends OncePerRequestFilter {
 
     private final StreamTicketPort streamTicketPort;
     private final UserDetailsService userDetailsService;
+    private final RestAuthenticationEntryPoint errorWriter;
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
@@ -53,7 +63,18 @@ class StreamTicketAuthFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
                                     FilterChain chain) throws ServletException, IOException {
         if (SecurityContextHolder.getContext().getAuthentication() == null) {
-            authenticate(request);
+            try {
+                authenticate(request);
+            } catch (StreamTicketStoreUnavailableException e) {
+                rejectAsUnavailable(response, "ticket store", e);
+                return;
+            } catch (DataAccessException | TransactionException e) {
+                // The ticket was already redeemed (GETDEL) when the user lookup failed, so it is
+                // burned: the client needs a new ticket anyway, which is fine because 503 makes it
+                // back off and request one. Never TICKET_INVALID: that would hide the outage.
+                rejectAsUnavailable(response, "user store", e);
+                return;
+            }
         }
         chain.doFilter(request, response);
     }
@@ -74,6 +95,21 @@ class StreamTicketAuthFilter extends OncePerRequestFilter {
             log.warn("Stream ticket for unknown user '{}'", userId.get());
             request.setAttribute("auth_error", TICKET_INVALID);
         }
+    }
+
+    /**
+     * Fails closed: nothing was authenticated and the chain is not continued, so the request can't
+     * reach the stream. Answered here because this filter runs before the
+     * {@code ExceptionTranslationFilter} and no {@code @RestControllerAdvice} applies.
+     */
+    private void rejectAsUnavailable(HttpServletResponse response, String store, Exception e) throws IOException {
+        log.error("Stream ticket authentication unavailable ({} failure: {}); answering 503 {}",
+                store, e.getClass().getSimpleName(), StreamTicketStoreUnavailableException.CODE);
+        SecurityContextHolder.clearContext();
+        response.setHeader(HttpHeaders.RETRY_AFTER,
+                String.valueOf(StreamTicketStoreUnavailableException.RETRY_AFTER.toSeconds()));
+        errorWriter.writeError(response, HttpServletResponse.SC_SERVICE_UNAVAILABLE,
+                StreamTicketStoreUnavailableException.CODE);
     }
 
     private static String pathWithinApplication(HttpServletRequest request) {

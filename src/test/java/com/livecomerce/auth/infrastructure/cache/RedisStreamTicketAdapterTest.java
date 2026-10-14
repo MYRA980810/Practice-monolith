@@ -9,6 +9,9 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
+import com.livecomerce.live.StreamTicketStoreUnavailableException;
+import org.springframework.dao.QueryTimeoutException;
+import org.springframework.data.redis.RedisConnectionFailureException;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 
@@ -17,7 +20,10 @@ import java.util.Base64;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -98,5 +104,28 @@ class RedisStreamTicketAdapterTest {
         when(valueOps.getAndDelete(anyString())).thenReturn("not-a-uuid");
 
         assertThat(adapter.consume("t")).isEmpty();
+    }
+
+    // --- Redis down: translated to the port's exception, never "invalid ticket" ---
+
+    @Test
+    void issue_redisFailure_isTranslatedToStoreUnavailable() {
+        var cause = new RedisConnectionFailureException("connection refused");
+        doThrow(cause).when(valueOps).set(anyString(), anyString(), any(Duration.class));
+
+        assertThatThrownBy(() -> adapter.issue(UUID.randomUUID()))
+                .isInstanceOf(StreamTicketStoreUnavailableException.class)
+                .hasCause(cause);
+    }
+
+    @Test
+    void consume_redisFailure_isTranslatedToStoreUnavailable_withoutLeakingTheTicket() {
+        var cause = new QueryTimeoutException("timed out");
+        when(valueOps.getAndDelete(anyString())).thenThrow(cause);
+
+        assertThatThrownBy(() -> adapter.consume("secret-ticket"))
+                .isInstanceOf(StreamTicketStoreUnavailableException.class)
+                .hasCause(cause)
+                .message().doesNotContain("secret-ticket");
     }
 }

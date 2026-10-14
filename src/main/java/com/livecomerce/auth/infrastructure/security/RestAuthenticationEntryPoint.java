@@ -1,6 +1,7 @@
 package com.livecomerce.auth.infrastructure.security;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.livecomerce.live.StreamTicketStoreUnavailableException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -23,14 +24,22 @@ class RestAuthenticationEntryPoint implements AuthenticationEntryPoint {
     public void commence(HttpServletRequest request,
                          HttpServletResponse response,
                          AuthenticationException authException) throws IOException {
-        String errorCode = resolveCode(request);
+        writeError(response, HttpServletResponse.SC_UNAUTHORIZED, resolveCode(request));
+    }
 
+    /**
+     * Writes the auth error body ({@code status}, {@code detail}, {@code code}) as
+     * {@code application/problem+json}. Shared with filters that must answer before the
+     * {@code ExceptionTranslationFilter} (e.g. {@link StreamTicketAuthFilter} on a store outage), so
+     * every auth-layer error has the same shape.
+     */
+    void writeError(HttpServletResponse response, int status, String errorCode) throws IOException {
         Map<String, Object> body = new LinkedHashMap<>();
-        body.put("status", HttpServletResponse.SC_UNAUTHORIZED);
+        body.put("status", status);
         body.put("detail", resolveDetail(errorCode));
         body.put("code", errorCode);
 
-        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+        response.setStatus(status);
         response.setContentType(MediaType.APPLICATION_PROBLEM_JSON_VALUE);
         objectMapper.writeValue(response.getOutputStream(), body);
     }
@@ -48,6 +57,8 @@ class RestAuthenticationEntryPoint implements AuthenticationEntryPoint {
             case "TOKEN_EXPIRED"  -> "The access token has expired. Please refresh or log in again.";
             case "INVALID_TOKEN"  -> "The provided token is invalid or malformed.";
             case "TICKET_INVALID" -> "The stream ticket is invalid, expired or already used. Request a new ticket.";
+            case StreamTicketStoreUnavailableException.CODE ->
+                    "Stream authentication is temporarily unavailable. Retry after the Retry-After delay.";
             default               -> "Authentication is required to access this resource.";
         };
     }
