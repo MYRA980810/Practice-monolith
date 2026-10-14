@@ -4,6 +4,7 @@ import com.livecomerce.live.application.port.in.GetLiveFeedTokenUseCase;
 import com.livecomerce.shared.UserPrincipal;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -16,6 +17,7 @@ class LiveFeedTokenController {
 
     private final GetLiveFeedTokenUseCase getLiveFeedTokenUseCase;
 
+    @PreAuthorize("hasRole('BUYER')")
     @GetMapping("/feed-token")
     ResponseEntity<ChatTokenResponse> getFeedToken(@AuthenticationPrincipal UserPrincipal principal) {
         var result = getLiveFeedTokenUseCase.getFeedToken(principal.getUserId());

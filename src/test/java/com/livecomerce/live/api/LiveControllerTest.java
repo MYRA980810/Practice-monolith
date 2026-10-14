@@ -107,6 +107,11 @@ class LiveControllerTest {
         SecurityContextHolder.clearContext();
     }
 
+    /** The lives feed (listings and chips-bar counts) is BUYER-only. */
+    private void asBuyer() {
+        setPrincipal(UUID.randomUUID(), "ROLE_BUYER");
+    }
+
     private void setPrincipal(UUID userId, String role) {
         var principal = new UserPrincipal(
                 userId, "seller@test.com", "hash",
@@ -307,6 +312,7 @@ class LiveControllerTest {
 
     @Test
     void listActiveLives_exposesFeedVersionHeader_readBeforeTheQuery() throws Exception {
+        asBuyer();
         when(liveFeedPort.currentVersion()).thenReturn(42L);
         when(loadLivePort.loadByStatus(eq(LiveStatus.LIVE), any()))
                 .thenReturn(new PageImpl<>(List.of()));
@@ -324,6 +330,7 @@ class LiveControllerTest {
 
     @Test
     void listActiveLives_feedVersionUnavailable_servesBodyWithoutVersionHeader() throws Exception {
+        asBuyer();
         when(liveFeedPort.currentVersion()).thenThrow(new RedisConnectionFailureException("redis down"));
         when(loadLivePort.loadByStatus(eq(LiveStatus.LIVE), any()))
                 .thenReturn(new PageImpl<>(List.of()));
@@ -336,6 +343,7 @@ class LiveControllerTest {
 
     @Test
     void listActiveLives_whenEmpty_returns200EmptyPage() throws Exception {
+        asBuyer();
         when(loadLivePort.loadByStatus(eq(LiveStatus.LIVE), any()))
                 .thenReturn(new PageImpl<>(List.of()));
 
@@ -348,6 +356,7 @@ class LiveControllerTest {
 
     @Test
     void listActiveLives_onlyQueriesLiveStatus_notSellerOrStoreScoped() throws Exception {
+        asBuyer();
         var live = buildLive();
         live.start();
         when(loadLivePort.loadByStatus(eq(LiveStatus.LIVE), any()))
@@ -364,6 +373,7 @@ class LiveControllerTest {
 
     @Test
     void listActiveLives_respectsPaginationDefaults() throws Exception {
+        asBuyer();
         when(loadLivePort.loadByStatus(
                 eq(LiveStatus.LIVE),
                 eq(PageRequest.of(0, 20, Sort.by(Sort.Direction.DESC, "startedAt")))))
@@ -375,6 +385,7 @@ class LiveControllerTest {
 
     @Test
     void listActiveLives_withNullThumbnail_doesNotThrow() throws Exception {
+        asBuyer();
         var live = buildLive();
         live.start();
         when(loadLivePort.loadByStatus(eq(LiveStatus.LIVE), any()))
@@ -389,6 +400,7 @@ class LiveControllerTest {
 
     @Test
     void listActiveLives_withNoRedisEntryYet_defaultsViewerCountToZero() throws Exception {
+        asBuyer();
         var live = buildLive();
         live.start();
         when(loadLivePort.loadByStatus(eq(LiveStatus.LIVE), any()))
@@ -402,6 +414,7 @@ class LiveControllerTest {
 
     @Test
     void listActiveLives_neverExposesPlaybackOrBroadcastCredentials() throws Exception {
+        asBuyer();
         var live = buildLive();
         live.start();
         live.setStreamToken("agora-rtc-token");
@@ -422,6 +435,7 @@ class LiveControllerTest {
 
     @Test
     void listUpcomingLives_whenEmpty_returns200EmptyPage() throws Exception {
+        asBuyer();
         when(loadLivePort.loadUpcoming(any()))
                 .thenReturn(new PageImpl<>(List.of()));
 
@@ -434,6 +448,7 @@ class LiveControllerTest {
 
     @Test
     void listUpcomingLives_onlyQueriesUpcoming_notSellerOrStoreScoped() throws Exception {
+        asBuyer();
         var live = buildScheduledLive(java.time.Instant.now().plusSeconds(3600));
         when(loadLivePort.loadUpcoming(any()))
                 .thenReturn(new PageImpl<>(List.of(live)));
@@ -449,6 +464,7 @@ class LiveControllerTest {
 
     @Test
     void listUpcomingLives_respectsPaginationDefaults() throws Exception {
+        asBuyer();
         when(loadLivePort.loadUpcoming(
                 eq(PageRequest.of(0, 20, Sort.by(Sort.Direction.ASC, "scheduledAt")))))
                 .thenReturn(new PageImpl<>(List.of()));
@@ -459,6 +475,7 @@ class LiveControllerTest {
 
     @Test
     void listUpcomingLives_withNullThumbnail_doesNotThrow() throws Exception {
+        asBuyer();
         var live = buildScheduledLive(java.time.Instant.now().plusSeconds(3600));
         when(loadLivePort.loadUpcoming(any()))
                 .thenReturn(new PageImpl<>(List.of(live)));
@@ -471,6 +488,7 @@ class LiveControllerTest {
 
     @Test
     void listUpcomingLives_neverExposesCurrentViewersOrBroadcastCredentials() throws Exception {
+        asBuyer();
         var live = buildScheduledLive(java.time.Instant.now().plusSeconds(3600));
         live.setStreamToken("agora-rtc-token");
         when(loadLivePort.loadUpcoming(any()))
@@ -486,6 +504,7 @@ class LiveControllerTest {
 
     @Test
     void listActiveLives_withStore_resolvesSellerNameFromStoreName() throws Exception {
+        asBuyer();
         var live = buildLiveWithStore(STORE_ID);
         live.start();
         when(loadLivePort.loadByStatus(eq(LiveStatus.LIVE), any()))
@@ -502,6 +521,7 @@ class LiveControllerTest {
 
     @Test
     void listActiveLives_withoutStore_resolvesSellerNameFromUserDisplayName() throws Exception {
+        asBuyer();
         var live = buildLive();
         live.start();
         when(loadLivePort.loadByStatus(eq(LiveStatus.LIVE), any()))
@@ -519,6 +539,7 @@ class LiveControllerTest {
 
     @Test
     void listActiveLives_withMultipleCardsFromSameStore_batchesStoreLookupOnce() throws Exception {
+        asBuyer();
         var live1 = buildLiveWithStore(STORE_ID);
         var live2 = buildLiveWithStore(STORE_ID);
         live1.start();
@@ -538,6 +559,7 @@ class LiveControllerTest {
 
     @Test
     void listUpcomingLives_withStore_resolvesSellerNameFromStoreName() throws Exception {
+        asBuyer();
         var live = Live.create(SELLER_ID, STORE_ID, LiveContext.STORE, "Store Upcoming Live",
                 null, java.time.Instant.now().plusSeconds(3600), 60);
         when(loadLivePort.loadUpcoming(any())).thenReturn(new PageImpl<>(List.of(live)));
@@ -550,6 +572,7 @@ class LiveControllerTest {
 
     @Test
     void listUpcomingLives_withoutStore_resolvesSellerNameFromUserDisplayName() throws Exception {
+        asBuyer();
         var live = buildScheduledLive(java.time.Instant.now().plusSeconds(3600));
         when(loadLivePort.loadUpcoming(any())).thenReturn(new PageImpl<>(List.of(live)));
         when(loadSellerNamesPort.loadNames(Set.of(SELLER_ID)))
@@ -616,6 +639,7 @@ class LiveControllerTest {
 
     @Test
     void listActiveLives_withCategoryId_queriesByStatusAndCategory() throws Exception {
+        asBuyer();
         var live = buildLiveWithCategory(CATEGORY_ID, null);
         live.start();
         when(loadLivePort.loadByStatusAndCategory(
@@ -633,6 +657,7 @@ class LiveControllerTest {
 
     @Test
     void listActiveLives_withoutCategoryId_usesUnfilteredQuery() throws Exception {
+        asBuyer();
         when(loadLivePort.loadByStatus(eq(LiveStatus.LIVE), any())).thenReturn(new PageImpl<>(List.of()));
 
         mvc.perform(get("/api/lives/active"))
@@ -643,6 +668,7 @@ class LiveControllerTest {
 
     @Test
     void listActiveLives_cardIncludesNullCategoryIdWhenUncategorized() throws Exception {
+        asBuyer();
         var live = buildLive();
         live.start();
         when(loadLivePort.loadByStatus(eq(LiveStatus.LIVE), any())).thenReturn(new PageImpl<>(List.of(live)));
@@ -655,12 +681,14 @@ class LiveControllerTest {
 
     @Test
     void listActiveLives_withMalformedCategoryId_returns400() throws Exception {
+        asBuyer();
         mvc.perform(get("/api/lives/active").param("categoryId", "not-a-uuid"))
                 .andExpect(status().isBadRequest());
     }
 
     @Test
     void countActiveLivesByCategory_returnsCountsInPortOrder() throws Exception {
+        asBuyer();
         var otherCategoryId = UUID.randomUUID();
         when(loadLivePort.countByStatusGroupedByCategory(LiveStatus.LIVE)).thenReturn(List.of(
                 new LoadLivePort.CategoryLiveCount(CATEGORY_ID, 3L),
@@ -679,6 +707,7 @@ class LiveControllerTest {
 
     @Test
     void countActiveLivesByCategory_withNoActiveLives_returnsEmptyArray() throws Exception {
+        asBuyer();
         when(loadLivePort.countByStatusGroupedByCategory(LiveStatus.LIVE)).thenReturn(List.of());
 
         mvc.perform(get("/api/lives/active/category-counts"))
@@ -688,6 +717,7 @@ class LiveControllerTest {
 
     @Test
     void countUpcomingLivesByCategory_returnsCountsInPortOrder() throws Exception {
+        asBuyer();
         var otherCategoryId = UUID.randomUUID();
         when(loadLivePort.countUpcomingGroupedByCategory()).thenReturn(List.of(
                 new LoadLivePort.CategoryLiveCount(CATEGORY_ID, 4L),
@@ -707,6 +737,7 @@ class LiveControllerTest {
 
     @Test
     void countUpcomingLivesByCategory_withNoUpcomingLives_returnsEmptyArray() throws Exception {
+        asBuyer();
         when(loadLivePort.countUpcomingGroupedByCategory()).thenReturn(List.of());
 
         mvc.perform(get("/api/lives/upcoming/category-counts"))
@@ -715,16 +746,8 @@ class LiveControllerTest {
     }
 
     @Test
-    void countUpcomingLivesByCategory_requiresNoSellerRole() throws Exception {
-        setPrincipal(UUID.randomUUID(), "ROLE_BUYER");
-        when(loadLivePort.countUpcomingGroupedByCategory()).thenReturn(List.of());
-
-        mvc.perform(get("/api/lives/upcoming/category-counts"))
-                .andExpect(status().isOk());
-    }
-
-    @Test
     void listUpcomingLives_withCategoryId_queriesUpcomingByCategory() throws Exception {
+        asBuyer();
         var live = buildLiveWithCategory(CATEGORY_ID, java.time.Instant.now().plusSeconds(3600));
         when(loadLivePort.loadUpcomingByCategory(
                 eq(CATEGORY_ID),
@@ -740,6 +763,7 @@ class LiveControllerTest {
 
     @Test
     void listUpcomingLives_withoutCategoryId_usesUnfilteredQuery() throws Exception {
+        asBuyer();
         when(loadLivePort.loadUpcoming(any())).thenReturn(new PageImpl<>(List.of()));
 
         mvc.perform(get("/api/lives/upcoming"))
@@ -750,6 +774,7 @@ class LiveControllerTest {
 
     @Test
     void listUpcomingLives_withMalformedCategoryId_returns400() throws Exception {
+        asBuyer();
         mvc.perform(get("/api/lives/upcoming").param("categoryId", "not-a-uuid"))
                 .andExpect(status().isBadRequest());
     }
