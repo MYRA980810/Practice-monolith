@@ -95,6 +95,11 @@ jwt:
   refresh-reuse-grace-ms: ${JWT_REFRESH_REUSE_GRACE_MS:30000}
   refresh-lock-timeout-ms: ${JWT_REFRESH_LOCK_TIMEOUT_MS:3000}
 
+auth:
+  stream-ticket:
+    # Lifetime of the single-use ticket from POST /api/lives/feed/stream-ticket (stored hashed in Redis).
+    ttl-ms: ${STREAM_TICKET_TTL_MS:30000}
+
 order:
   reservation:
     ttl-minutes: ${ORDER_RESERVATION_TTL_MINUTES:10}
@@ -107,6 +112,12 @@ app:
     same-site: ${COOKIE_SAME_SITE:None}
   oauth2:
     code-ttl-seconds: ${OAUTH2_CODE_TTL_SECONDS:90}
+  feed-stream:
+    # Origins allowed to open GET /api/lives/feed/stream cross-origin (browser + X-Stream-Ticket).
+    # Comma-separated origins or patterns: the Vercel production domain and the team-scoped preview
+    # pattern, e.g. https://livecomerce-web-*-<team-slug>.vercel.app (never without the team slug).
+    # Defaults to the frontend URL; set it empty to block cross-origin access to the stream.
+    allowed-origin-patterns: ${FEED_STREAM_CORS_ALLOWED_ORIGINS:${app.frontend-url}}
   billing:
     success-url: ${BILLING_SUCCESS_URL:http://localhost:3000/billing/success}
     cancel-url: ${BILLING_CANCEL_URL:http://localhost:3000/billing/cancel}

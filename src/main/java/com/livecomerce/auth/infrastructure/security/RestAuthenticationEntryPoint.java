@@ -47,6 +47,7 @@ class RestAuthenticationEntryPoint implements AuthenticationEntryPoint {
         return switch (code) {
             case "TOKEN_EXPIRED"  -> "The access token has expired. Please refresh or log in again.";
             case "INVALID_TOKEN"  -> "The provided token is invalid or malformed.";
+            case "TICKET_INVALID" -> "The stream ticket is invalid, expired or already used. Request a new ticket.";
             default               -> "Authentication is required to access this resource.";
         };
     }
