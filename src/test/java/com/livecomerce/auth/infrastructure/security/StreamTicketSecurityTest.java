@@ -1,6 +1,7 @@
 package com.livecomerce.auth.infrastructure.security;
 
 import com.livecomerce.live.StreamTicketPort;
+import com.livecomerce.live.StreamTicketStoreUnavailableException;
 import com.livecomerce.shared.UserPrincipal;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.MalformedJwtException;
@@ -10,6 +11,7 @@ import org.springframework.boot.autoconfigure.security.oauth2.client.OAuth2Clien
 import org.springframework.boot.autoconfigure.security.oauth2.client.servlet.OAuth2ClientWebSecurityAutoConfiguration;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.http.MediaType;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -176,6 +178,51 @@ class StreamTicketSecurityTest {
         mvc.perform(get(STREAM).header(TICKET_HEADER, "orphan"))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.code").value("TICKET_INVALID"));
+    }
+
+    // --- ticket store / user store unavailable: 503, never TICKET_INVALID, never authenticated ---
+
+    @Test
+    void ticketStoreUnavailable_returns503TicketStoreUnavailableWithRetryAfter() throws Exception {
+        when(streamTicketPort.consume("any"))
+                .thenThrow(new StreamTicketStoreUnavailableException("down", new RuntimeException("redis")));
+
+        mvc.perform(get(STREAM).header(TICKET_HEADER, "any"))
+                .andExpect(request().asyncNotStarted())
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(header().string("Retry-After", "5"))
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.status").value(503))
+                .andExpect(jsonPath("$.code").value("TICKET_STORE_UNAVAILABLE"))
+                .andExpect(jsonPath("$.detail").isNotEmpty());
+
+        verify(userDetailsAdapter, never()).loadUserByUsername(anyString());
+    }
+
+    @Test
+    void ticketStoreUnavailable_crossOrigin_exposesRetryAfterToTheBrowser() throws Exception {
+        when(streamTicketPort.consume("any"))
+                .thenThrow(new StreamTicketStoreUnavailableException("down", new RuntimeException("redis")));
+
+        mvc.perform(get(STREAM).header(TICKET_HEADER, "any").header("Origin", "https://livecomerce.app"))
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(header().string("Access-Control-Allow-Origin", "https://livecomerce.app"))
+                .andExpect(header().string("Access-Control-Expose-Headers", containsString("Retry-After")));
+    }
+
+    @Test
+    void userStoreUnavailableAfterRedeemingTheTicket_returns503TicketStoreUnavailable() throws Exception {
+        var userId = UUID.randomUUID();
+        when(streamTicketPort.consume("burned")).thenReturn(Optional.of(userId));
+        when(userDetailsAdapter.loadUserByUsername(userId.toString()))
+                .thenThrow(new DataAccessResourceFailureException("db down"));
+
+        mvc.perform(get(STREAM).header(TICKET_HEADER, "burned"))
+                .andExpect(request().asyncNotStarted())
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(header().string("Retry-After", "5"))
+                .andExpect(jsonPath("$.status").value(503))
+                .andExpect(jsonPath("$.code").value("TICKET_STORE_UNAVAILABLE"));
     }
 
     @Test

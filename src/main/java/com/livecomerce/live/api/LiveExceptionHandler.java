@@ -10,8 +10,13 @@ import com.livecomerce.live.domain.LiveProductNotFoundException;
 import com.livecomerce.live.domain.LiveProductOutOfStockException;
 import com.livecomerce.live.domain.LiveSubscriptionNotForSellerException;
 import com.livecomerce.live.domain.VideoProviderUnavailableException;
+import com.livecomerce.live.StreamTicketStoreUnavailableException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
+import org.springframework.http.ResponseEntity;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -21,6 +26,8 @@ import java.net.URI;
 @SuppressWarnings("null") // URI.create() is never null; ProblemDetail.setType expects @NonNull
 @RestControllerAdvice(basePackages = "com.livecomerce.live")
 class LiveExceptionHandler {
+
+    private static final Logger log = LoggerFactory.getLogger(LiveExceptionHandler.class);
 
     @ExceptionHandler(LiveNotFoundException.class)
     ProblemDetail handleNotFound(LiveNotFoundException e) {
@@ -90,6 +97,25 @@ class LiveExceptionHandler {
         var detail = ProblemDetail.forStatusAndDetail(HttpStatus.SERVICE_UNAVAILABLE, e.getMessage());
         detail.setType(URI.create("https://livecomerce.com/errors/video-provider-unavailable"));
         return detail;
+    }
+
+    /**
+     * The stream-ticket store is down: 503 with {@code Retry-After} and code
+     * {@code TICKET_STORE_UNAVAILABLE}, so the client backs off instead of refreshing its session.
+     */
+    @ExceptionHandler(StreamTicketStoreUnavailableException.class)
+    ResponseEntity<ProblemDetail> handleTicketStoreUnavailable(StreamTicketStoreUnavailableException e) {
+        log.error("Stream ticket store unavailable ({}); answering 503 {}",
+                e.getCause() != null ? e.getCause().getClass().getSimpleName() : e.getMessage(),
+                StreamTicketStoreUnavailableException.CODE);
+        var detail = ProblemDetail.forStatusAndDetail(HttpStatus.SERVICE_UNAVAILABLE,
+                "Stream tickets are temporarily unavailable. Retry after the Retry-After delay.");
+        detail.setType(URI.create("https://livecomerce.com/errors/ticket-store-unavailable"));
+        detail.setProperty("code", StreamTicketStoreUnavailableException.CODE);
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                .header(HttpHeaders.RETRY_AFTER,
+                        String.valueOf(StreamTicketStoreUnavailableException.RETRY_AFTER.toSeconds()))
+                .body(detail);
     }
 
     @ExceptionHandler(ObjectOptimisticLockingFailureException.class)

@@ -3,6 +3,7 @@ package com.livecomerce.live.api;
 import com.livecomerce.auth.infrastructure.security.ProductionSecurityTestConfig;
 import com.livecomerce.live.LoadSellerNamesPort;
 import com.livecomerce.live.LoadStoreNamesPort;
+import com.livecomerce.live.StreamTicketStoreUnavailableException;
 import com.livecomerce.live.application.LiveFeedCardAssembler;
 import com.livecomerce.live.application.port.in.*;
 import com.livecomerce.live.application.port.out.LiveFeedPort;
@@ -246,6 +247,20 @@ class LiveFeedBuyerOnlySecurityTest {
                 .andExpect(status().isOk());
 
         verify(issueFeedStreamTicketUseCase).issue(userId);
+    }
+
+    @Test
+    void streamTicket_storeUnavailable_returns503TicketStoreUnavailableWithRetryAfter() throws Exception {
+        when(issueFeedStreamTicketUseCase.issue(any()))
+                .thenThrow(new StreamTicketStoreUnavailableException("down", new RuntimeException("redis")));
+
+        mvc.perform(post(STREAM_TICKET).with(as("ROLE_BUYER")))
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(header().string("Retry-After", "5"))
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.status").value(503))
+                .andExpect(jsonPath("$.code").value("TICKET_STORE_UNAVAILABLE"))
+                .andExpect(jsonPath("$.type").value("https://livecomerce.com/errors/ticket-store-unavailable"));
     }
 
     @Test
