@@ -67,6 +67,7 @@ class AsyncDispatchSecurityTest {
     @MockitoBean GoogleOAuth2SuccessHandler                 googleOAuth2SuccessHandler;
     @MockitoBean CookieOAuth2AuthorizationRequestRepository authorizationRequestRepository;
     @MockitoBean ClientRegistrationRepository               clientRegistrationRepository;
+    @MockitoBean com.livecomerce.live.StreamTicketPort streamTicketPort;
 
     @Test
     void stream_withoutJwt_isRejectedWith401() throws Exception {

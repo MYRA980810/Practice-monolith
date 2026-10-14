@@ -42,7 +42,9 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.request;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -54,7 +56,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  */
 @SuppressWarnings("null")
 @WebMvcTest(
-        controllers = {LiveController.class, LiveFeedStreamController.class, LiveFeedTokenController.class},
+        controllers = {LiveController.class, LiveFeedStreamController.class, LiveFeedTokenController.class,
+                LiveFeedTicketController.class},
         excludeAutoConfiguration = {
                 OAuth2ClientAutoConfiguration.class,
                 OAuth2ClientWebSecurityAutoConfiguration.class
@@ -87,6 +90,7 @@ class LiveFeedBuyerOnlySecurityTest {
     @MockitoBean ChangeLiveCategoryUseCase changeLiveCategoryUseCase;
     @MockitoBean RecordViewerHeartbeatUseCase recordViewerHeartbeatUseCase;
     @MockitoBean GetLiveFeedTokenUseCase getLiveFeedTokenUseCase;
+    @MockitoBean IssueFeedStreamTicketUseCase issueFeedStreamTicketUseCase;
     @MockitoBean LoadLivePort loadLivePort;
     @MockitoBean LiveFeedPort liveFeedPort;
     @MockitoBean ViewerCountPort viewerCountPort;
@@ -211,5 +215,54 @@ class LiveFeedBuyerOnlySecurityTest {
                 .andExpect(jsonPath("$.code").value("UNAUTHENTICATED"));
 
         verifyNoInteractions(liveFeedPort);
+    }
+
+    // --- SSE stream ticket (issued to the Next.js server, which holds the Bearer token) ---
+
+    private static final String STREAM_TICKET = "/api/lives/feed/stream-ticket";
+
+    @Test
+    void streamTicket_asBuyer_returnsTicketAndExpiry_notCacheable() throws Exception {
+        when(issueFeedStreamTicketUseCase.issue(any()))
+                .thenReturn(new IssueFeedStreamTicketUseCase.FeedStreamTicket("opaque-ticket", 30_000L));
+
+        mvc.perform(post(STREAM_TICKET).with(as("ROLE_BUYER")))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Cache-Control", "no-store"))
+                .andExpect(jsonPath("$.ticket").value("opaque-ticket"))
+                .andExpect(jsonPath("$.expiresInMs").value(30_000));
+    }
+
+    @Test
+    void streamTicket_isIssuedForTheAuthenticatedUser() throws Exception {
+        var userId = UUID.randomUUID();
+        var principal = new UserPrincipal(userId, "buyer@test.com", "hash",
+                java.util.List.of(new SimpleGrantedAuthority("ROLE_BUYER")), true);
+        when(issueFeedStreamTicketUseCase.issue(userId))
+                .thenReturn(new IssueFeedStreamTicketUseCase.FeedStreamTicket("t", 30_000L));
+
+        mvc.perform(post(STREAM_TICKET).with(authentication(
+                        new UsernamePasswordAuthenticationToken(principal, null, principal.getAuthorities()))))
+                .andExpect(status().isOk());
+
+        verify(issueFeedStreamTicketUseCase).issue(userId);
+    }
+
+    @Test
+    void streamTicket_asSeller_returns403WithoutIssuing() throws Exception {
+        mvc.perform(post(STREAM_TICKET).with(as("ROLE_SELLER")))
+                .andExpect(status().isForbidden())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON));
+
+        verifyNoInteractions(issueFeedStreamTicketUseCase);
+    }
+
+    @Test
+    void streamTicket_unauthenticated_returns401() throws Exception {
+        mvc.perform(post(STREAM_TICKET))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("UNAUTHENTICATED"));
+
+        verifyNoInteractions(issueFeedStreamTicketUseCase);
     }
 }

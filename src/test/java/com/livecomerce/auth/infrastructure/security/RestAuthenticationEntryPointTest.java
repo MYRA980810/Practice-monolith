@@ -78,4 +78,18 @@ class RestAuthenticationEntryPointTest {
         var body = new ObjectMapper().readValue(response.getContentAsByteArray(), Map.class);
         assertThat(body.get("code")).isEqualTo("INVALID_TOKEN");
     }
+
+    @Test
+    void commence_withTicketInvalidAttribute_returns401WithTicketInvalidCodeAndDetail() throws Exception {
+        when(request.getAttribute("auth_error")).thenReturn("TICKET_INVALID");
+
+        entryPoint.commence(request, response, AUTH_EXCEPTION);
+
+        assertThat(response.getStatus()).isEqualTo(401);
+
+        @SuppressWarnings("unchecked")
+        var body = new ObjectMapper().readValue(response.getContentAsByteArray(), Map.class);
+        assertThat(body.get("code")).isEqualTo("TICKET_INVALID");
+        assertThat((String) body.get("detail")).contains("stream ticket");
+    }
 }

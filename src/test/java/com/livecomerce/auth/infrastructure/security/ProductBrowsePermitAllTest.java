@@ -82,6 +82,7 @@ class ProductBrowsePermitAllTest {
 
     // OAuth2 login requires a ClientRegistrationRepository even when autoconfiguration is excluded
     @MockitoBean ClientRegistrationRepository clientRegistrationRepository;
+    @MockitoBean com.livecomerce.live.StreamTicketPort streamTicketPort;
 
     // ProductController's own dependencies
     @MockitoBean CreateProductUseCase createProductUseCase;
