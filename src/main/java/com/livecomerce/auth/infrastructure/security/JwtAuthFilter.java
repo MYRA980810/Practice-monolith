@@ -39,7 +39,7 @@ class JwtAuthFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
     private final UserDetailsService userDetailsService;
-    private final RestAuthenticationEntryPoint errorWriter;
+    private final AuthStoreOutageResponder outageResponder;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
@@ -99,9 +99,6 @@ class JwtAuthFilter extends OncePerRequestFilter {
      * {@code @RestControllerAdvice} applies.
      */
     private void rejectAsUnavailable(HttpServletResponse response, Exception e) throws IOException {
-        log.error("JWT authentication unavailable (user store failure); answering 503 {}",
-                AUTH_STORE_UNAVAILABLE, e);
-        SecurityContextHolder.clearContext();
-        errorWriter.writeUnavailable(response, AUTH_STORE_UNAVAILABLE, RETRY_AFTER);
+        outageResponder.reject(response, log, "jwt", "user store", AUTH_STORE_UNAVAILABLE, RETRY_AFTER, e);
     }
 }

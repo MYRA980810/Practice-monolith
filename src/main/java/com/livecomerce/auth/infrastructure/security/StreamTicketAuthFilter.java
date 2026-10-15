@@ -50,7 +50,7 @@ class StreamTicketAuthFilter extends OncePerRequestFilter {
 
     private final StreamTicketPort streamTicketPort;
     private final UserDetailsService userDetailsService;
-    private final RestAuthenticationEntryPoint errorWriter;
+    private final AuthStoreOutageResponder outageResponder;
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
@@ -108,11 +108,8 @@ class StreamTicketAuthFilter extends OncePerRequestFilter {
      * {@code ExceptionTranslationFilter} and no {@code @RestControllerAdvice} applies.
      */
     private void rejectAsUnavailable(HttpServletResponse response, String store, Exception e) throws IOException {
-        log.error("Stream ticket authentication unavailable ({} failure: {}); answering 503 {}",
-                store, e.getClass().getSimpleName(), StreamTicketStoreUnavailableException.CODE);
-        SecurityContextHolder.clearContext();
-        errorWriter.writeUnavailable(response, StreamTicketStoreUnavailableException.CODE,
-                StreamTicketStoreUnavailableException.RETRY_AFTER);
+        outageResponder.reject(response, log, "stream-ticket", store, StreamTicketStoreUnavailableException.CODE,
+                StreamTicketStoreUnavailableException.RETRY_AFTER, e);
     }
 
     private static String pathWithinApplication(HttpServletRequest request) {

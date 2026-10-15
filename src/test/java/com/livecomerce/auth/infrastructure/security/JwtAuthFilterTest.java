@@ -3,6 +3,7 @@ package com.livecomerce.auth.infrastructure.security;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.livecomerce.shared.UserPrincipal;
 import io.jsonwebtoken.Claims;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.JwtException;
 import jakarta.servlet.FilterChain;
@@ -24,6 +25,7 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.transaction.CannotCreateTransactionException;
 
+import java.time.Clock;
 import java.util.List;
 import java.util.UUID;
 
@@ -51,12 +53,14 @@ class JwtAuthFilterTest {
     @Mock
     private Claims claims;
 
+    private final SimpleMeterRegistry meterRegistry = new SimpleMeterRegistry();
+
     private JwtAuthFilter filter;
 
     @BeforeEach
     void setUp() {
-        filter = new JwtAuthFilter(jwtService, userDetailsService,
-                new RestAuthenticationEntryPoint(new ObjectMapper()));
+        filter = new JwtAuthFilter(jwtService, userDetailsService, new AuthStoreOutageResponder(
+                new RestAuthenticationEntryPoint(new ObjectMapper()), meterRegistry, Clock.systemUTC()));
     }
 
     @AfterEach
@@ -217,5 +221,7 @@ class JwtAuthFilterTest {
         assertThat(request.getAttribute("auth_error")).isNull();
         assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
         verify(filterChain, never()).doFilter(any(), any());
+        assertThat(meterRegistry.get("auth.store.unavailable").tag("filter", "jwt").counter().count())
+                .isEqualTo(1.0);
     }
 }
