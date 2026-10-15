@@ -121,7 +121,8 @@ class SecurityConfig {
         // The SSE stream (/api/lives/feed/stream) has its own configuration: see feedStreamCorsConfiguration.
         config.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-Requested-With"));
         // X-Feed-Version: live-feed snapshot version on GET /api/lives/active, read by the frontend.
-        config.setExposedHeaders(List.of("Authorization", "X-Feed-Version"));
+        // Retry-After: not CORS-safelisted; the back-off of a 503 AUTH_STORE_UNAVAILABLE.
+        config.setExposedHeaders(List.of("Authorization", "X-Feed-Version", HttpHeaders.RETRY_AFTER));
 
         var source = new UrlBasedCorsConfigurationSource();
         // First match wins: the stream path must be registered before the global pattern.
