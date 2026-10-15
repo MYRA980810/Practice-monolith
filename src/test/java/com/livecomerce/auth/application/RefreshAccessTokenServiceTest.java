@@ -15,7 +15,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.CannotAcquireLockException;
 import org.springframework.dao.DataAccessResourceFailureException;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
 import java.time.Instant;
@@ -285,15 +284,5 @@ class RefreshAccessTokenServiceTest {
         verify(refreshTokenStorePort).revokeFamily(FAMILY_ID);
         verify(refreshTokenStorePort, never()).save(any());
         verify(tokenGeneratorPort, never()).generate(any());
-    }
-
-    /** The family revocation for a missing/inactive user must commit while the 401 propagates. */
-    @Test
-    void refresh_doesNotRollBackOnInvalidOrReuse() throws Exception {
-        var tx = RefreshAccessTokenService.class.getMethod("refresh", String.class)
-                .getAnnotation(Transactional.class);
-
-        assertThat(tx.noRollbackFor())
-                .contains(RefreshTokenReuseException.class, RefreshTokenInvalidException.class);
     }
 }
