@@ -22,7 +22,7 @@ import java.time.Duration;
  * Authenticates requests carrying {@code Authorization: Bearer <access token>}.
  * <p>
  * An expired token sets {@code auth_error=TOKEN_EXPIRED} and any other bad token (malformed, bad
- * signature, unknown user) sets {@code INVALID_TOKEN}; the chain continues and
+ * signature, unknown or inactive user) sets {@code INVALID_TOKEN}; the chain continues and
  * {@link RestAuthenticationEntryPoint} answers 401 if the endpoint needs authentication.
  * <p>
  * If the user store is down while loading the user, the request is answered right here with 503
@@ -66,6 +66,14 @@ class JwtAuthFilter extends OncePerRequestFilter {
 
             if (userId != null && SecurityContextHolder.getContext().getAuthentication() == null) {
                 var userDetails = userDetailsService.loadUserByUsername(userId);
+                if (!userDetails.isEnabled()) {
+                    // Same code as a bad token on purpose: the client tries one refresh, which is
+                    // also rejected for an inactive user, and then logs out.
+                    log.warn("Rejected JWT of inactive user '{}'", userId);
+                    request.setAttribute("auth_error", "INVALID_TOKEN");
+                    chain.doFilter(request, response);
+                    return;
+                }
                 var auth = new UsernamePasswordAuthenticationToken(
                         userDetails, null, userDetails.getAuthorities()
                 );

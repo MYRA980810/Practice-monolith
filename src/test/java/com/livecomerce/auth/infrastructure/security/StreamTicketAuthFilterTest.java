@@ -3,6 +3,7 @@ package com.livecomerce.auth.infrastructure.security;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.livecomerce.live.StreamTicketPort;
 import com.livecomerce.live.StreamTicketStoreUnavailableException;
+import com.livecomerce.shared.UserPrincipal;
 import jakarta.servlet.FilterChain;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -10,10 +11,12 @@ import org.junit.jupiter.api.Test;
 import org.springframework.dao.QueryTimeoutException;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.transaction.CannotCreateTransactionException;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -83,5 +86,20 @@ class StreamTicketAuthFilterTest {
         assertThat(response.getContentAsString()).doesNotContain("TICKET_INVALID");
         assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
         verify(chain, never()).doFilter(any(), any());
+    }
+
+    @Test
+    void ticketOfAnInactiveUser_doesNotAuthenticate_setsTicketInvalidAndContinues() throws Exception {
+        var userId = UUID.randomUUID();
+        when(streamTicketPort.consume("t")).thenReturn(Optional.of(userId));
+        when(userDetailsService.loadUserByUsername(userId.toString()))
+                .thenReturn(new UserPrincipal(userId, "u@test.com", "hash",
+                        List.of(new SimpleGrantedAuthority("ROLE_BUYER")), false));
+
+        filter.doFilter(request, response, chain);
+
+        assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
+        assertThat(request.getAttribute("auth_error")).isEqualTo(StreamTicketAuthFilter.TICKET_INVALID);
+        verify(chain).doFilter(request, response);
     }
 }

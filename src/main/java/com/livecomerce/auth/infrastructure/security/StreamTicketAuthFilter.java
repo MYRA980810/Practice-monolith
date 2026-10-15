@@ -26,9 +26,10 @@ import java.io.IOException;
  * JWT as a ticket). The user is reloaded like {@link JwtAuthFilter} does, so the principal and
  * authorities are identical and the stream's {@code hasRole('BUYER')} applies.
  * <p>
- * A bad ticket (unknown, expired or already used) sets {@code auth_error=TICKET_INVALID} and the
- * chain continues: {@link RestAuthenticationEntryPoint} answers 401 with that code, telling the
- * client to fetch a new ticket instead of refreshing its session.
+ * A bad ticket (unknown, expired or already used, or issued to a user that is gone or inactive)
+ * sets {@code auth_error=TICKET_INVALID} and the chain continues: {@link RestAuthenticationEntryPoint}
+ * answers 401 with that code, telling the client to fetch a new ticket instead of refreshing its
+ * session.
  * <p>
  * If the ticket store or the user store is down, the request is answered right here with 503
  * {@code TICKET_STORE_UNAVAILABLE} and {@code Retry-After} (never {@code TICKET_INVALID}, which
@@ -87,6 +88,11 @@ class StreamTicketAuthFilter extends OncePerRequestFilter {
         }
         try {
             var userDetails = userDetailsService.loadUserByUsername(userId.get().toString());
+            if (!userDetails.isEnabled()) {
+                log.warn("Stream ticket for inactive user '{}'", userId.get());
+                request.setAttribute("auth_error", TICKET_INVALID);
+                return;
+            }
             SecurityContextHolder.getContext().setAuthentication(
                     new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities()));
             log.debug("Authenticated user '{}' with a stream ticket", userId.get());

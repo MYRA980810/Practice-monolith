@@ -1,6 +1,7 @@
 package com.livecomerce.auth.infrastructure.security;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.livecomerce.shared.UserPrincipal;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.JwtException;
@@ -17,11 +18,13 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.transaction.CannotCreateTransactionException;
 
+import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -119,6 +122,40 @@ class JwtAuthFilterTest {
         assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
         verifyNoInteractions(userDetailsService);
         verify(filterChain).doFilter(request, response);
+    }
+
+    @Test
+    void doFilterInternal_withActiveUser_authenticatesAndContinues() throws Exception {
+        var userId = UUID.randomUUID();
+        var request = bearerRequestFor(userId.toString());
+        var response = new MockHttpServletResponse();
+        var principal = principal(userId, true);
+        when(userDetailsService.loadUserByUsername(userId.toString())).thenReturn(principal);
+
+        filter.doFilterInternal(request, response, filterChain);
+
+        assertThat(SecurityContextHolder.getContext().getAuthentication().getPrincipal()).isSameAs(principal);
+        assertThat(request.getAttribute("auth_error")).isNull();
+        verify(filterChain).doFilter(request, response);
+    }
+
+    @Test
+    void doFilterInternal_withInactiveUser_doesNotAuthenticate_setsInvalidTokenAndContinues() throws Exception {
+        var userId = UUID.randomUUID();
+        var request = bearerRequestFor(userId.toString());
+        var response = new MockHttpServletResponse();
+        when(userDetailsService.loadUserByUsername(userId.toString())).thenReturn(principal(userId, false));
+
+        filter.doFilterInternal(request, response, filterChain);
+
+        assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
+        assertThat(request.getAttribute("auth_error")).isEqualTo("INVALID_TOKEN");
+        verify(filterChain).doFilter(request, response);
+    }
+
+    private static UserPrincipal principal(UUID userId, boolean active) {
+        return new UserPrincipal(userId, "u@test.com", "hash",
+                List.of(new SimpleGrantedAuthority("ROLE_BUYER")), active);
     }
 
     // --- user store unavailable: 503, never INVALID_TOKEN, never authenticated ---
