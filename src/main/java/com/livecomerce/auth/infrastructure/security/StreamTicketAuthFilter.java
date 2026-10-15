@@ -10,7 +10,6 @@ import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataAccessException;
-import org.springframework.http.HttpHeaders;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -106,10 +105,8 @@ class StreamTicketAuthFilter extends OncePerRequestFilter {
         log.error("Stream ticket authentication unavailable ({} failure: {}); answering 503 {}",
                 store, e.getClass().getSimpleName(), StreamTicketStoreUnavailableException.CODE);
         SecurityContextHolder.clearContext();
-        response.setHeader(HttpHeaders.RETRY_AFTER,
-                String.valueOf(StreamTicketStoreUnavailableException.RETRY_AFTER.toSeconds()));
-        errorWriter.writeError(response, HttpServletResponse.SC_SERVICE_UNAVAILABLE,
-                StreamTicketStoreUnavailableException.CODE);
+        errorWriter.writeUnavailable(response, StreamTicketStoreUnavailableException.CODE,
+                StreamTicketStoreUnavailableException.RETRY_AFTER);
     }
 
     private static String pathWithinApplication(HttpServletRequest request) {

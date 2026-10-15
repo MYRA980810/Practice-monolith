@@ -5,12 +5,14 @@ import com.livecomerce.live.StreamTicketStoreUnavailableException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
+import java.time.Duration;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -44,6 +46,15 @@ class RestAuthenticationEntryPoint implements AuthenticationEntryPoint {
         objectMapper.writeValue(response.getOutputStream(), body);
     }
 
+    /**
+     * Writes a 503 auth error with {@code Retry-After}, for filters that fail closed when a store
+     * they authenticate against is down (an outage, never a bad credential).
+     */
+    void writeUnavailable(HttpServletResponse response, String errorCode, Duration retryAfter) throws IOException {
+        response.setHeader(HttpHeaders.RETRY_AFTER, String.valueOf(retryAfter.toSeconds()));
+        writeError(response, HttpServletResponse.SC_SERVICE_UNAVAILABLE, errorCode);
+    }
+
     private String resolveCode(HttpServletRequest request) {
         var attr = request.getAttribute("auth_error");
         if (attr instanceof String code) {
@@ -59,6 +70,8 @@ class RestAuthenticationEntryPoint implements AuthenticationEntryPoint {
             case "TICKET_INVALID" -> "The stream ticket is invalid, expired or already used. Request a new ticket.";
             case StreamTicketStoreUnavailableException.CODE ->
                     "Stream authentication is temporarily unavailable. Retry after the Retry-After delay.";
+            case JwtAuthFilter.AUTH_STORE_UNAVAILABLE ->
+                    "Authentication is temporarily unavailable. Retry after the Retry-After delay.";
             default               -> "Authentication is required to access this resource.";
         };
     }

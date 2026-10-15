@@ -273,6 +273,24 @@ class StreamTicketSecurityTest {
     }
 
     @Test
+    void bearerWithUserStoreUnavailable_returns503AuthStoreUnavailable_notInvalidToken() throws Exception {
+        var userId = UUID.randomUUID();
+        var claims = mock(Claims.class);
+        when(claims.getSubject()).thenReturn(userId.toString());
+        when(jwtService.validateAndExtract("jwt")).thenReturn(claims);
+        when(userDetailsAdapter.loadUserByUsername(userId.toString()))
+                .thenThrow(new DataAccessResourceFailureException("db down"));
+
+        mvc.perform(get("/api/lives/active").header("Authorization", "Bearer jwt"))
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(header().string("Retry-After", "5"))
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.status").value(503))
+                .andExpect(jsonPath("$.code").value("AUTH_STORE_UNAVAILABLE"))
+                .andExpect(jsonPath("$.detail").isNotEmpty());
+    }
+
+    @Test
     void ticketSentAsBearer_isNotAcceptedAsAJwt() throws Exception {
         when(jwtService.validateAndExtract("a-ticket")).thenThrow(new MalformedJwtException("not a jwt"));
 

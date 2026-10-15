@@ -96,7 +96,8 @@ class SecurityConfig {
                 .addFilterBefore(new StreamTicketAuthFilter(streamTicketPort, userDetailsAdapter,
                                 restAuthenticationEntryPoint),
                         UsernamePasswordAuthenticationFilter.class)
-                .addFilterBefore(new JwtAuthFilter(jwtService, userDetailsAdapter),
+                .addFilterBefore(new JwtAuthFilter(jwtService, userDetailsAdapter,
+                                restAuthenticationEntryPoint),
                         UsernamePasswordAuthenticationFilter.class)
                 .build();
     }
