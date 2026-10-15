@@ -15,6 +15,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.CannotAcquireLockException;
 import org.springframework.dao.DataAccessResourceFailureException;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
 import java.time.Instant;
@@ -250,5 +251,49 @@ class RefreshAccessTokenServiceTest {
         service.refresh(RAW_TOKEN);
 
         assertThat(oldToken.getUsedAt()).isEqualTo(now);
+    }
+
+    @Test
+    void refresh_whenUserNoLongerExists_revokesFamilyAndThrowsInvalidWithoutIssuing() {
+        var oldToken = RefreshToken.issue(USER_ID, FAMILY_ID, TOKEN_HASH, TTL_MS);
+
+        when(refreshTokenHasher.hash(RAW_TOKEN)).thenReturn(TOKEN_HASH);
+        when(refreshTokenStorePort.loadByTokenHashForUpdate(TOKEN_HASH)).thenReturn(Optional.of(oldToken));
+        when(loadUserPort.loadById(USER_ID)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.refresh(RAW_TOKEN))
+                .isInstanceOf(RefreshTokenInvalidException.class);
+
+        verify(refreshTokenStorePort).revokeFamily(FAMILY_ID);
+        verify(refreshTokenStorePort, never()).save(any());
+        verify(tokenGeneratorPort, never()).generate(any());
+    }
+
+    @Test
+    void refresh_whenUserIsInactive_revokesFamilyAndThrowsInvalidWithoutIssuing() {
+        var oldToken = RefreshToken.issue(USER_ID, FAMILY_ID, TOKEN_HASH, TTL_MS);
+        var user = User.create("user@test.com", "hash", "John", "Doe", null, Role.SELLER);
+        user.deactivate();
+
+        when(refreshTokenHasher.hash(RAW_TOKEN)).thenReturn(TOKEN_HASH);
+        when(refreshTokenStorePort.loadByTokenHashForUpdate(TOKEN_HASH)).thenReturn(Optional.of(oldToken));
+        when(loadUserPort.loadById(USER_ID)).thenReturn(Optional.of(user));
+
+        assertThatThrownBy(() -> service.refresh(RAW_TOKEN))
+                .isInstanceOf(RefreshTokenInvalidException.class);
+
+        verify(refreshTokenStorePort).revokeFamily(FAMILY_ID);
+        verify(refreshTokenStorePort, never()).save(any());
+        verify(tokenGeneratorPort, never()).generate(any());
+    }
+
+    /** The family revocation for a missing/inactive user must commit while the 401 propagates. */
+    @Test
+    void refresh_doesNotRollBackOnInvalidOrReuse() throws Exception {
+        var tx = RefreshAccessTokenService.class.getMethod("refresh", String.class)
+                .getAnnotation(Transactional.class);
+
+        assertThat(tx.noRollbackFor())
+                .contains(RefreshTokenReuseException.class, RefreshTokenInvalidException.class);
     }
 }
