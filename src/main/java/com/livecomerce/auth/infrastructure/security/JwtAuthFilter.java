@@ -71,14 +71,13 @@ class JwtAuthFilter extends OncePerRequestFilter {
                     // also rejected for an inactive user, and then logs out.
                     log.warn("Rejected JWT of inactive user '{}'", userId);
                     request.setAttribute("auth_error", "INVALID_TOKEN");
-                    chain.doFilter(request, response);
-                    return;
+                } else {
+                    var auth = new UsernamePasswordAuthenticationToken(
+                            userDetails, null, userDetails.getAuthorities()
+                    );
+                    SecurityContextHolder.getContext().setAuthentication(auth);
+                    log.info("Authenticated user '{}' with authorities: {}", userId, userDetails.getAuthorities());
                 }
-                var auth = new UsernamePasswordAuthenticationToken(
-                        userDetails, null, userDetails.getAuthorities()
-                );
-                SecurityContextHolder.getContext().setAuthentication(auth);
-                log.info("Authenticated user '{}' with authorities: {}", userId, userDetails.getAuthorities());
             }
         } catch (DataAccessException | TransactionException e) {
             rejectAsUnavailable(response, e);
