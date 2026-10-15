@@ -15,6 +15,11 @@ spring:
     hikari:
       maximum-pool-size: 10
       minimum-idle: 2
+      # Fail fast when the DB is down: every authenticated request waits this long for a
+      # connection before the auth filter can answer 503, and the 30s default would pin a
+      # Tomcat thread per request. validation-timeout must stay below connection-timeout.
+      connection-timeout: ${DB_CONNECTION_TIMEOUT_MS:3000}
+      validation-timeout: ${DB_VALIDATION_TIMEOUT_MS:2000}
 
   jpa:
     hibernate:
