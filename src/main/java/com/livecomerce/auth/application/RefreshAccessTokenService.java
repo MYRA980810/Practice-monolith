@@ -28,10 +28,11 @@ public class RefreshAccessTokenService implements RefreshAccessTokenUseCase {
     private final Clock clock;
 
     @Override
-    // noRollbackFor is required here: RefreshTokenReuseException is a RuntimeException
-    // which would normally trigger a rollback — undoing revokeFamily and defeating theft detection.
-    // We WANT the family revocation to commit even as the exception propagates to return 401.
-    @Transactional(noRollbackFor = RefreshTokenReuseException.class)
+    // noRollbackFor is required here: both exceptions are RuntimeExceptions, which would normally
+    // trigger a rollback and undo revokeFamily — defeating theft detection (reuse) or leaving the
+    // family of a deleted/inactive user alive (invalid). We WANT the family revocation to commit
+    // even as the exception propagates to return 401. No path revokes and then throws anything else.
+    @Transactional(noRollbackFor = {RefreshTokenReuseException.class, RefreshTokenInvalidException.class})
     public RefreshResult refresh(String rawRefreshToken) {
         var hash = refreshTokenHasher.hash(rawRefreshToken);
 
@@ -54,6 +55,16 @@ public class RefreshAccessTokenService implements RefreshAccessTokenUseCase {
             throw new RefreshTokenInvalidException();
         }
 
+        // The user must still exist and be active before anything is issued; otherwise the whole
+        // family is dead, so revoke it instead of rotating.
+        var user = loadUserPort.loadById(existing.getUserId())
+                .filter(u -> u.isActive())
+                .orElse(null);
+        if (user == null) {
+            refreshTokenStorePort.revokeFamily(existing.getFamilyId());
+            throw new RefreshTokenInvalidException();
+        }
+
         // Issue new token in the same family
         var newRawToken = refreshTokenHasher.generateRawToken();
         var newHash = refreshTokenHasher.hash(newRawToken);
@@ -67,9 +78,6 @@ public class RefreshAccessTokenService implements RefreshAccessTokenUseCase {
         refreshTokenStorePort.save(existing);
 
         // Generate new access token
-        var user = loadUserPort.loadById(existing.getUserId())
-                .orElseThrow(() -> new IllegalStateException("User not found: " + existing.getUserId()));
-
         var newAccessToken = tokenGeneratorPort.generate(user);
 
         return new RefreshResult(newAccessToken, newRawToken);

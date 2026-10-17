@@ -1,10 +1,13 @@
 package com.livecomerce.auth.infrastructure.security;
 
 import com.livecomerce.live.StreamTicketPort;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import jakarta.servlet.DispatcherType;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
@@ -25,6 +28,7 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import java.time.Clock;
 import java.util.Arrays;
 import java.util.List;
 
@@ -55,8 +59,16 @@ class SecurityConfig {
     @Value("${app.feed-stream.allowed-origin-patterns:}")
     private String feedStreamAllowedOriginPatterns;
 
+    /**
+     * The meter registry and clock come from the application context (actuator, ClockConfig). They
+     * are optional so {@code @WebMvcTest} slices that import this config, which have neither, keep
+     * working with a local registry and the system clock.
+     */
     @Bean
-    SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+    SecurityFilterChain filterChain(HttpSecurity http, ObjectProvider<MeterRegistry> meterRegistry,
+                                    ObjectProvider<Clock> clock) throws Exception {
+        var outageResponder = new AuthStoreOutageResponder(restAuthenticationEntryPoint,
+                meterRegistry.getIfAvailable(SimpleMeterRegistry::new), clock.getIfAvailable(Clock::systemUTC));
         return http
                 .csrf(AbstractHttpConfigurer::disable)
                 .cors(Customizer.withDefaults())
@@ -93,10 +105,9 @@ class SecurityConfig {
                         })
                 )
                 // Ticket filter first: JwtAuthFilter only authenticates an empty security context.
-                .addFilterBefore(new StreamTicketAuthFilter(streamTicketPort, userDetailsAdapter,
-                                restAuthenticationEntryPoint),
+                .addFilterBefore(new StreamTicketAuthFilter(streamTicketPort, userDetailsAdapter, outageResponder),
                         UsernamePasswordAuthenticationFilter.class)
-                .addFilterBefore(new JwtAuthFilter(jwtService, userDetailsAdapter),
+                .addFilterBefore(new JwtAuthFilter(jwtService, userDetailsAdapter, outageResponder),
                         UsernamePasswordAuthenticationFilter.class)
                 .build();
     }
@@ -110,7 +121,8 @@ class SecurityConfig {
         // The SSE stream (/api/lives/feed/stream) has its own configuration: see feedStreamCorsConfiguration.
         config.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-Requested-With"));
         // X-Feed-Version: live-feed snapshot version on GET /api/lives/active, read by the frontend.
-        config.setExposedHeaders(List.of("Authorization", "X-Feed-Version"));
+        // Retry-After: not CORS-safelisted; the back-off of a 503 AUTH_STORE_UNAVAILABLE.
+        config.setExposedHeaders(List.of("Authorization", "X-Feed-Version", HttpHeaders.RETRY_AFTER));
 
         var source = new UrlBasedCorsConfigurationSource();
         // First match wins: the stream path must be registered before the global pattern.

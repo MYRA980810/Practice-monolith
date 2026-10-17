@@ -10,7 +10,6 @@ import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataAccessException;
-import org.springframework.http.HttpHeaders;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -27,9 +26,10 @@ import java.io.IOException;
  * JWT as a ticket). The user is reloaded like {@link JwtAuthFilter} does, so the principal and
  * authorities are identical and the stream's {@code hasRole('BUYER')} applies.
  * <p>
- * A bad ticket (unknown, expired or already used) sets {@code auth_error=TICKET_INVALID} and the
- * chain continues: {@link RestAuthenticationEntryPoint} answers 401 with that code, telling the
- * client to fetch a new ticket instead of refreshing its session.
+ * A bad ticket (unknown, expired or already used, or issued to a user that is gone or inactive)
+ * sets {@code auth_error=TICKET_INVALID} and the chain continues: {@link RestAuthenticationEntryPoint}
+ * answers 401 with that code, telling the client to fetch a new ticket instead of refreshing its
+ * session.
  * <p>
  * If the ticket store or the user store is down, the request is answered right here with 503
  * {@code TICKET_STORE_UNAVAILABLE} and {@code Retry-After} (never {@code TICKET_INVALID}, which
@@ -50,7 +50,7 @@ class StreamTicketAuthFilter extends OncePerRequestFilter {
 
     private final StreamTicketPort streamTicketPort;
     private final UserDetailsService userDetailsService;
-    private final RestAuthenticationEntryPoint errorWriter;
+    private final AuthStoreOutageResponder outageResponder;
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
@@ -88,6 +88,11 @@ class StreamTicketAuthFilter extends OncePerRequestFilter {
         }
         try {
             var userDetails = userDetailsService.loadUserByUsername(userId.get().toString());
+            if (!userDetails.isEnabled()) {
+                log.warn("Stream ticket for inactive user '{}'", userId.get());
+                request.setAttribute("auth_error", TICKET_INVALID);
+                return;
+            }
             SecurityContextHolder.getContext().setAuthentication(
                     new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities()));
             log.debug("Authenticated user '{}' with a stream ticket", userId.get());
@@ -103,13 +108,8 @@ class StreamTicketAuthFilter extends OncePerRequestFilter {
      * {@code ExceptionTranslationFilter} and no {@code @RestControllerAdvice} applies.
      */
     private void rejectAsUnavailable(HttpServletResponse response, String store, Exception e) throws IOException {
-        log.error("Stream ticket authentication unavailable ({} failure: {}); answering 503 {}",
-                store, e.getClass().getSimpleName(), StreamTicketStoreUnavailableException.CODE);
-        SecurityContextHolder.clearContext();
-        response.setHeader(HttpHeaders.RETRY_AFTER,
-                String.valueOf(StreamTicketStoreUnavailableException.RETRY_AFTER.toSeconds()));
-        errorWriter.writeError(response, HttpServletResponse.SC_SERVICE_UNAVAILABLE,
-                StreamTicketStoreUnavailableException.CODE);
+        outageResponder.reject(response, log, "stream-ticket", store, StreamTicketStoreUnavailableException.CODE,
+                StreamTicketStoreUnavailableException.RETRY_AFTER, e);
     }
 
     private static String pathWithinApplication(HttpServletRequest request) {

@@ -38,6 +38,15 @@ class SecurityConfigCorsTest {
         assertThat(config.getAllowCredentials()).isTrue();
     }
 
+    /** Not CORS-safelisted: without it browser code can't read the back-off of a 503 AUTH_STORE_UNAVAILABLE. */
+    @Test
+    void globalConfiguration_exposesRetryAfter() {
+        var config = configFor("/api/lives/active", "https://livecomerce.app");
+
+        assertThat(config).isNotNull();
+        assertThat(config.getExposedHeaders()).contains("Retry-After");
+    }
+
     @Test
     void globalConfiguration_doesNotAllowTheStreamTicketHeader() {
         var config = configFor("/api/lives/active", "https://livecomerce.app");
