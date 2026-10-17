@@ -31,6 +31,8 @@
 		<spring-modulith.version>1.4.10</spring-modulith.version>
 		<!-- Boot 3.5.0 manages 1.21.0, whose Docker API negotiation is rejected by Docker Engine 29+ -->
 		<testcontainers.version>1.21.4</testcontainers.version>
+		<!-- Boot 3.5.0 manages 1.18.38, which VS Code's JDT (redhat.java 1.57+) misreads as a Java 25 flexible constructor body -->
+		<lombok.version>1.18.48</lombok.version>
 	</properties>
 	<dependencies>
 		<dependency>
