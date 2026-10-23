@@ -59,6 +59,10 @@ public class Live implements Persistable<UUID> {
     @Column(name = "ivs_playback_url", length = 500)
     private String ivsPlaybackUrl;
 
+    @Nullable
+    @Column(name = "chat_room_arn", length = 255)
+    private String chatRoomArn;
+
     @Column(name = "thumbnail_url", length = 500)
     private String thumbnailUrl;
 
@@ -240,6 +244,11 @@ public class Live implements Persistable<UUID> {
         this.ivsStreamKeyValue  = streamKeyValue;
         this.ivsPlaybackUrl     = playbackUrl;
         this.updatedAt          = OffsetDateTime.now();
+    }
+
+    public void setChatRoom(String roomArn) {
+        this.chatRoomArn = roomArn;
+        this.updatedAt   = OffsetDateTime.now();
     }
 
     public void updatePeakViewers(int currentCount) {

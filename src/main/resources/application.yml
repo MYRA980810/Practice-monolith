@@ -153,9 +153,19 @@ ivs:
   channel-type: ${IVS_CHANNEL_TYPE:STANDARD}
   latency-mode: LOW
   stream-events-queue-name: ${IVS_STREAM_EVENTS_QUEUE_NAME:ivs_stream_events}
+  chat:
+    # One IVS Chat room per live (created on start, deleted on end/cancel); only when live.chat-provider=ivs.
+    max-message-length: ${IVS_CHAT_MAX_MESSAGE_LENGTH:500}
+    max-messages-per-second: ${IVS_CHAT_MAX_MESSAGES_PER_SECOND:10}
+    # Lambda that reviews every message. Blank: rooms are created without moderation.
+    review-handler-arn: ${IVS_CHAT_REVIEW_HANDLER_ARN:}
+    # What IVS Chat does with a message when the review handler errors or times out: ALLOW | DENY.
+    fallback-result: ${IVS_CHAT_FALLBACK_RESULT:ALLOW}
 
 live:
   video-provider: ${LIVE_VIDEO_PROVIDER}
+  # agora | ivs. Stays agora until the frontend moves to IVS Chat.
+  chat-provider: ${LIVE_CHAT_PROVIDER:agora}
   feed:
     agora:
       # Legacy Agora RTM "lives-feed" broadcast (LiveFeedBroadcastListener). Superseded by the

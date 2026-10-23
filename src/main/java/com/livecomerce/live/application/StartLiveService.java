@@ -4,6 +4,7 @@ import com.livecomerce.live.LiveStartedEvent;
 import com.livecomerce.live.ProfileCompletionPort;
 import com.livecomerce.live.application.port.in.StartLiveUseCase;
 import com.livecomerce.live.application.port.out.AgoraTokenPort;
+import com.livecomerce.live.application.port.out.ChatRoomPort;
 import com.livecomerce.live.application.port.out.LoadLivePort;
 import com.livecomerce.live.application.port.out.LoadLiveSubscriptionPort;
 import com.livecomerce.live.application.port.out.SaveLivePort;
@@ -23,6 +24,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 @Service
 @RequiredArgsConstructor
@@ -42,9 +45,13 @@ public class StartLiveService implements StartLiveUseCase {
     private final ApplicationEventPublisher eventPublisher;
     private final ProfileCompletionPort     profileCompletionPort;
     private final SellerIvsChannelPort      sellerIvsChannelPort;
+    private final ChatRoomPort              chatRoomPort;
 
     @Value("${live.video-provider:agora}")
     private String videoProvider;
+
+    @Value("${live.chat-provider:agora}")
+    private String chatProvider;
 
     @Override
     public Live startLive(StartLiveCommand command) {
@@ -75,6 +82,14 @@ public class StartLiveService implements StartLiveUseCase {
             live.setStreamToken(token);
         }
 
+        // Last external call before saving: every earlier failure leaves no room behind,
+        // and a later one (save, commit) rolls back and deletes it (see deleteRoomOnRollback).
+        if ("ivs".equals(chatProvider)) {
+            var roomArn = chatRoomPort.createRoom(live.getId(), live.getSellerId());
+            deleteRoomOnRollback(live.getId(), roomArn);
+            live.setChatRoom(roomArn);
+        }
+
         var saved = saveLivePort.save(live);
 
         var subscriberIds = loadLiveSubscriptionPort.loadSubscriberIdsByLiveId(live.getId());
@@ -89,6 +104,30 @@ public class StartLiveService implements StartLiveUseCase {
         if (!live.getSellerId().equals(sellerId)) {
             throw new LiveNotOwnedBySellerException(live.getId(), sellerId);
         }
+    }
+
+    /**
+     * The room lives outside the transaction: if the start rolls back, delete it so
+     * it does not stay orphaned in AWS. Best-effort; an unknown outcome keeps the room.
+     */
+    private void deleteRoomOnRollback(java.util.UUID liveId, String roomArn) {
+        if (!TransactionSynchronizationManager.isSynchronizationActive()) {
+            return;
+        }
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCompletion(int status) {
+                if (status != STATUS_ROLLED_BACK) {
+                    return;
+                }
+                try {
+                    chatRoomPort.deleteRoom(roomArn);
+                } catch (Exception e) {
+                    log.warn("IVS Chat room cleanup after failed start failed: liveId={}, roomArn={}, error={}",
+                            liveId, roomArn, e.getMessage());
+                }
+            }
+        });
     }
 
     private SellerIvsChannel resolveOrCreateChannel(java.util.UUID sellerId) {
