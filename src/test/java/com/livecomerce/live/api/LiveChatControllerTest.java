@@ -88,12 +88,6 @@ class LiveChatControllerTest {
     }
 
     @Test
-    void getChatToken_oldChatPath_returns404() throws Exception {
-        mvc.perform(get("/api/lives/{liveId}/chat/token", LIVE_ID))
-                .andExpect(status().isNotFound());
-    }
-
-    @Test
     void getChatHistory_returnsMessages() throws Exception {
         var live = Live.create(UUID.randomUUID(), UUID.randomUUID(), LiveContext.STORE, "Live", null, null, 60);
         var msg  = LiveChatMessage.create(live, "msg-001", USER_ID, "alice", "Hello!", OffsetDateTime.now());

@@ -161,6 +161,11 @@ ivs:
     review-handler-arn: ${IVS_CHAT_REVIEW_HANDLER_ARN:}
     # What IVS Chat does with a message when the review handler errors or times out: ALLOW | DENY.
     fallback-result: ${IVS_CHAT_FALLBACK_RESULT:ALLOW}
+    # Chat token session length; the client renews the token through its tokenProvider.
+    session-duration-minutes: ${IVS_CHAT_SESSION_DURATION_MINUTES:60}
+    # Bounds every IVS Chat call (total incl. retries / single attempt) so a slow AWS never pins a request thread.
+    api-call-timeout-ms: ${IVS_CHAT_API_CALL_TIMEOUT_MS:3000}
+    api-call-attempt-timeout-ms: ${IVS_CHAT_API_CALL_ATTEMPT_TIMEOUT_MS:1500}
 
 live:
   video-provider: ${LIVE_VIDEO_PROVIDER}

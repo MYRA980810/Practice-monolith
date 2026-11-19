@@ -1,0 +1,101 @@
+package com.livecomerce.live.application;
+
+import com.livecomerce.live.LoadSellerNamesPort;
+import com.livecomerce.live.application.port.in.GetIvsChatTokenUseCase;
+import com.livecomerce.live.application.port.out.IvsChatTokenPort;
+import com.livecomerce.live.application.port.out.LoadLivePort;
+import com.livecomerce.live.domain.LiveChatRoomNotAvailableException;
+import com.livecomerce.live.domain.LiveNotFoundException;
+import com.livecomerce.live.domain.LiveNotLiveException;
+import com.livecomerce.live.domain.LiveStatus;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+
+/**
+ * Issues the IVS Chat token of a live. Not transactional on purpose: the live is read once
+ * and no DB connection should be held while the AWS call is in flight.
+ */
+@Service
+public class GetIvsChatTokenService implements GetIvsChatTokenUseCase {
+
+    private static final Logger log = LoggerFactory.getLogger(GetIvsChatTokenService.class);
+
+    static final String FALLBACK_DISPLAY_NAME = "User";
+
+    /** Token attribute keys: part of the wire contract with the chat clients, do not rename. */
+    static final String ATTR_LIVE_ID      = "liveId";
+    static final String ATTR_DISPLAY_NAME = "displayName";
+    static final String ATTR_ROLE         = "role";
+
+    /** Value of the {@value #ATTR_ROLE} attribute; the enum names are the wire values. */
+    enum ChatRole { SELLER, BUYER }
+
+    /** IVS caps all token attributes at 1 KB in total, so the free-text name is bounded. */
+    private static final int MAX_DISPLAY_NAME_CODE_POINTS = 64;
+
+    private final LoadLivePort        loadLivePort;
+    private final IvsChatTokenPort    ivsChatTokenPort;
+    /** Resolves any user's display name (alias, else first + last name), not only sellers. */
+    private final LoadSellerNamesPort loadUserNamesPort;
+    private final int                 sessionDurationMinutes;
+
+    GetIvsChatTokenService(LoadLivePort loadLivePort,
+                           IvsChatTokenPort ivsChatTokenPort,
+                           LoadSellerNamesPort loadUserNamesPort,
+                           @Value("${ivs.chat.session-duration-minutes:60}") int sessionDurationMinutes) {
+        this.loadLivePort           = loadLivePort;
+        this.ivsChatTokenPort       = ivsChatTokenPort;
+        this.loadUserNamesPort      = loadUserNamesPort;
+        this.sessionDurationMinutes = sessionDurationMinutes;
+    }
+
+    @Override
+    public IvsChatTokenResult getIvsChatToken(GetIvsChatTokenCommand command) {
+        var live = loadLivePort.loadById(command.liveId())
+                .orElseThrow(() -> new LiveNotFoundException(command.liveId()));
+
+        if (live.getStatus() != LiveStatus.LIVE && live.getStatus() != LiveStatus.RECONNECTING) {
+            throw new LiveNotLiveException(live.getId());
+        }
+        if (live.getChatRoomArn() == null) {
+            throw new LiveChatRoomNotAvailableException(live.getId());
+        }
+
+        var role = live.getSellerId().equals(command.userId()) ? ChatRole.SELLER : ChatRole.BUYER;
+        var attributes = Map.of(
+                ATTR_LIVE_ID,      live.getId().toString(),
+                ATTR_DISPLAY_NAME, displayName(command.userId()),
+                ATTR_ROLE,         role.name());
+
+        var token = ivsChatTokenPort.createToken(
+                live.getChatRoomArn(), command.userId().toString(), attributes, sessionDurationMinutes);
+
+        return new IvsChatTokenResult(
+                token.token(), token.sessionExpirationTime(), token.tokenExpirationTime(), token.region());
+    }
+
+    private String displayName(UUID userId) {
+        String name;
+        try {
+            name = loadUserNamesPort.loadNames(List.of(userId)).get(userId);
+        } catch (RuntimeException e) {
+            // The name is cosmetic: never fail the token because of it.
+            log.warn("Display name lookup failed for user {}, using fallback", userId, e);
+            return FALLBACK_DISPLAY_NAME;
+        }
+        if (name == null || name.isBlank()) {
+            return FALLBACK_DISPLAY_NAME;
+        }
+        name = name.strip();
+        if (name.codePointCount(0, name.length()) > MAX_DISPLAY_NAME_CODE_POINTS) {
+            name = name.substring(0, name.offsetByCodePoints(0, MAX_DISPLAY_NAME_CODE_POINTS));
+        }
+        return name;
+    }
+}
