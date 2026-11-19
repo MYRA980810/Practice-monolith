@@ -4,6 +4,7 @@ import com.livecomerce.live.LiveStartedEvent;
 import com.livecomerce.live.ProfileCompletionPort;
 import com.livecomerce.live.application.port.in.StartLiveUseCase.StartLiveCommand;
 import com.livecomerce.live.application.port.out.AgoraTokenPort;
+import com.livecomerce.live.application.port.out.ChatRoomPort;
 import com.livecomerce.live.application.port.out.LoadLivePort;
 import com.livecomerce.live.application.port.out.LoadLiveSubscriptionPort;
 import com.livecomerce.live.application.port.out.SaveLivePort;
@@ -21,6 +22,8 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.util.List;
 import java.util.Optional;
@@ -44,10 +47,12 @@ class StartLiveServiceTest {
     @Mock ApplicationEventPublisher   eventPublisher;
     @Mock ProfileCompletionPort       profileCompletionPort;
     @Mock SellerIvsChannelPort        sellerIvsChannelPort;
+    @Mock ChatRoomPort                chatRoomPort;
     @InjectMocks StartLiveService sut;
 
     private static final UUID SELLER_ID = UUID.randomUUID();
     private static final UUID STORE_ID  = UUID.randomUUID();
+    private static final String CHAT_ROOM_ARN = "arn:aws:ivschat:us-east-1:123:room/abc";
 
     @BeforeEach
     void setUp() {
@@ -72,6 +77,104 @@ class StartLiveServiceTest {
         assertThat(result.getStreamToken()).isEqualTo("agora-token-abc");
         verify(agoraTokenPort).generateRtcToken(live.getAgoraChannelId(), "uid-42", 3600);
         verifyNoInteractions(videoBroadcastPort);
+        verifyNoInteractions(chatRoomPort);
+        assertThat(result.getChatRoomArn()).isNull();
+    }
+
+    @Test
+    void startLive_withIvsChatProvider_createsChatRoomAndStoresArn() {
+        var live = ivsChatLive();
+
+        var result = sut.startLive(new StartLiveCommand(live.getId(), SELLER_ID, "uid-42"));
+
+        assertThat(result.getChatRoomArn()).isEqualTo(CHAT_ROOM_ARN);
+        verify(chatRoomPort).createRoom(live.getId(), SELLER_ID);
+    }
+
+    @Test
+    void startLive_withIvsChatProvider_whenCreateRoomFails_throwsChatProviderUnavailableAndDoesNotSave() {
+        ReflectionTestUtils.setField(sut, "chatProvider", "ivs");
+
+        var live = scheduledLive();
+        when(loadLivePort.loadById(live.getId())).thenReturn(Optional.of(live));
+        when(agoraTokenPort.generateRtcToken(anyString(), anyString(), anyInt())).thenReturn("token");
+        when(chatRoomPort.createRoom(live.getId(), SELLER_ID))
+                .thenThrow(new ChatProviderUnavailableException("IVS Chat down", new RuntimeException()));
+
+        var cmd = new StartLiveCommand(live.getId(), SELLER_ID, "uid-42");
+
+        assertThatThrownBy(() -> sut.startLive(cmd))
+                .isInstanceOf(ChatProviderUnavailableException.class);
+        verify(saveLivePort, never()).save(any());
+    }
+
+    @Test
+    void startLive_withIvsChatProvider_whenVideoChannelFails_neverCreatesChatRoom() {
+        ReflectionTestUtils.setField(sut, "videoProvider", "ivs");
+        ReflectionTestUtils.setField(sut, "chatProvider", "ivs");
+
+        var live = scheduledLive();
+        when(loadLivePort.loadById(live.getId())).thenReturn(Optional.of(live));
+        when(sellerIvsChannelPort.loadBySellerId(SELLER_ID)).thenThrow(new RuntimeException("IVS down"));
+
+        var cmd = new StartLiveCommand(live.getId(), SELLER_ID, "uid-42");
+
+        assertThatThrownBy(() -> sut.startLive(cmd))
+                .isInstanceOf(VideoProviderUnavailableException.class);
+        verifyNoInteractions(chatRoomPort);
+    }
+
+    @Test
+    void startLive_withIvsChatProvider_whenTransactionRollsBack_deletesCreatedRoom() {
+        var live = ivsChatLive();
+
+        completeTransaction(TransactionSynchronization.STATUS_ROLLED_BACK,
+                () -> sut.startLive(new StartLiveCommand(live.getId(), SELLER_ID, "uid-42")));
+
+        verify(chatRoomPort).deleteRoom(CHAT_ROOM_ARN);
+    }
+
+    @Test
+    void startLive_withIvsChatProvider_whenTransactionCommits_keepsRoom() {
+        var live = ivsChatLive();
+
+        completeTransaction(TransactionSynchronization.STATUS_COMMITTED,
+                () -> sut.startLive(new StartLiveCommand(live.getId(), SELLER_ID, "uid-42")));
+
+        verify(chatRoomPort, never()).deleteRoom(anyString());
+    }
+
+    @Test
+    void startLive_withIvsChatProvider_whenRollbackCleanupFails_swallowsError() {
+        var live = ivsChatLive();
+        doThrow(new RuntimeException("IVS Chat down")).when(chatRoomPort).deleteRoom(CHAT_ROOM_ARN);
+
+        assertThatCode(() -> completeTransaction(TransactionSynchronization.STATUS_ROLLED_BACK,
+                () -> sut.startLive(new StartLiveCommand(live.getId(), SELLER_ID, "uid-42"))))
+                .doesNotThrowAnyException();
+    }
+
+    /** Scheduled live whose start succeeds with chat-provider=ivs and the Agora video provider. */
+    private Live ivsChatLive() {
+        ReflectionTestUtils.setField(sut, "chatProvider", "ivs");
+        var live = scheduledLive();
+        when(loadLivePort.loadById(live.getId())).thenReturn(Optional.of(live));
+        when(agoraTokenPort.generateRtcToken(anyString(), anyString(), anyInt())).thenReturn("token");
+        when(chatRoomPort.createRoom(live.getId(), SELLER_ID)).thenReturn(CHAT_ROOM_ARN);
+        when(saveLivePort.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        return live;
+    }
+
+    /** Runs {@code action} inside a simulated transaction, then completes it with {@code status}. */
+    private static void completeTransaction(int status, Runnable action) {
+        TransactionSynchronizationManager.initSynchronization();
+        try {
+            action.run();
+            TransactionSynchronizationManager.getSynchronizations()
+                    .forEach(sync -> sync.afterCompletion(status));
+        } finally {
+            TransactionSynchronizationManager.clearSynchronization();
+        }
     }
 
     @Test

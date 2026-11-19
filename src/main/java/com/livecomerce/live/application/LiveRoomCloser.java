@@ -2,6 +2,7 @@ package com.livecomerce.live.application;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.livecomerce.live.application.port.out.AgoraRtmMessagePort;
+import com.livecomerce.live.application.port.out.ChatRoomPort;
 import com.livecomerce.live.application.port.out.VideoBroadcastPort;
 import com.livecomerce.live.domain.Live;
 import lombok.RequiredArgsConstructor;
@@ -14,8 +15,9 @@ import java.util.Map;
 /**
  * Tears down the live room once a live stops being on air (ended or cancelled
  * while LIVE/RECONNECTING): tells everyone in {@code live-chat:{id}} the live
- * ended, then stops the IVS stream. Both steps are best-effort; a failure is
- * logged and never blocks the state change that triggered the close.
+ * ended, then stops the IVS stream and deletes the IVS Chat room. Every step is
+ * best-effort; a failure is logged and never blocks the state change that
+ * triggered the close.
  */
 @Component
 @RequiredArgsConstructor
@@ -25,6 +27,7 @@ class LiveRoomCloser {
 
     private final AgoraRtmMessagePort agoraRtmMessagePort;
     private final VideoBroadcastPort  videoBroadcastPort;
+    private final ChatRoomPort        chatRoomPort;
     private final ObjectMapper        objectMapper;
 
     void closeRoom(Live live) {
@@ -44,6 +47,15 @@ class LiveRoomCloser {
             } catch (Exception e) {
                 log.warn("IVS stopStream failed: liveId={}, channelArn={}, error={}",
                         live.getId(), live.getIvsChannelArn(), e.getMessage());
+            }
+        }
+
+        if (live.getChatRoomArn() != null) {
+            try {
+                chatRoomPort.deleteRoom(live.getChatRoomArn());
+            } catch (Exception e) {
+                log.warn("IVS Chat deleteRoom failed: liveId={}, roomArn={}, error={}",
+                        live.getId(), live.getChatRoomArn(), e.getMessage());
             }
         }
     }

@@ -1,0 +1,1 @@
+ALTER TABLE lives ADD COLUMN chat_room_arn VARCHAR(255) NULL;

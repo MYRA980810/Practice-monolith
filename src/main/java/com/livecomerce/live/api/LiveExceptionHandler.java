@@ -1,5 +1,6 @@
 package com.livecomerce.live.api;
 
+import com.livecomerce.live.domain.ChatProviderUnavailableException;
 import com.livecomerce.live.domain.InvalidLiveStateException;
 import com.livecomerce.live.domain.LiveNotFoundException;
 import com.livecomerce.live.domain.LiveNotLiveException;
@@ -96,6 +97,14 @@ class LiveExceptionHandler {
     ProblemDetail handleVideoProviderUnavailable(VideoProviderUnavailableException e) {
         var detail = ProblemDetail.forStatusAndDetail(HttpStatus.SERVICE_UNAVAILABLE, e.getMessage());
         detail.setType(URI.create("https://livecomerce.com/errors/video-provider-unavailable"));
+        return detail;
+    }
+
+    @ExceptionHandler(ChatProviderUnavailableException.class)
+    ProblemDetail handleChatProviderUnavailable(ChatProviderUnavailableException e) {
+        log.error("Chat provider unavailable: {}", e.getMessage(), e);
+        var detail = ProblemDetail.forStatusAndDetail(HttpStatus.SERVICE_UNAVAILABLE, e.getMessage());
+        detail.setType(URI.create("https://livecomerce.com/errors/chat-provider-unavailable"));
         return detail;
     }
 

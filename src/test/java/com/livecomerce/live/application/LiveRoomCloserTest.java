@@ -2,6 +2,7 @@ package com.livecomerce.live.application;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.livecomerce.live.application.port.out.AgoraRtmMessagePort;
+import com.livecomerce.live.application.port.out.ChatRoomPort;
 import com.livecomerce.live.application.port.out.VideoBroadcastPort;
 import com.livecomerce.live.domain.Live;
 import com.livecomerce.live.domain.LiveContext;
@@ -29,10 +30,12 @@ class LiveRoomCloserTest {
 
     @Mock AgoraRtmMessagePort agoraRtmMessagePort;
     @Mock VideoBroadcastPort  videoBroadcastPort;
+    @Mock ChatRoomPort        chatRoomPort;
     @Spy  ObjectMapper        objectMapper = new ObjectMapper();
     @InjectMocks LiveRoomCloser sut;
 
-    private static final String CHANNEL_ARN = "arn:ivs:channel";
+    private static final String CHANNEL_ARN   = "arn:ivs:channel";
+    private static final String CHAT_ROOM_ARN = "arn:ivschat:room";
 
     private Live live() {
         var live = Live.create(UUID.randomUUID(), UUID.randomUUID(), LiveContext.STORE, "My Live", null, null, 60);
@@ -89,6 +92,33 @@ class LiveRoomCloserTest {
     void closeRoom_rtmFailure_isSwallowed_andStillStopsIvsStream() {
         var live = ivsLive();
         doThrow(new RuntimeException("RTM error")).when(agoraRtmMessagePort).sendChannelMessage(any(), any());
+
+        assertThatCode(() -> sut.closeRoom(live)).doesNotThrowAnyException();
+        verify(videoBroadcastPort).stopStream(CHANNEL_ARN);
+    }
+
+    @Test
+    void closeRoom_withChatRoom_deletesChatRoom() {
+        var live = live();
+        live.setChatRoom(CHAT_ROOM_ARN);
+
+        sut.closeRoom(live);
+
+        verify(chatRoomPort).deleteRoom(CHAT_ROOM_ARN);
+    }
+
+    @Test
+    void closeRoom_withoutChatRoom_skipsDeleteRoom() {
+        sut.closeRoom(live());
+
+        verifyNoInteractions(chatRoomPort);
+    }
+
+    @Test
+    void closeRoom_deleteRoomFailure_isSwallowed_andStillStopsIvsStream() {
+        var live = ivsLive();
+        live.setChatRoom(CHAT_ROOM_ARN);
+        doThrow(new RuntimeException("IVS Chat error")).when(chatRoomPort).deleteRoom(CHAT_ROOM_ARN);
 
         assertThatCode(() -> sut.closeRoom(live)).doesNotThrowAnyException();
         verify(videoBroadcastPort).stopStream(CHANNEL_ARN);

@@ -206,6 +206,12 @@
 			<artifactId>ivs</artifactId>
 		</dependency>
 
+		<!-- Amazon IVS Chat (per-live chat rooms) -->
+		<dependency>
+			<groupId>software.amazon.awssdk</groupId>
+			<artifactId>ivschat</artifactId>
+		</dependency>
+
 		<!-- Amazon IVS stream-event ingestion (EventBridge -> SQS) -->
 		<dependency>
 			<groupId>io.awspring.cloud</groupId>
