@@ -2,7 +2,9 @@ package com.livecomerce.live.infrastructure.persistence;
 
 import com.livecomerce.live.application.port.out.LoadChatMessagePort;
 import com.livecomerce.live.application.port.out.SaveChatMessagePort;
+import com.livecomerce.live.domain.Live;
 import com.livecomerce.live.domain.LiveChatMessage;
+import com.livecomerce.live.domain.LiveContext;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -31,22 +33,31 @@ class LiveChatMessagePersistenceAdapterTest {
     LiveChatMessagePersistenceAdapter adapter;
 
     @Test
-    void save_delegatesToRepository() {
-        var msg = mock(LiveChatMessage.class);
-        when(repository.save(msg)).thenReturn(msg);
+    void saveIfAbsent_insertsThroughOnConflictQuery_andReportsWhetherARowWasInserted() {
+        var live = Live.create(UUID.randomUUID(), UUID.randomUUID(), LiveContext.STORE, "Live", null, null, 60);
+        var msg  = LiveChatMessage.create(live, "msg-001", UUID.randomUUID(), "alice", "hi", OffsetDateTime.now());
+        when(repository.insertIfAbsent(msg.getId(), live.getId(), "msg-001", msg.getUserId(),
+                "alice", "hi", msg.getSentAt())).thenReturn(1, 0);
 
-        var result = ((SaveChatMessagePort) adapter).save(msg);
-
-        assertThat(result).isSameAs(msg);
-        verify(repository).save(msg);
+        assertThat(((SaveChatMessagePort) adapter).saveIfAbsent(msg)).isTrue();
+        assertThat(((SaveChatMessagePort) adapter).saveIfAbsent(msg)).isFalse();
     }
 
     @Test
-    void existsByAgoraMsgId_delegatesToRepository() {
-        when(repository.existsByAgoraMsgId("msg-001")).thenReturn(true);
+    void insertIfAbsent_targetsTheExistingAgoraColumn() throws NoSuchMethodException {
+        var method = LiveChatMessageJpaRepository.class.getDeclaredMethod("insertIfAbsent",
+                UUID.class, UUID.class, String.class, UUID.class, String.class, String.class, OffsetDateTime.class);
+        var sql = method.getAnnotation(org.springframework.data.jpa.repository.Query.class).value();
 
-        assertThat(((SaveChatMessagePort) adapter).existsByAgoraMsgId("msg-001")).isTrue();
-        verify(repository).existsByAgoraMsgId("msg-001");
+        assertThat(sql).contains("ON CONFLICT (agora_msg_id) DO NOTHING").doesNotContain("provider_msg_id");
+    }
+
+    @Test
+    void existsByProviderMsgId_delegatesToRepository() {
+        when(repository.existsByProviderMsgId("msg-001")).thenReturn(true);
+
+        assertThat(((SaveChatMessagePort) adapter).existsByProviderMsgId("msg-001")).isTrue();
+        verify(repository).existsByProviderMsgId("msg-001");
     }
 
     @Test

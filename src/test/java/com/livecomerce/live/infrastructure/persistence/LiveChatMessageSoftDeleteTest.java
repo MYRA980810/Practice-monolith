@@ -76,9 +76,9 @@ class LiveChatMessageSoftDeleteTest {
         entityManager.clear();
 
         assertThat(adapter.findByLiveIdLatest(live.getId(), 50))
-                .extracting(LiveChatMessage::getAgoraMsgId).containsExactly(kept);
+                .extracting(LiveChatMessage::getProviderMsgId).containsExactly(kept);
         assertThat(adapter.findByLiveIdBefore(live.getId(), T0.plusMinutes(5), 50))
-                .extracting(LiveChatMessage::getAgoraMsgId).containsExactly(kept);
+                .extracting(LiveChatMessage::getProviderMsgId).containsExactly(kept);
     }
 
     private Live persistLive(UUID sellerId) {

@@ -12,19 +12,27 @@ class LiveChatMessageTest {
     @Test
     void create_assignsAllFields() {
         var live      = Live.create(UUID.randomUUID(), UUID.randomUUID(), LiveContext.STORE, "Live Test", null, null, 60);
-        var agoraMsgId = "agora-msg-001";
+        var providerMsgId = "provider-msg-001";
         var userId    = UUID.randomUUID();
         var sentAt    = OffsetDateTime.now();
 
-        var msg = LiveChatMessage.create(live, agoraMsgId, userId, "alice", "Hello world!", sentAt);
+        var msg = LiveChatMessage.create(live, providerMsgId, userId, "alice", "Hello world!", sentAt);
 
         assertThat(msg.getId()).isNotNull();
         assertThat(msg.getLive()).isEqualTo(live);
-        assertThat(msg.getAgoraMsgId()).isEqualTo(agoraMsgId);
+        assertThat(msg.getProviderMsgId()).isEqualTo(providerMsgId);
         assertThat(msg.getUserId()).isEqualTo(userId);
         assertThat(msg.getUsername()).isEqualTo("alice");
         assertThat(msg.getContent()).isEqualTo("Hello world!");
         assertThat(msg.getSentAt()).isEqualTo(sentAt);
+    }
+
+    @Test
+    void providerMsgId_staysMappedToTheExistingAgoraColumn() throws NoSuchFieldException {
+        // The physical rename is deferred to the Agora cleanup PR: no migration in this deploy.
+        var column = LiveChatMessage.class.getDeclaredField("providerMsgId").getAnnotation(jakarta.persistence.Column.class);
+
+        assertThat(column.name()).isEqualTo("agora_msg_id");
     }
 
     @Test

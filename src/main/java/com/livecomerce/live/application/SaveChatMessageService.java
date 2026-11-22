@@ -19,8 +19,9 @@ public class SaveChatMessageService implements SaveChatMessageUseCase {
     @Override
     @Transactional
     public void saveChatMessage(SaveChatMessageCommand command) {
-        // Idempotency check — silently ignore duplicate Agora message IDs
-        if (saveChatMessagePort.existsByAgoraMsgId(command.agoraMsgId())) {
+        // Idempotency: duplicate provider message ids (webhook retries, SQS redelivery) are ignored.
+        // existsBy is only a fast path; saveIfAbsent is what makes concurrent duplicates race-safe.
+        if (saveChatMessagePort.existsByProviderMsgId(command.providerMsgId())) {
             return;
         }
 
@@ -29,13 +30,13 @@ public class SaveChatMessageService implements SaveChatMessageUseCase {
 
         var message = LiveChatMessage.create(
                 live,
-                command.agoraMsgId(),
+                command.providerMsgId(),
                 command.userId(),
                 command.username(),
                 command.content(),
                 command.sentAt()
         );
 
-        saveChatMessagePort.save(message);
+        saveChatMessagePort.saveIfAbsent(message);
     }
 }

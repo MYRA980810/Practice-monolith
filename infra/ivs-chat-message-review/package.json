@@ -1,0 +1,19 @@
+{
+  "name": "ivs-chat-message-review",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Amazon IVS Chat message review handler: stateless moderation plus hand-off of allowed messages to SQS.",
+  "type": "module",
+  "main": "src/index.mjs",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "test": "node --test",
+    "package": "npm ci --omit=dev && rm -f function.zip && zip -qr function.zip src banned-words.json package.json node_modules",
+    "package:windows": "npm ci --omit=dev && powershell -NoProfile -Command \"Compress-Archive -Force -Path src,banned-words.json,package.json,node_modules -DestinationPath function.zip\""
+  },
+  "dependencies": {
+    "@aws-sdk/client-sqs": "^3.700.0"
+  }
+}

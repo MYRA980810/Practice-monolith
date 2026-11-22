@@ -18,15 +18,21 @@ class LiveChatMessagePersistenceAdapter implements SaveChatMessagePort, LoadChat
 
     private final LiveChatMessageJpaRepository repository;
 
+    /**
+     * INSERT ... ON CONFLICT DO NOTHING instead of save + catching the constraint violation: the
+     * repository's transactional proxy marks the shared transaction rollback-only when the insert
+     * throws, so the commit would still fail after the catch.
+     */
     @Override
-    @SuppressWarnings("null")
-    public LiveChatMessage save(LiveChatMessage message) {
-        return repository.save(message);
+    @Transactional
+    public boolean saveIfAbsent(LiveChatMessage message) {
+        return repository.insertIfAbsent(message.getId(), message.getLive().getId(), message.getProviderMsgId(),
+                message.getUserId(), message.getUsername(), message.getContent(), message.getSentAt()) == 1;
     }
 
     @Override
-    public boolean existsByAgoraMsgId(String agoraMsgId) {
-        return repository.existsByAgoraMsgId(agoraMsgId);
+    public boolean existsByProviderMsgId(String providerMsgId) {
+        return repository.existsByProviderMsgId(providerMsgId);
     }
 
     @Override

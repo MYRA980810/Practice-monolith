@@ -9,7 +9,7 @@ public interface SaveChatMessageUseCase {
 
     record SaveChatMessageCommand(
             UUID liveId,
-            String agoraMsgId,
+            String providerMsgId,
             UUID userId,
             String username,
             String content,

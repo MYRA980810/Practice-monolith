@@ -35,24 +35,37 @@ class SaveChatMessageServiceTest {
                 live.getId(), "msg-001", UUID.randomUUID(), "alice", "Hello!", OffsetDateTime.now());
 
         when(loadLivePort.loadById(live.getId())).thenReturn(Optional.of(live));
-        when(saveChatMessagePort.existsByAgoraMsgId("msg-001")).thenReturn(false);
-        when(saveChatMessagePort.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(saveChatMessagePort.existsByProviderMsgId("msg-001")).thenReturn(false);
+        when(saveChatMessagePort.saveIfAbsent(any())).thenReturn(true);
 
         assertThatNoException().isThrownBy(() -> sut.saveChatMessage(cmd));
-        verify(saveChatMessagePort).save(any(LiveChatMessage.class));
+        verify(saveChatMessagePort).saveIfAbsent(any(LiveChatMessage.class));
     }
 
     @Test
-    void saveChatMessage_duplicateAgoraMsgId_idempotent_noException() {
+    void saveChatMessage_duplicateProviderMsgId_idempotent_noException() {
         var liveId = UUID.randomUUID();
         var cmd = new SaveChatMessageCommand(
                 liveId, "msg-dup", UUID.randomUUID(), "alice", "Hello!", OffsetDateTime.now());
 
-        when(saveChatMessagePort.existsByAgoraMsgId("msg-dup")).thenReturn(true);
+        when(saveChatMessagePort.existsByProviderMsgId("msg-dup")).thenReturn(true);
 
         assertThatNoException().isThrownBy(() -> sut.saveChatMessage(cmd));
         verifyNoInteractions(loadLivePort);
-        verify(saveChatMessagePort, never()).save(any());
+        verify(saveChatMessagePort, never()).saveIfAbsent(any());
+    }
+
+    @Test
+    void saveChatMessage_concurrentDuplicateLosesInsertRace_noException() {
+        var live = Live.create(SELLER_ID, STORE_ID, LiveContext.STORE, "Test Live", null, null, 60);
+        var cmd  = new SaveChatMessageCommand(
+                live.getId(), "msg-race", UUID.randomUUID(), "alice", "Hello!", OffsetDateTime.now());
+
+        when(saveChatMessagePort.existsByProviderMsgId("msg-race")).thenReturn(false);
+        when(loadLivePort.loadById(live.getId())).thenReturn(Optional.of(live));
+        when(saveChatMessagePort.saveIfAbsent(any())).thenReturn(false); // another consumer inserted it first
+
+        assertThatNoException().isThrownBy(() -> sut.saveChatMessage(cmd));
     }
 
     @Test
@@ -61,7 +74,7 @@ class SaveChatMessageServiceTest {
         var cmd = new SaveChatMessageCommand(
                 liveId, "msg-002", UUID.randomUUID(), "bob", "Hi!", OffsetDateTime.now());
 
-        when(saveChatMessagePort.existsByAgoraMsgId("msg-002")).thenReturn(false);
+        when(saveChatMessagePort.existsByProviderMsgId("msg-002")).thenReturn(false);
         when(loadLivePort.loadById(liveId)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> sut.saveChatMessage(cmd))
