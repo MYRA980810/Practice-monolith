@@ -10,6 +10,14 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+/**
+ * Issues the Agora RTM token for the legacy live chat.
+ *
+ * <p>Intentionally does NOT check chat bans: Agora has no server-side moderation, and this
+ * token is also the only RTM login both roles have for 1:1 notices until Phase 2, so denying
+ * it would cut those too. Bans are enforced only with {@code live.chat-provider=ivs}
+ * (see {@link GetIvsChatTokenService}). This class is removed with the rest of Agora chat.
+ */
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)

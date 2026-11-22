@@ -2,8 +2,10 @@ package com.livecomerce.live.application;
 
 import com.livecomerce.live.LoadSellerNamesPort;
 import com.livecomerce.live.application.port.in.GetIvsChatTokenUseCase;
+import com.livecomerce.live.application.port.out.ChatBanPort;
 import com.livecomerce.live.application.port.out.IvsChatTokenPort;
 import com.livecomerce.live.application.port.out.LoadLivePort;
+import com.livecomerce.live.domain.ChatBannedException;
 import com.livecomerce.live.domain.LiveChatRoomNotAvailableException;
 import com.livecomerce.live.domain.LiveNotFoundException;
 import com.livecomerce.live.domain.LiveNotLiveException;
@@ -43,15 +45,18 @@ public class GetIvsChatTokenService implements GetIvsChatTokenUseCase {
     private final IvsChatTokenPort    ivsChatTokenPort;
     /** Resolves any user's display name (alias, else first + last name), not only sellers. */
     private final LoadSellerNamesPort loadUserNamesPort;
+    private final ChatBanPort         chatBanPort;
     private final int                 sessionDurationMinutes;
 
     GetIvsChatTokenService(LoadLivePort loadLivePort,
                            IvsChatTokenPort ivsChatTokenPort,
                            LoadSellerNamesPort loadUserNamesPort,
+                           ChatBanPort chatBanPort,
                            @Value("${ivs.chat.session-duration-minutes:60}") int sessionDurationMinutes) {
         this.loadLivePort           = loadLivePort;
         this.ivsChatTokenPort       = ivsChatTokenPort;
         this.loadUserNamesPort      = loadUserNamesPort;
+        this.chatBanPort            = chatBanPort;
         this.sessionDurationMinutes = sessionDurationMinutes;
     }
 
@@ -68,6 +73,10 @@ public class GetIvsChatTokenService implements GetIvsChatTokenUseCase {
         }
 
         var role = live.getSellerId().equals(command.userId()) ? ChatRole.SELLER : ChatRole.BUYER;
+        // The owner is never banned from their own chat; bans are per seller, not per live.
+        if (role == ChatRole.BUYER && chatBanPort.isBanned(live.getSellerId(), command.userId())) {
+            throw new ChatBannedException(live.getId());
+        }
         var attributes = Map.of(
                 ATTR_LIVE_ID,      live.getId().toString(),
                 ATTR_DISPLAY_NAME, displayName(command.userId()),

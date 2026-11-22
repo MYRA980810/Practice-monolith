@@ -36,6 +36,10 @@ public class LiveChatMessage {
     @Column(name = "sent_at", nullable = false)
     private OffsetDateTime sentAt;
 
+    /** Set when the seller deleted the message; deleted messages are excluded from the history. */
+    @Column(name = "deleted_at")
+    private OffsetDateTime deletedAt;
+
     public static LiveChatMessage create(Live live, String agoraMsgId, UUID userId,
                                          String username, String content, OffsetDateTime sentAt) {
         var msg      = new LiveChatMessage();

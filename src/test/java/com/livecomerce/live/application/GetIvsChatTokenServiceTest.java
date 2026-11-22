@@ -2,9 +2,11 @@ package com.livecomerce.live.application;
 
 import com.livecomerce.live.LoadSellerNamesPort;
 import com.livecomerce.live.application.port.in.GetIvsChatTokenUseCase.GetIvsChatTokenCommand;
+import com.livecomerce.live.application.port.out.ChatBanPort;
 import com.livecomerce.live.application.port.out.IvsChatTokenPort;
 import com.livecomerce.live.application.port.out.IvsChatTokenPort.ChatToken;
 import com.livecomerce.live.application.port.out.LoadLivePort;
+import com.livecomerce.live.domain.ChatBannedException;
 import com.livecomerce.live.domain.Live;
 import com.livecomerce.live.domain.LiveChatRoomNotAvailableException;
 import com.livecomerce.live.domain.LiveContext;
@@ -39,6 +41,7 @@ class GetIvsChatTokenServiceTest {
     @Mock LoadLivePort        loadLivePort;
     @Mock IvsChatTokenPort       ivsChatTokenPort;
     @Mock LoadSellerNamesPort loadUserNamesPort;
+    @Mock ChatBanPort         chatBanPort;
 
     private static final UUID    SELLER_ID      = UUID.randomUUID();
     private static final UUID    BUYER_ID       = UUID.randomUUID();
@@ -50,7 +53,7 @@ class GetIvsChatTokenServiceTest {
 
     @BeforeEach
     void setUp() {
-        sut = new GetIvsChatTokenService(loadLivePort, ivsChatTokenPort, loadUserNamesPort, 60);
+        sut = new GetIvsChatTokenService(loadLivePort, ivsChatTokenPort, loadUserNamesPort, chatBanPort, 60);
         lenient().when(ivsChatTokenPort.createToken(anyString(), anyString(), any(), anyInt()))
                 .thenReturn(new ChatToken("ivs-token", SESSION_EXPIRY, TOKEN_EXPIRY, "us-east-1"));
     }
@@ -230,8 +233,31 @@ class GetIvsChatTokenServiceTest {
     }
 
     @Test
+    void bannedUser_isRejectedBeforeCallingIvs() {
+        var live = liveLiveWithRoom();
+        givenLive(live);
+        when(chatBanPort.isBanned(SELLER_ID, BUYER_ID)).thenReturn(true);
+
+        assertThatThrownBy(() -> sut.getIvsChatToken(new GetIvsChatTokenCommand(live.getId(), BUYER_ID)))
+                .isInstanceOf(ChatBannedException.class);
+        verifyNoInteractions(ivsChatTokenPort);
+    }
+
+    @Test
+    void owner_isNeverCheckedAgainstBans() {
+        var live = liveLiveWithRoom();
+        givenLive(live);
+        givenName(SELLER_ID, "Ana");
+
+        sut.getIvsChatToken(new GetIvsChatTokenCommand(live.getId(), SELLER_ID));
+
+        verifyNoInteractions(chatBanPort);
+        verify(ivsChatTokenPort).createToken(eq(ROOM_ARN), eq(SELLER_ID.toString()), any(), anyInt());
+    }
+
+    @Test
     void configuredSessionDuration_isPassedThrough() {
-        sut = new GetIvsChatTokenService(loadLivePort, ivsChatTokenPort, loadUserNamesPort, 30);
+        sut = new GetIvsChatTokenService(loadLivePort, ivsChatTokenPort, loadUserNamesPort, chatBanPort, 30);
         var live = liveLiveWithRoom();
         givenLive(live);
         givenName(BUYER_ID, "Bob");

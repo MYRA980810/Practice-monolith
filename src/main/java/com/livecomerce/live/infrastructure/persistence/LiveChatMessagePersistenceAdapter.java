@@ -6,6 +6,7 @@ import com.livecomerce.live.domain.LiveChatMessage;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -26,6 +27,12 @@ class LiveChatMessagePersistenceAdapter implements SaveChatMessagePort, LoadChat
     @Override
     public boolean existsByAgoraMsgId(String agoraMsgId) {
         return repository.existsByAgoraMsgId(agoraMsgId);
+    }
+
+    @Override
+    @Transactional
+    public int markDeleted(UUID liveId, String providerMessageId, OffsetDateTime deletedAt) {
+        return repository.markDeleted(liveId, providerMessageId, deletedAt);
     }
 
     @Override

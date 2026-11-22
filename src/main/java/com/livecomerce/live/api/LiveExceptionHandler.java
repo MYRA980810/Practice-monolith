@@ -1,6 +1,10 @@
 package com.livecomerce.live.api;
 
+import com.livecomerce.live.domain.ChatBannedException;
+import com.livecomerce.live.domain.ChatProviderMisconfiguredException;
 import com.livecomerce.live.domain.ChatProviderUnavailableException;
+import com.livecomerce.live.domain.ChatRequestRejectedException;
+import com.livecomerce.live.domain.ChatSelfBanException;
 import com.livecomerce.live.domain.InvalidLiveStateException;
 import com.livecomerce.live.domain.LiveChatRoomNotAvailableException;
 import com.livecomerce.live.domain.LiveNotFoundException;
@@ -105,6 +109,39 @@ class LiveExceptionHandler {
     ProblemDetail handleChatRoomNotAvailable(LiveChatRoomNotAvailableException e) {
         var detail = ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, e.getMessage());
         detail.setType(URI.create("https://livecomerce.com/errors/live-chat-room-not-available"));
+        return detail;
+    }
+
+    @ExceptionHandler(ChatBannedException.class)
+    ProblemDetail handleChatBanned(ChatBannedException e) {
+        var detail = ProblemDetail.forStatusAndDetail(HttpStatus.FORBIDDEN, e.getMessage());
+        detail.setType(URI.create("https://livecomerce.com/errors/chat-banned"));
+        detail.setProperty("code", ChatBannedException.CODE);
+        return detail;
+    }
+
+    @ExceptionHandler(ChatSelfBanException.class)
+    ProblemDetail handleChatSelfBan(ChatSelfBanException e) {
+        var detail = ProblemDetail.forStatusAndDetail(HttpStatus.UNPROCESSABLE_ENTITY, e.getMessage());
+        detail.setType(URI.create("https://livecomerce.com/errors/chat-self-ban"));
+        detail.setProperty("code", ChatSelfBanException.CODE);
+        return detail;
+    }
+
+    @ExceptionHandler(ChatRequestRejectedException.class)
+    ProblemDetail handleChatRequestRejected(ChatRequestRejectedException e) {
+        var detail = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, e.getMessage());
+        detail.setType(URI.create("https://livecomerce.com/errors/chat-request-rejected"));
+        return detail;
+    }
+
+    /** Not retryable and not the client's fault (e.g. missing IAM permission): 500 with a generic body. */
+    @ExceptionHandler(ChatProviderMisconfiguredException.class)
+    ProblemDetail handleChatProviderMisconfigured(ChatProviderMisconfiguredException e) {
+        log.error("Chat provider misconfigured: {}", e.getMessage(), e);
+        var detail = ProblemDetail.forStatusAndDetail(HttpStatus.INTERNAL_SERVER_ERROR,
+                "The chat moderation service is not available. Please contact support.");
+        detail.setType(URI.create("https://livecomerce.com/errors/chat-provider-misconfigured"));
         return detail;
     }
 
