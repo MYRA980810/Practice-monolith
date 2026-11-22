@@ -189,4 +189,18 @@ class RedisViewerCountAdapterTest {
 
         verify(redisTemplate).expire(eq(LAST_BROADCAST_KEY), eq(Duration.ofSeconds(120)));
     }
+
+    // --- resetLastBroadcast ---
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void resetLastBroadcast_runsAtomicCompareAndDeleteOnLastBroadcastKey() {
+        adapter.resetLastBroadcast(LIVE_ID, 5L);
+
+        var script = org.mockito.ArgumentCaptor.forClass(org.springframework.data.redis.core.script.RedisScript.class);
+        verify(redisTemplate).execute(script.capture(), eq(List.of(LAST_BROADCAST_KEY)), eq("5"));
+        assertThat(script.getValue().getScriptAsString())
+                .contains("redis.call('GET', KEYS[1]) == ARGV[1]")
+                .contains("redis.call('DEL', KEYS[1])");
+    }
 }

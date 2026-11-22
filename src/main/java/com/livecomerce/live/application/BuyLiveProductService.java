@@ -5,8 +5,10 @@ import com.livecomerce.live.ProfileCompletionPort;
 import com.livecomerce.live.application.port.in.BuyLiveProductUseCase;
 import com.livecomerce.live.application.port.out.AgoraRtmMessagePort;
 import com.livecomerce.live.application.port.out.AtomicLiveProductStockPort;
+import com.livecomerce.live.application.port.out.LiveRoomEventPort;
 import com.livecomerce.live.application.port.out.LoadLivePort;
 import com.livecomerce.live.application.port.out.LoadLiveProductPort;
+import com.livecomerce.live.application.port.out.RoomEvent;
 import com.livecomerce.live.domain.*;
 import com.livecomerce.order.LivePurchasePort;
 import com.livecomerce.order.domain.Order;
@@ -32,6 +34,7 @@ public class BuyLiveProductService implements BuyLiveProductUseCase {
     private final AtomicLiveProductStockPort atomicStockPort;
     private final LivePurchasePort           livePurchasePort;
     private final AgoraRtmMessagePort        agoraRtmMessagePort;
+    private final LiveRoomEventPort          liveRoomEventPort;
     private final ObjectMapper               objectMapper;
     private final ProfileCompletionPort      profileCompletionPort;
 
@@ -72,16 +75,7 @@ public class BuyLiveProductService implements BuyLiveProductUseCase {
                     itemType));
 
             int stockRemaining = Math.max(0, lp.getStockAllocated() - (lp.getStockSold() + command.quantity()));
-            try {
-                String stockPayload = objectMapper.writeValueAsString(Map.of(
-                        "type",           "stock-update",
-                        "liveProductId",  lp.getId(),
-                        "stockRemaining", stockRemaining
-                ));
-                agoraRtmMessagePort.sendChannelMessage("live-chat:" + live.getId(), stockPayload);
-            } catch (Exception e) {
-                log.warn("Agora RTM stock-update failed: {}", e.getMessage());
-            }
+            liveRoomEventPort.publish(live, new RoomEvent.StockUpdate(lp.getId(), stockRemaining));
 
             try {
                 String orderPayload = objectMapper.writeValueAsString(Map.of(

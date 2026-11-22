@@ -1,37 +1,32 @@
 package com.livecomerce.live.application;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.livecomerce.live.application.port.out.AgoraRtmMessagePort;
 import com.livecomerce.live.application.port.out.ChatRoomPort;
+import com.livecomerce.live.application.port.out.LiveRoomEventPort;
+import com.livecomerce.live.application.port.out.RoomEvent;
 import com.livecomerce.live.application.port.out.VideoBroadcastPort;
 import com.livecomerce.live.domain.Live;
 import com.livecomerce.live.domain.LiveContext;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.util.Map;
 import java.util.UUID;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class LiveRoomCloserTest {
 
-    @Mock AgoraRtmMessagePort agoraRtmMessagePort;
+    @Mock LiveRoomEventPort   liveRoomEventPort;
     @Mock VideoBroadcastPort  videoBroadcastPort;
     @Mock ChatRoomPort        chatRoomPort;
-    @Spy  ObjectMapper        objectMapper = new ObjectMapper();
     @InjectMocks LiveRoomCloser sut;
 
     private static final String CHANNEL_ARN   = "arn:ivs:channel";
@@ -50,18 +45,12 @@ class LiveRoomCloserTest {
     }
 
     @Test
-    @SuppressWarnings("unchecked")
-    void closeRoom_sendsLiveEndedMessageToLiveChatChannel() throws Exception {
+    void closeRoom_publishesLiveEndedRoomEvent() {
         var live = live();
 
         sut.closeRoom(live);
 
-        var payload = ArgumentCaptor.forClass(String.class);
-        verify(agoraRtmMessagePort).sendChannelMessage(eq("live-chat:" + live.getId()), payload.capture());
-        Map<String, Object> body = objectMapper.readValue(payload.getValue(), Map.class);
-        assertThat(body).containsOnly(
-                Map.entry("type", "live-ended"),
-                Map.entry("liveId", live.getId().toString()));
+        verify(liveRoomEventPort).publish(live, new RoomEvent.LiveEnded(live.getId()));
     }
 
     @Test
@@ -89,9 +78,9 @@ class LiveRoomCloserTest {
     }
 
     @Test
-    void closeRoom_rtmFailure_isSwallowed_andStillStopsIvsStream() {
+    void closeRoom_roomEventNotDelivered_stillStopsIvsStream() {
         var live = ivsLive();
-        doThrow(new RuntimeException("RTM error")).when(agoraRtmMessagePort).sendChannelMessage(any(), any());
+        when(liveRoomEventPort.publish(any(), any())).thenReturn(false);
 
         assertThatCode(() -> sut.closeRoom(live)).doesNotThrowAnyException();
         verify(videoBroadcastPort).stopStream(CHANNEL_ARN);

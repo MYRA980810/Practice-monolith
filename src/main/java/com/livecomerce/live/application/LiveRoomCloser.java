@@ -1,8 +1,8 @@
 package com.livecomerce.live.application;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.livecomerce.live.application.port.out.AgoraRtmMessagePort;
 import com.livecomerce.live.application.port.out.ChatRoomPort;
+import com.livecomerce.live.application.port.out.LiveRoomEventPort;
+import com.livecomerce.live.application.port.out.RoomEvent;
 import com.livecomerce.live.application.port.out.VideoBroadcastPort;
 import com.livecomerce.live.domain.Live;
 import lombok.RequiredArgsConstructor;
@@ -10,12 +10,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
-import java.util.Map;
-
 /**
  * Tears down the live room once a live stops being on air (ended or cancelled
- * while LIVE/RECONNECTING): tells everyone in {@code live-chat:{id}} the live
- * ended, then stops the IVS stream and deletes the IVS Chat room. Every step is
+ * while LIVE/RECONNECTING): tells everyone in the live room the live ended, then stops the IVS stream and deletes the IVS Chat room. Every step is
  * best-effort; a failure is logged and never blocks the state change that
  * triggered the close.
  */
@@ -25,21 +22,12 @@ class LiveRoomCloser {
 
     private static final Logger log = LoggerFactory.getLogger(LiveRoomCloser.class);
 
-    private final AgoraRtmMessagePort agoraRtmMessagePort;
+    private final LiveRoomEventPort   liveRoomEventPort;
     private final VideoBroadcastPort  videoBroadcastPort;
     private final ChatRoomPort        chatRoomPort;
-    private final ObjectMapper        objectMapper;
 
     void closeRoom(Live live) {
-        try {
-            String payload = objectMapper.writeValueAsString(Map.of(
-                    "type",   "live-ended",
-                    "liveId", live.getId()
-            ));
-            agoraRtmMessagePort.sendChannelMessage("live-chat:" + live.getId(), payload);
-        } catch (Exception e) {
-            log.warn("Agora RTM live-ended failed: {}", e.getMessage());
-        }
+        liveRoomEventPort.publish(live, new RoomEvent.LiveEnded(live.getId()));
 
         if (live.getIvsChannelArn() != null) {
             try {

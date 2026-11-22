@@ -66,4 +66,12 @@ class InMemoryViewerCountAdapter implements ViewerCountPort {
         var previous = lastBroadcast.computeIfAbsent(liveId, k -> new AtomicLong(-1));
         return previous.getAndSet(count) != count;
     }
+
+    @Override
+    public void resetLastBroadcast(UUID liveId, long count) {
+        var previous = lastBroadcast.get(liveId);
+        if (previous != null) {
+            previous.compareAndSet(count, -1);
+        }
+    }
 }

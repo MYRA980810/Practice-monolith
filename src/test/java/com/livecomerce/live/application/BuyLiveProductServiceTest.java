@@ -7,6 +7,8 @@ import com.livecomerce.live.application.port.out.AgoraRtmMessagePort;
 import com.livecomerce.live.application.port.out.AtomicLiveProductStockPort;
 import com.livecomerce.live.application.port.out.LoadLivePort;
 import com.livecomerce.live.application.port.out.LoadLiveProductPort;
+import com.livecomerce.live.application.port.out.LiveRoomEventPort;
+import com.livecomerce.live.application.port.out.RoomEvent;
 import com.livecomerce.live.domain.*;
 import com.livecomerce.order.LivePurchasePort;
 import com.livecomerce.order.LivePurchasePort.LivePurchaseCommand;
@@ -40,6 +42,7 @@ class BuyLiveProductServiceTest {
     @Mock LivePurchasePort           livePurchasePort;
     @Mock AtomicLiveProductStockPort atomicStockPort;
     @Mock AgoraRtmMessagePort        agoraRtmMessagePort;
+    @Mock LiveRoomEventPort          liveRoomEventPort;
     @Spy  ObjectMapper               objectMapper = new ObjectMapper();
     @Mock ProfileCompletionPort      profileCompletionPort;
     @InjectMocks BuyLiveProductService sut;
@@ -81,8 +84,8 @@ class BuyLiveProductServiceTest {
         assertThat(captor.getValue().itemType()).isEqualTo(OrderItemType.PRODUCT);
         assertThat(captor.getValue().quantity()).isEqualTo(2);
         assertThat(captor.getValue().buyerId()).isEqualTo(BUYER_ID);
-        verify(agoraRtmMessagePort).sendChannelMessage(
-                eq("live-chat:" + live.getId()), contains("\"type\":\"stock-update\""));
+        verify(liveRoomEventPort).publish(live, new RoomEvent.StockUpdate(lp.getId(), 8));
+        verify(agoraRtmMessagePort, never()).sendChannelMessage(any(), any());
         verify(agoraRtmMessagePort).sendPeerMessage(
                 eq(live.getSellerId().toString()), contains("\"type\":\"order-confirmed\""));
     }
@@ -153,7 +156,7 @@ class BuyLiveProductServiceTest {
     }
 
     @Test
-    void buyLiveProduct_rtmChannelMessageThrows_purchaseStillSucceeds() {
+    void buyLiveProduct_stockUpdateNotDelivered_purchaseStillSucceeds() {
         var live = startedLive();
         var lp = LiveProduct.forCatalogProduct(live, PRODUCT_ID, VARIANT_ID, "Shirt", new BigDecimal("99"), "MXN", 10);
         var mockOrder = mock(Order.class);
@@ -162,7 +165,7 @@ class BuyLiveProductServiceTest {
         when(loadLivePort.loadById(live.getId())).thenReturn(Optional.of(live));
         when(atomicStockPort.atomicIncrementStockSold(lp.getId(), 1)).thenReturn(Optional.of(lp.getId()));
         when(livePurchasePort.placeItem(any())).thenReturn(mockOrder);
-        doThrow(new RuntimeException("RTM error")).when(agoraRtmMessagePort).sendChannelMessage(any(), any());
+        when(liveRoomEventPort.publish(any(), any())).thenReturn(false);
 
         var cmd = new BuyLiveProductCommand(live.getId(), lp.getId(), BUYER_ID, 1);
         var result = sut.buyLiveProduct(cmd);

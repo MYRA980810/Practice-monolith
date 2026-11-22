@@ -1,24 +1,21 @@
 package com.livecomerce.live.application;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.livecomerce.live.LiveEndedEvent;
 import com.livecomerce.live.LiveReconnectingEvent;
 import com.livecomerce.live.LiveRevivedEvent;
 import com.livecomerce.live.application.port.in.EndLiveUseCase;
-import com.livecomerce.live.application.port.out.AgoraRtmMessagePort;
+import com.livecomerce.live.application.port.out.LiveRoomEventPort;
 import com.livecomerce.live.application.port.out.LoadLivePort;
+import com.livecomerce.live.application.port.out.RoomEvent;
 import com.livecomerce.live.application.port.out.SaveLivePort;
 import com.livecomerce.live.domain.Live;
 import com.livecomerce.live.domain.LiveNotFoundException;
 import com.livecomerce.live.domain.LiveNotOwnedBySellerException;
 import lombok.RequiredArgsConstructor;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -26,15 +23,12 @@ import java.util.UUID;
 @Transactional
 public class EndLiveService implements EndLiveUseCase {
 
-    private static final Logger log = LoggerFactory.getLogger(EndLiveService.class);
-
     private static final String REASON_STREAM_DISCONNECTED = "stream_disconnected";
 
     private final LoadLivePort              loadLivePort;
     private final SaveLivePort              saveLivePort;
-    private final AgoraRtmMessagePort       agoraRtmMessagePort;
+    private final LiveRoomEventPort         liveRoomEventPort;
     private final LiveRoomCloser            liveRoomCloser;
-    private final ObjectMapper              objectMapper;
     private final ApplicationEventPublisher eventPublisher;
 
     @Override
@@ -67,16 +61,7 @@ public class EndLiveService implements EndLiveUseCase {
 
         eventPublisher.publishEvent(new LiveReconnectingEvent(saved.getId(), saved.getSellerId(), REASON_STREAM_DISCONNECTED));
 
-        try {
-            String payload = objectMapper.writeValueAsString(Map.of(
-                    "type",   "live-reconnecting",
-                    "liveId", saved.getId(),
-                    "reason", REASON_STREAM_DISCONNECTED
-            ));
-            agoraRtmMessagePort.sendChannelMessage("live-chat:" + saved.getId(), payload);
-        } catch (Exception e) {
-            log.warn("Agora RTM live-reconnecting failed: {}", e.getMessage());
-        }
+        liveRoomEventPort.publish(saved, new RoomEvent.LiveReconnecting(saved.getId(), REASON_STREAM_DISCONNECTED));
 
         return saved;
     }

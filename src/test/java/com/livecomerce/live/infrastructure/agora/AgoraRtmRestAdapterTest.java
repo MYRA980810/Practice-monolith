@@ -11,6 +11,8 @@ import org.springframework.web.client.RestTemplate;
 import java.util.Base64;
 
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.withServerError;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
 class AgoraRtmRestAdapterTest {
@@ -58,6 +60,22 @@ class AgoraRtmRestAdapterTest {
         sut.sendChannelMessage("live-chat:123", "{\"type\":\"test\"}");
 
         server.verify();
+    }
+
+    @Test
+    void sendChannelMessage_accepted_returnsTrue() {
+        server.expect(requestTo(org.hamcrest.Matchers.containsString("channel_messages")))
+              .andRespond(withSuccess());
+
+        assertThat(sut.sendChannelMessage("live-chat:123", "{\"type\":\"test\"}")).isTrue();
+    }
+
+    @Test
+    void sendChannelMessage_serverError_returnsFalseWithoutThrowing() {
+        server.expect(requestTo(org.hamcrest.Matchers.containsString("channel_messages")))
+              .andRespond(withServerError());
+
+        assertThat(sut.sendChannelMessage("live-chat:123", "{\"type\":\"test\"}")).isFalse();
     }
 
     @Test

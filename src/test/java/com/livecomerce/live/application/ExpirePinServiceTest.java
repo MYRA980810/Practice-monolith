@@ -1,17 +1,16 @@
 package com.livecomerce.live.application;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.livecomerce.live.application.port.in.ExpirePinUseCase.ExpirePinCommand;
-import com.livecomerce.live.application.port.out.AgoraRtmMessagePort;
+import com.livecomerce.live.application.port.out.LiveRoomEventPort;
 import com.livecomerce.live.application.port.out.LoadLivePort;
 import com.livecomerce.live.application.port.out.LoadLiveProductPort;
+import com.livecomerce.live.application.port.out.RoomEvent;
 import com.livecomerce.live.application.port.out.SaveLiveProductPort;
 import com.livecomerce.live.domain.*;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
@@ -21,8 +20,6 @@ import java.util.UUID;
 import static com.livecomerce.live.domain.LiveProductStatus.*;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.contains;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -31,8 +28,7 @@ class ExpirePinServiceTest {
     @Mock LoadLivePort        loadLivePort;
     @Mock LoadLiveProductPort loadLiveProductPort;
     @Mock SaveLiveProductPort saveLiveProductPort;
-    @Mock AgoraRtmMessagePort agoraRtmMessagePort;
-    @Spy  ObjectMapper        objectMapper = new ObjectMapper();
+    @Mock LiveRoomEventPort   liveRoomEventPort;
     @InjectMocks ExpirePinService sut;
 
     private static final UUID SELLER_ID = UUID.randomUUID();
@@ -66,9 +62,7 @@ class ExpirePinServiceTest {
         var result = sut.expirePin(new ExpirePinCommand(live.getId(), lp.getId(), SELLER_ID));
 
         assertThat(result.getStatus()).isEqualTo(SOLD);
-        verify(agoraRtmMessagePort).sendChannelMessage(
-                eq("live-chat:" + live.getId()),
-                contains("\"status\":\"SOLD\""));
+        verify(liveRoomEventPort).publish(live, new RoomEvent.ProductExpired(lp.getId(), "SOLD"));
     }
 
     // ── 2. Stock remaining → AVAILABLE + RTM sent ────────────────────────────
@@ -85,9 +79,7 @@ class ExpirePinServiceTest {
         var result = sut.expirePin(new ExpirePinCommand(live.getId(), lp.getId(), SELLER_ID));
 
         assertThat(result.getStatus()).isEqualTo(AVAILABLE);
-        verify(agoraRtmMessagePort).sendChannelMessage(
-                eq("live-chat:" + live.getId()),
-                contains("\"status\":\"AVAILABLE\""));
+        verify(liveRoomEventPort).publish(live, new RoomEvent.ProductExpired(lp.getId(), "AVAILABLE"));
     }
 
     // ── 3. Already AVAILABLE → idempotent, no RTM ────────────────────────────
@@ -105,7 +97,7 @@ class ExpirePinServiceTest {
         var result = sut.expirePin(new ExpirePinCommand(live.getId(), lp.getId(), SELLER_ID));
 
         assertThat(result.getStatus()).isEqualTo(AVAILABLE);
-        verifyNoInteractions(agoraRtmMessagePort);
+        verifyNoInteractions(liveRoomEventPort);
         verify(saveLiveProductPort, never()).save(any());
     }
 
@@ -125,7 +117,7 @@ class ExpirePinServiceTest {
         var result = sut.expirePin(new ExpirePinCommand(live.getId(), lp.getId(), SELLER_ID));
 
         assertThat(result.getStatus()).isEqualTo(SOLD);
-        verifyNoInteractions(agoraRtmMessagePort);
+        verifyNoInteractions(liveRoomEventPort);
         verify(saveLiveProductPort, never()).save(any());
     }
 }

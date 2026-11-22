@@ -4,6 +4,8 @@ import com.livecomerce.live.application.port.out.ViewerCountPort;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Profile;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.script.DefaultRedisScript;
+import org.springframework.data.redis.core.script.RedisScript;
 import org.springframework.stereotype.Component;
 
 import java.time.Duration;
@@ -19,6 +21,10 @@ import java.util.UUID;
 class RedisViewerCountAdapter implements ViewerCountPort {
 
     private static final long HEARTBEAT_TTL_MILLIS = 30_000L;
+
+    private static final RedisScript<Long> DELETE_IF_EQUALS = new DefaultRedisScript<>(
+            "if redis.call('GET', KEYS[1]) == ARGV[1] then return redis.call('DEL', KEYS[1]) else return 0 end",
+            Long.class);
 
     private final StringRedisTemplate redisTemplate;
 
@@ -92,6 +98,11 @@ class RedisViewerCountAdapter implements ViewerCountPort {
         String previous = redisTemplate.opsForValue().getAndSet(key, String.valueOf(count));
         redisTemplate.expire(key, Duration.ofSeconds(120));
         return previous == null || !previous.equals(String.valueOf(count));
+    }
+
+    @Override
+    public void resetLastBroadcast(UUID liveId, long count) {
+        redisTemplate.execute(DELETE_IF_EQUALS, List.of(lastBroadcastKey(liveId)), String.valueOf(count));
     }
 
     private static String lastBroadcastKey(UUID liveId) {

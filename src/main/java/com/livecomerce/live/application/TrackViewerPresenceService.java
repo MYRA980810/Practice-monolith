@@ -1,11 +1,12 @@
 package com.livecomerce.live.application;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.livecomerce.live.application.port.in.RecordViewerHeartbeatUseCase;
-import com.livecomerce.live.application.port.out.AgoraRtmMessagePort;
+import com.livecomerce.live.application.port.out.LiveRoomEventPort;
 import com.livecomerce.live.application.port.out.LoadLivePort;
+import com.livecomerce.live.application.port.out.RoomEvent;
 import com.livecomerce.live.application.port.out.SaveLivePort;
 import com.livecomerce.live.application.port.out.ViewerCountPort;
+import com.livecomerce.live.domain.Live;
 import com.livecomerce.live.domain.LiveNotFoundException;
 import com.livecomerce.live.domain.LiveNotLiveException;
 import com.livecomerce.live.domain.LiveStatus;
@@ -14,7 +15,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -25,20 +25,17 @@ public class TrackViewerPresenceService implements RecordViewerHeartbeatUseCase 
     private final LoadLivePort        loadLivePort;
     private final SaveLivePort        saveLivePort;
     private final ViewerCountPort     viewerCountPort;
-    private final AgoraRtmMessagePort agoraRtmMessagePort;
-    private final ObjectMapper        objectMapper;
+    private final LiveRoomEventPort   liveRoomEventPort;
 
     TrackViewerPresenceService(
             LoadLivePort loadLivePort,
             SaveLivePort saveLivePort,
             ViewerCountPort viewerCountPort,
-            AgoraRtmMessagePort agoraRtmMessagePort,
-            ObjectMapper objectMapper) {
+            LiveRoomEventPort liveRoomEventPort) {
         this.loadLivePort        = loadLivePort;
         this.saveLivePort        = saveLivePort;
         this.viewerCountPort     = viewerCountPort;
-        this.agoraRtmMessagePort = agoraRtmMessagePort;
-        this.objectMapper        = objectMapper;
+        this.liveRoomEventPort   = liveRoomEventPort;
     }
 
     @Transactional
@@ -52,7 +49,7 @@ public class TrackViewerPresenceService implements RecordViewerHeartbeatUseCase 
         var live  = liveOpt.get();
         UUID liveId = live.getId();
         long count = viewerCountPort.increment(liveId);
-        broadcastViewerCount(liveId, count);
+        broadcastViewerCount(live, count);
 
         live.updatePeakViewers((int) count);
         saveLivePort.save(live);
@@ -68,7 +65,7 @@ public class TrackViewerPresenceService implements RecordViewerHeartbeatUseCase 
 
         var live  = liveOpt.get();
         long count = viewerCountPort.decrement(live.getId());
-        broadcastViewerCount(live.getId(), count);
+        broadcastViewerCount(live, count);
     }
 
     @Override
@@ -82,7 +79,7 @@ public class TrackViewerPresenceService implements RecordViewerHeartbeatUseCase 
         }
 
         long count = viewerCountPort.heartbeat(command.liveId(), command.viewerId());
-        broadcastViewerCount(command.liveId(), count);
+        broadcastViewerCount(live, count);
 
         int previousPeak = live.getPeakViewers();
         live.updatePeakViewers((int) count);
@@ -93,16 +90,13 @@ public class TrackViewerPresenceService implements RecordViewerHeartbeatUseCase 
         return count;
     }
 
-    private void broadcastViewerCount(UUID liveId, long count) {
-        if (!viewerCountPort.shouldBroadcast(liveId, count)) {
+    private void broadcastViewerCount(Live live, long count) {
+        if (!viewerCountPort.shouldBroadcast(live.getId(), count)) {
             return;
         }
-        try {
-            String payload = objectMapper.writeValueAsString(
-                    Map.of("type", "viewer-count", "count", count));
-            agoraRtmMessagePort.sendChannelMessage("live-chat:" + liveId, payload);
-        } catch (Exception e) {
-            log.warn("Agora RTM viewer-count broadcast failed: {}", e.getMessage());
+        if (!liveRoomEventPort.publish(live, new RoomEvent.ViewerCount(count))) {
+            // shouldBroadcast already recorded this count; undo it so the next heartbeat retries.
+            viewerCountPort.resetLastBroadcast(live.getId(), count);
         }
     }
 }

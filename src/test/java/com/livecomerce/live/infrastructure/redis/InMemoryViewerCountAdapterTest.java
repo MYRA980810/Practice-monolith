@@ -110,4 +110,30 @@ class InMemoryViewerCountAdapterTest {
 
         assertThat(adapter.shouldBroadcast(otherLiveId, 5L)).isTrue();
     }
+
+    // --- resetLastBroadcast ---
+
+    @Test
+    void resetLastBroadcast_whenStillCurrent_letsSameCountBroadcastAgain() {
+        adapter.shouldBroadcast(LIVE_ID, 5L);
+
+        adapter.resetLastBroadcast(LIVE_ID, 5L);
+
+        assertThat(adapter.shouldBroadcast(LIVE_ID, 5L)).isTrue();
+    }
+
+    @Test
+    void resetLastBroadcast_whenANewerCountWasRecorded_keepsTheNewerCount() {
+        adapter.shouldBroadcast(LIVE_ID, 5L);
+        adapter.shouldBroadcast(LIVE_ID, 6L);
+
+        adapter.resetLastBroadcast(LIVE_ID, 5L);
+
+        assertThat(adapter.shouldBroadcast(LIVE_ID, 6L)).isFalse();
+    }
+
+    @Test
+    void resetLastBroadcast_unknownLive_isNoOp() {
+        adapter.resetLastBroadcast(UUID.randomUUID(), 5L);
+    }
 }
