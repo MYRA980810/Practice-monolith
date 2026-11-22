@@ -101,4 +101,16 @@ class LiveChatControllerTest {
                 .andExpect(jsonPath("$[0].content").value("Hello!"));
     }
 
+    @Test
+    void getChatHistory_exposesProviderMessageId_andKeepsInternalId() throws Exception {
+        var live = Live.create(UUID.randomUUID(), UUID.randomUUID(), LiveContext.STORE, "Live", null, null, 60);
+        var msg  = LiveChatMessage.create(live, "ivs-msg-001", USER_ID, "alice", "Hello!", OffsetDateTime.now());
+        when(getChatHistoryUseCase.getChatHistory(any())).thenReturn(List.of(msg));
+
+        mvc.perform(get("/api/lives/{liveId}/rtm/history", LIVE_ID))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id").value(msg.getId().toString()))
+                .andExpect(jsonPath("$[0].providerMessageId").value("ivs-msg-001"));
+    }
+
 }
