@@ -147,6 +147,11 @@ agora:
   webhook-secret: ${AGORA_WEBHOOK_SECRET}
   customer-id: ${AGORA_CUSTOMER_ID}
   customer-secret: ${AGORA_CUSTOMER_SECRET}
+  rtm:
+    # Bounds every Agora RTM REST call (live + notification adapters); they run synchronously,
+    # often inside a DB transaction, so a hung Agora must fail fast instead of draining the pool.
+    connect-timeout-ms: ${AGORA_RTM_CONNECT_TIMEOUT_MS:1000}
+    read-timeout-ms: ${AGORA_RTM_READ_TIMEOUT_MS:2000}
 
 ivs:
   region: ${AWS_REGION:us-east-1}

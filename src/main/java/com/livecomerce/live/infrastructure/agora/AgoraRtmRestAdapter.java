@@ -6,10 +6,13 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
+import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
+import java.net.http.HttpClient;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.Base64;
 import java.util.Map;
 
@@ -17,6 +20,7 @@ import java.util.Map;
 class AgoraRtmRestAdapter implements AgoraRtmMessagePort {
 
     private static final Logger log      = LoggerFactory.getLogger(AgoraRtmRestAdapter.class);
+    private static final String AGORA_BASE_URL = "https://api.agora.io";
     private static final String SENDER_ID = "live-server";
 
     private final RestClient restClient;
@@ -27,13 +31,22 @@ class AgoraRtmRestAdapter implements AgoraRtmMessagePort {
     AgoraRtmRestAdapter(
             @Value("${agora.app-id}") String appId,
             @Value("${agora.customer-id}") String customerId,
-            @Value("${agora.customer-secret}") String customerSecret) {
+            @Value("${agora.customer-secret}") String customerSecret,
+            @Value("${agora.rtm.connect-timeout-ms:1000}") long connectTimeoutMs,
+            @Value("${agora.rtm.read-timeout-ms:2000}") long readTimeoutMs) {
         this(
-            RestClient.builder().baseUrl("https://api.agora.io").build(),
+            AGORA_BASE_URL,
+            Duration.ofMillis(connectTimeoutMs),
+            Duration.ofMillis(readTimeoutMs),
             appId,
             customerId,
             customerSecret
         );
+    }
+
+    AgoraRtmRestAdapter(String baseUrl, Duration connectTimeout, Duration readTimeout,
+            String appId, String customerId, String customerSecret) {
+        this(boundedRestClient(baseUrl, connectTimeout, readTimeout), appId, customerId, customerSecret);
     }
 
     AgoraRtmRestAdapter(RestClient restClient, String appId, String customerId, String customerSecret) {
@@ -41,6 +54,15 @@ class AgoraRtmRestAdapter implements AgoraRtmMessagePort {
         this.appId      = appId;
         this.authHeader = "Basic " + Base64.getEncoder()
                 .encodeToString((customerId + ":" + customerSecret).getBytes(StandardCharsets.UTF_8));
+    }
+
+    // Calls run synchronously, often inside a DB transaction: bound them so a hung Agora
+    // fails fast into the WARN path below instead of pinning a request thread and a pool connection.
+    private static RestClient boundedRestClient(String baseUrl, Duration connectTimeout, Duration readTimeout) {
+        var httpClient = HttpClient.newBuilder().connectTimeout(connectTimeout).build();
+        var requestFactory = new JdkClientHttpRequestFactory(httpClient);
+        requestFactory.setReadTimeout(readTimeout);
+        return RestClient.builder().baseUrl(baseUrl).requestFactory(requestFactory).build();
     }
 
     @Override
