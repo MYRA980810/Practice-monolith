@@ -1,12 +1,12 @@
 package com.livecomerce.live.application;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.livecomerce.live.LiveEndedEvent;
 import com.livecomerce.live.LiveReconnectingEvent;
 import com.livecomerce.live.LiveRevivedEvent;
 import com.livecomerce.live.application.port.in.EndLiveUseCase.EndLiveCommand;
-import com.livecomerce.live.application.port.out.AgoraRtmMessagePort;
+import com.livecomerce.live.application.port.out.LiveRoomEventPort;
 import com.livecomerce.live.application.port.out.LoadLivePort;
+import com.livecomerce.live.application.port.out.RoomEvent;
 import com.livecomerce.live.application.port.out.SaveLivePort;
 import com.livecomerce.live.domain.*;
 import org.junit.jupiter.api.Test;
@@ -15,7 +15,6 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InOrder;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
 
@@ -24,8 +23,6 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.contains;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -33,10 +30,9 @@ class EndLiveServiceTest {
 
     @Mock LoadLivePort              loadLivePort;
     @Mock SaveLivePort              saveLivePort;
-    @Mock AgoraRtmMessagePort       agoraRtmMessagePort;
+    @Mock LiveRoomEventPort         liveRoomEventPort;
     @Mock LiveRoomCloser            liveRoomCloser;
     @Mock ApplicationEventPublisher eventPublisher;
-    @Spy  ObjectMapper              objectMapper = new ObjectMapper();
     @InjectMocks EndLiveService sut;
 
     private static final UUID SELLER_ID = UUID.randomUUID();
@@ -65,7 +61,7 @@ class EndLiveServiceTest {
         assertThat(result.getStatus()).isEqualTo(LiveStatus.ENDED);
         assertThat(result.getEndedAt()).isNotNull();
         verify(liveRoomCloser).closeRoom(live);
-        verifyNoInteractions(agoraRtmMessagePort);
+        verifyNoInteractions(liveRoomEventPort);
     }
 
     @Test
@@ -139,26 +135,20 @@ class EndLiveServiceTest {
     }
 
     @Test
-    void beginReconnecting_sendsAgoraRtmChannelMessage_withReasonField() {
+    void beginReconnecting_publishesLiveReconnectingRoomEvent_withReason() {
         var live = liveLive();
         when(saveLivePort.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         sut.beginReconnecting(live);
 
-        verify(agoraRtmMessagePort).sendChannelMessage(
-                eq("live-chat:" + live.getId()),
-                contains("\"type\":\"live-reconnecting\""));
-        verify(agoraRtmMessagePort).sendChannelMessage(
-                eq("live-chat:" + live.getId()),
-                contains("\"reason\":\"stream_disconnected\""));
+        verify(liveRoomEventPort).publish(live, new RoomEvent.LiveReconnecting(live.getId(), "stream_disconnected"));
     }
 
     @Test
-    void beginReconnecting_rtmFailure_isSwallowed() {
+    void beginReconnecting_roomEventNotDelivered_stillReconnects() {
         var live = liveLive();
         when(saveLivePort.save(any())).thenAnswer(inv -> inv.getArgument(0));
-        doThrow(new RuntimeException("RTM error")).when(agoraRtmMessagePort)
-                .sendChannelMessage(any(), any());
+        when(liveRoomEventPort.publish(any(), any())).thenReturn(false);
 
         var result = sut.beginReconnecting(live);
 

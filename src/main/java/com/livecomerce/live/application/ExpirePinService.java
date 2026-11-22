@@ -1,32 +1,25 @@
 package com.livecomerce.live.application;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.livecomerce.live.application.port.in.ExpirePinUseCase;
-import com.livecomerce.live.application.port.out.AgoraRtmMessagePort;
+import com.livecomerce.live.application.port.out.LiveRoomEventPort;
 import com.livecomerce.live.application.port.out.LoadLivePort;
 import com.livecomerce.live.application.port.out.LoadLiveProductPort;
+import com.livecomerce.live.application.port.out.RoomEvent;
 import com.livecomerce.live.application.port.out.SaveLiveProductPort;
 import com.livecomerce.live.domain.*;
 import lombok.RequiredArgsConstructor;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
 @Transactional
 public class ExpirePinService implements ExpirePinUseCase {
 
-    private static final Logger log = LoggerFactory.getLogger(ExpirePinService.class);
-
     private final LoadLivePort        loadLivePort;
     private final LoadLiveProductPort loadLiveProductPort;
     private final SaveLiveProductPort saveLiveProductPort;
-    private final AgoraRtmMessagePort agoraRtmMessagePort;
-    private final ObjectMapper        objectMapper;
+    private final LiveRoomEventPort   liveRoomEventPort;
 
     @Override
     public LiveProduct expirePin(ExpirePinCommand command) {
@@ -50,16 +43,7 @@ public class ExpirePinService implements ExpirePinUseCase {
 
         var saved = saveLiveProductPort.save(lp);
 
-        try {
-            String payload = objectMapper.writeValueAsString(Map.of(
-                    "type",          "product-expired",
-                    "liveProductId", saved.getId(),
-                    "status",        saved.getStatus().name()
-            ));
-            agoraRtmMessagePort.sendChannelMessage("live-chat:" + live.getId(), payload);
-        } catch (Exception e) {
-            log.warn("Agora RTM product-expired failed: {}", e.getMessage());
-        }
+        liveRoomEventPort.publish(live, new RoomEvent.ProductExpired(saved.getId(), saved.getStatus().name()));
 
         return saved;
     }

@@ -1,6 +1,5 @@
 package com.livecomerce.live.application;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.livecomerce.live.application.port.in.PinProductUseCase.PinProductCommand;
 import com.livecomerce.live.application.port.out.*;
 import com.livecomerce.live.domain.*;
@@ -10,7 +9,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
 
@@ -20,8 +18,6 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.contains;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -31,8 +27,7 @@ class PinProductServiceTest {
     @Mock LoadLiveProductPort       loadLiveProductPort;
     @Mock SaveLiveProductPort       saveLiveProductPort;
     @Mock ApplicationEventPublisher eventPublisher;
-    @Mock AgoraRtmMessagePort       agoraRtmMessagePort;
-    @Spy  ObjectMapper              objectMapper = new ObjectMapper();
+    @Mock LiveRoomEventPort         liveRoomEventPort;
     @InjectMocks PinProductService sut;
 
     private static final UUID SELLER_ID  = UUID.randomUUID();
@@ -61,9 +56,8 @@ class PinProductServiceTest {
 
         assertThat(result.getStatus()).isEqualTo(PINNED);
         verify(eventPublisher).publishEvent(any(com.livecomerce.live.LiveProductPinnedEvent.class));
-        verify(agoraRtmMessagePort).sendChannelMessage(
-                eq("live-chat:" + live.getId()),
-                contains("\"type\":\"product-pinned\""));
+        verify(liveRoomEventPort).publish(live, new RoomEvent.ProductPinned(
+                lp.getId(), "Shirt", new BigDecimal("99"), live.getDisplayDurationSeconds()));
     }
 
     @Test

@@ -1,9 +1,9 @@
 package com.livecomerce.live.application;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.livecomerce.live.application.port.in.RecordViewerHeartbeatUseCase;
-import com.livecomerce.live.application.port.out.AgoraRtmMessagePort;
+import com.livecomerce.live.application.port.out.LiveRoomEventPort;
 import com.livecomerce.live.application.port.out.LoadLivePort;
+import com.livecomerce.live.application.port.out.RoomEvent;
 import com.livecomerce.live.application.port.out.SaveLivePort;
 import com.livecomerce.live.application.port.out.ViewerCountPort;
 import com.livecomerce.live.domain.Live;
@@ -13,7 +13,6 @@ import com.livecomerce.live.domain.LiveNotLiveException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -23,8 +22,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.contains;
-import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -33,7 +31,7 @@ class TrackViewerPresenceServiceTest {
     @Mock LoadLivePort        loadLivePort;
     @Mock SaveLivePort        saveLivePort;
     @Mock ViewerCountPort     viewerCountPort;
-    @Mock AgoraRtmMessagePort agoraRtmMessagePort;
+    @Mock LiveRoomEventPort   liveRoomEventPort;
 
     TrackViewerPresenceService sut;
 
@@ -42,7 +40,7 @@ class TrackViewerPresenceServiceTest {
 
     @BeforeEach
     void setUp() {
-        sut = new TrackViewerPresenceService(loadLivePort, saveLivePort, viewerCountPort, agoraRtmMessagePort, new ObjectMapper());
+        sut = new TrackViewerPresenceService(loadLivePort, saveLivePort, viewerCountPort, liveRoomEventPort);
     }
 
     private Live startedLive() {
@@ -68,9 +66,7 @@ class TrackViewerPresenceServiceTest {
         sut.handleJoin(channelId);
 
         verify(viewerCountPort).increment(live.getId());
-        var captor = ArgumentCaptor.forClass(String.class);
-        verify(agoraRtmMessagePort).sendChannelMessage(eq("live-chat:" + live.getId()), captor.capture());
-        assertThat(captor.getValue()).contains("\"type\":\"viewer-count\"").contains("\"count\":5");
+        verify(liveRoomEventPort).publish(live, new RoomEvent.ViewerCount(5L));
     }
 
     @Test
@@ -85,9 +81,7 @@ class TrackViewerPresenceServiceTest {
         sut.handleLeave(channelId);
 
         verify(viewerCountPort).decrement(live.getId());
-        verify(agoraRtmMessagePort).sendChannelMessage(
-                eq("live-chat:" + live.getId()),
-                contains("\"count\":3"));
+        verify(liveRoomEventPort).publish(live, new RoomEvent.ViewerCount(3L));
     }
 
     @Test
@@ -112,13 +106,13 @@ class TrackViewerPresenceServiceTest {
 
         sut.handleJoin(unknownChannel);
 
-        verifyNoInteractions(agoraRtmMessagePort);
+        verifyNoInteractions(liveRoomEventPort);
         verifyNoInteractions(saveLivePort);
         verifyNoInteractions(viewerCountPort);
     }
 
     @Test
-    void handleJoin_rtmExceptionIsSwallowed_joinStillSucceeds() throws Exception {
+    void handleJoin_roomEventNotDelivered_resetsLastBroadcastSoNextHeartbeatRetries() {
         var live = startedLive();
         String channelId = live.getAgoraChannelId();
 
@@ -126,10 +120,27 @@ class TrackViewerPresenceServiceTest {
         when(viewerCountPort.shouldBroadcast(live.getId(), 1L)).thenReturn(true);
         when(loadLivePort.loadByAgoraChannelId(channelId)).thenReturn(Optional.of(live));
         when(saveLivePort.save(any())).thenReturn(live);
-        doThrow(new RuntimeException("RTM error")).when(agoraRtmMessagePort)
-                .sendChannelMessage(any(), any());
+        when(liveRoomEventPort.publish(any(), any())).thenReturn(false);
 
         sut.handleJoin(channelId);
+
+        verify(viewerCountPort).resetLastBroadcast(live.getId(), 1L);
+    }
+
+    @Test
+    void recordHeartbeat_roomEventDelivered_keepsLastBroadcast() {
+        var live = startedLive();
+        String viewerId = "viewer-abc";
+
+        when(loadLivePort.loadById(live.getId())).thenReturn(Optional.of(live));
+        when(viewerCountPort.heartbeat(live.getId(), viewerId)).thenReturn(4L);
+        when(viewerCountPort.shouldBroadcast(live.getId(), 4L)).thenReturn(true);
+        when(liveRoomEventPort.publish(live, new RoomEvent.ViewerCount(4L))).thenReturn(true);
+        when(saveLivePort.save(any())).thenReturn(live);
+
+        sut.recordHeartbeat(new RecordViewerHeartbeatUseCase.RecordHeartbeatCommand(live.getId(), viewerId));
+
+        verify(viewerCountPort, never()).resetLastBroadcast(any(), anyLong());
     }
 
     // --- recordHeartbeat ---
@@ -148,9 +159,7 @@ class TrackViewerPresenceServiceTest {
 
         assertThat(count).isEqualTo(4L);
         verify(viewerCountPort).heartbeat(live.getId(), viewerId);
-        var captor = ArgumentCaptor.forClass(String.class);
-        verify(agoraRtmMessagePort).sendChannelMessage(eq("live-chat:" + live.getId()), captor.capture());
-        assertThat(captor.getValue()).contains("\"type\":\"viewer-count\"").contains("\"count\":4");
+        verify(liveRoomEventPort).publish(live, new RoomEvent.ViewerCount(4L));
     }
 
     @Test
@@ -165,7 +174,7 @@ class TrackViewerPresenceServiceTest {
         long count = sut.recordHeartbeat(new RecordViewerHeartbeatUseCase.RecordHeartbeatCommand(live.getId(), viewerId));
 
         assertThat(count).isEqualTo(4L);
-        verify(agoraRtmMessagePort, never()).sendChannelMessage(any(), any());
+        verify(liveRoomEventPort, never()).publish(any(), any());
     }
 
     @Test
@@ -208,7 +217,7 @@ class TrackViewerPresenceServiceTest {
 
         assertThatThrownBy(() -> sut.recordHeartbeat(cmd))
                 .isInstanceOf(LiveNotFoundException.class);
-        verifyNoInteractions(viewerCountPort, saveLivePort, agoraRtmMessagePort);
+        verifyNoInteractions(viewerCountPort, saveLivePort, liveRoomEventPort);
     }
 
     @Test

@@ -25,4 +25,11 @@ public interface ViewerCountPort {
      * RTM broadcasts when the viewer count hasn't moved.
      */
     boolean shouldBroadcast(UUID liveId, long count);
+
+    /**
+     * Undoes {@link #shouldBroadcast}'s record of {@code count} when that broadcast
+     * was not delivered, so the next call with the same count returns {@code true}
+     * and retries. Atomic compare-and-delete: a newer recorded count is kept.
+     */
+    void resetLastBroadcast(UUID liveId, long count);
 }

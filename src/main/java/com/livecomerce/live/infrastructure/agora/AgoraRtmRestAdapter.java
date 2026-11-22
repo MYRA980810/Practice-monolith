@@ -44,7 +44,7 @@ class AgoraRtmRestAdapter implements AgoraRtmMessagePort {
     }
 
     @Override
-    public void sendChannelMessage(String channelName, String payloadJson) {
+    public boolean sendChannelMessage(String channelName, String payloadJson) {
         try {
             var body = Map.of(
                     "channel_name",               channelName,
@@ -58,8 +58,10 @@ class AgoraRtmRestAdapter implements AgoraRtmMessagePort {
                     .body(body)
                     .retrieve()
                     .toBodilessEntity();
+            return true;
         } catch (Exception e) {
             log.warn("Agora RTM channel message to '{}' failed: {}", channelName, e.getMessage());
+            return false;
         }
     }
 

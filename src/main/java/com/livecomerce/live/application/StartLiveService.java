@@ -50,7 +50,7 @@ public class StartLiveService implements StartLiveUseCase {
     @Value("${live.video-provider:agora}")
     private String videoProvider;
 
-    @Value("${live.chat-provider:agora}")
+    @Value("${" + ChatProvider.PROPERTY + ":" + ChatProvider.DEFAULT + "}")
     private String chatProvider;
 
     @Override
@@ -84,7 +84,7 @@ public class StartLiveService implements StartLiveUseCase {
 
         // Last external call before saving: every earlier failure leaves no room behind,
         // and a later one (save, commit) rolls back and deletes it (see deleteRoomOnRollback).
-        if ("ivs".equals(chatProvider)) {
+        if (ChatProvider.isIvs(chatProvider)) {
             var roomArn = chatRoomPort.createRoom(live.getId(), live.getSellerId());
             deleteRoomOnRollback(live.getId(), roomArn);
             live.setChatRoom(roomArn);
