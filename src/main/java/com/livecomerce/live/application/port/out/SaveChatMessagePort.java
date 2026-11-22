@@ -7,9 +7,15 @@ import java.util.UUID;
 
 public interface SaveChatMessagePort {
 
-    LiveChatMessage save(LiveChatMessage message);
+    /**
+     * Inserts the message unless one with the same provider message id already exists. Race-safe:
+     * a concurrent duplicate is skipped by the database instead of failing the transaction.
+     *
+     * @return {@code true} when the message was inserted, {@code false} when it was a duplicate
+     */
+    boolean saveIfAbsent(LiveChatMessage message);
 
-    boolean existsByAgoraMsgId(String agoraMsgId);
+    boolean existsByProviderMsgId(String providerMsgId);
 
     /**
      * Soft-deletes the message with that provider id, only if it belongs to {@code liveId}.

@@ -166,6 +166,9 @@ ivs:
     review-handler-arn: ${IVS_CHAT_REVIEW_HANDLER_ARN:}
     # What IVS Chat does with a message when the review handler errors or times out: ALLOW | DENY.
     fallback-result: ${IVS_CHAT_FALLBACK_RESULT:ALLOW}
+    # SQS queue the review Lambda sends allowed messages to; IvsChatMessageListener persists them.
+    # Listened to only when live.chat-provider=ivs, so it must exist before flipping the provider.
+    messages-queue-name: ${IVS_CHAT_MESSAGES_QUEUE_NAME:ivs-chat-messages}
     # Chat token session length; the client renews the token through its tokenProvider.
     session-duration-minutes: ${IVS_CHAT_SESSION_DURATION_MINUTES:60}
     # Bounds every IVS Chat call (total incl. retries / single attempt) so a slow AWS never pins a request thread.
