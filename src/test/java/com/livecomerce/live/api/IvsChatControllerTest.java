@@ -122,6 +122,17 @@ class IvsChatControllerTest {
     }
 
     @Test
+    void getToken_bannedUser_returns403WithChatBannedCode() throws Exception {
+        when(getIvsChatTokenUseCase.getIvsChatToken(any()))
+                .thenThrow(new com.livecomerce.live.domain.ChatBannedException(LIVE_ID));
+
+        mvc.perform(get(PATH, LIVE_ID).with(as("ROLE_BUYER")))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.type").value("https://livecomerce.com/errors/chat-banned"))
+                .andExpect(jsonPath("$.code").value("CHAT_BANNED"));
+    }
+
+    @Test
     void getToken_chatProviderDown_returns503() throws Exception {
         when(getIvsChatTokenUseCase.getIvsChatToken(any()))
                 .thenThrow(new ChatProviderUnavailableException("down", new RuntimeException("aws")));
