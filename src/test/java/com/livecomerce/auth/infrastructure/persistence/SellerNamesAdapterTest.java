@@ -45,6 +45,39 @@ class SellerNamesAdapterTest {
     }
 
     @Test
+    void loadNames_whenOnlyFirstName_usesItWithoutNullSuffix() {
+        var user = User.create("user@test.com", "hash", "Jane", null, null, Role.SELLER);
+        when(loadUserPort.loadByIds(Set.of(user.getId()))).thenReturn(List.of(user));
+
+        var result = adapter.loadNames(Set.of(user.getId()));
+
+        assertThat(result).containsEntry(user.getId(), "Jane");
+    }
+
+    @Test
+    void loadNames_whenOnlyLastName_usesItWithoutNullPrefix() {
+        var user = User.create("user@test.com", "hash", null, "Doe", null, Role.SELLER);
+        when(loadUserPort.loadByIds(Set.of(user.getId()))).thenReturn(List.of(user));
+
+        var result = adapter.loadNames(Set.of(user.getId()));
+
+        assertThat(result).containsEntry(user.getId(), "Doe");
+    }
+
+    @Test
+    void loadNames_whenNoAliasNorNames_omitsItFromTheMap() {
+        var nameless = User.create("nameless@test.com", "hash", null, " ", null, Role.BUYER);
+        var named    = User.create("named@test.com", "hash", "Jane", "Doe", null, Role.SELLER);
+        when(loadUserPort.loadByIds(Set.of(nameless.getId(), named.getId())))
+                .thenReturn(List.of(nameless, named));
+
+        var result = adapter.loadNames(Set.of(nameless.getId(), named.getId()));
+
+        assertThat(result).doesNotContainKey(nameless.getId())
+                .containsEntry(named.getId(), "Jane Doe");
+    }
+
+    @Test
     void loadNames_whenUserNotFound_omitsItFromTheMap() {
         var missingId = UUID.randomUUID();
         when(loadUserPort.loadByIds(Set.of(missingId))).thenReturn(List.of());

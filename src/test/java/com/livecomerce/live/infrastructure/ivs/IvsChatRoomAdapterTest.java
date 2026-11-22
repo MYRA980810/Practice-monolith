@@ -6,6 +6,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import software.amazon.awssdk.core.exception.ApiCallTimeoutException;
 import software.amazon.awssdk.services.ivschat.IvschatClient;
 import software.amazon.awssdk.services.ivschat.model.CreateRoomRequest;
 import software.amazon.awssdk.services.ivschat.model.CreateRoomResponse;
@@ -90,6 +91,16 @@ class IvsChatRoomAdapterTest {
 
         assertThatThrownBy(() -> adapter("").createRoom(LIVE_ID, SELLER_ID))
                 .isInstanceOf(ChatProviderUnavailableException.class);
+    }
+
+    @Test
+    void createRoom_whenApiCallTimesOut_throwsChatProviderUnavailable() {
+        var timeout = ApiCallTimeoutException.create(3000);
+        when(ivschatClient.createRoom(any(CreateRoomRequest.class))).thenThrow(timeout);
+
+        assertThatThrownBy(() -> adapter("").createRoom(LIVE_ID, SELLER_ID))
+                .isInstanceOf(ChatProviderUnavailableException.class)
+                .hasCause(timeout);
     }
 
     @Test
