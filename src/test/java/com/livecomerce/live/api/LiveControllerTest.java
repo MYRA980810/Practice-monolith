@@ -300,6 +300,27 @@ class LiveControllerTest {
     }
 
     @Test
+    void getLive_withIvsChatRoom_exposesIvsChatProvider() throws Exception {
+        var live = buildLive();
+        live.setChatRoom("arn:aws:ivschat:us-east-1:123456789012:room/abc");
+        when(loadLivePort.loadById(any())).thenReturn(Optional.of(live));
+
+        mvc.perform(get("/api/lives/{id}", LIVE_ID))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.chatProvider").value("ivs"))
+                .andExpect(jsonPath("$.chatRoomArn").doesNotExist());
+    }
+
+    @Test
+    void getLive_withoutIvsChatRoom_exposesAgoraChatProvider() throws Exception {
+        when(loadLivePort.loadById(any())).thenReturn(Optional.of(buildLive()));
+
+        mvc.perform(get("/api/lives/{id}", LIVE_ID))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.chatProvider").value("agora"));
+    }
+
+    @Test
     void getLive_whenNotFound_returns404() throws Exception {
         when(loadLivePort.loadById(any())).thenReturn(Optional.empty());
 

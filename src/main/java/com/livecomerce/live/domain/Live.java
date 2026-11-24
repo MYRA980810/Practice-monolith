@@ -251,6 +251,15 @@ public class Live implements Persistable<UUID> {
         this.updatedAt   = OffsetDateTime.now();
     }
 
+    /**
+     * Whether this live's chat runs on IVS Chat. The room ARN is only set at start when
+     * IVS Chat is the configured provider and is never cleared, so the answer is fixed
+     * per live regardless of later changes to the global flag.
+     */
+    public boolean hasIvsChatRoom() {
+        return this.chatRoomArn != null;
+    }
+
     public void updatePeakViewers(int currentCount) {
         if (currentCount > this.peakViewers) {
             this.peakViewers = currentCount;

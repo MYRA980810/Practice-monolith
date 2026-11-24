@@ -7,6 +7,11 @@ import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
+/**
+ * @param chatProvider {@code "ivs"} when the live has an IVS Chat room, otherwise {@code "agora"}.
+ *                     Decided per live from its own state (never the global {@code live.chat-provider}
+ *                     flag), so a live started on Agora stays on Agora after the flag flips.
+ */
 public record LiveResponse(
         UUID id,
         UUID sellerId,
@@ -23,8 +28,12 @@ public record LiveResponse(
         int displayDurationSeconds,
         OffsetDateTime createdAt,
         @Nullable String ivsPlaybackUrl,
-        @Nullable UUID categoryId
+        @Nullable UUID categoryId,
+        String chatProvider
 ) {
+    static final String CHAT_PROVIDER_IVS   = "ivs";
+    static final String CHAT_PROVIDER_AGORA = "agora";
+
     public static LiveResponse from(Live live) {
         return new LiveResponse(
                 live.getId(),
@@ -42,7 +51,8 @@ public record LiveResponse(
                 live.getDisplayDurationSeconds(),
                 live.getCreatedAt(),
                 live.getIvsPlaybackUrl(),
-                live.getCategoryId()
+                live.getCategoryId(),
+                live.hasIvsChatRoom() ? CHAT_PROVIDER_IVS : CHAT_PROVIDER_AGORA
         );
     }
 }
