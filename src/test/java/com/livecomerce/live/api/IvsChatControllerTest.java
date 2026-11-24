@@ -99,7 +99,9 @@ class IvsChatControllerTest {
 
         mvc.perform(get(PATH, LIVE_ID).with(as("ROLE_BUYER")))
                 .andExpect(status().isNotFound())
-                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON));
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.type").value("https://livecomerce.com/errors/live-not-found"))
+                .andExpect(jsonPath("$.code").value("LIVE_NOT_FOUND"));
     }
 
     @Test
@@ -108,7 +110,8 @@ class IvsChatControllerTest {
 
         mvc.perform(get(PATH, LIVE_ID).with(as("ROLE_BUYER")))
                 .andExpect(status().isForbidden())
-                .andExpect(jsonPath("$.type").value("https://livecomerce.com/errors/live-not-active"));
+                .andExpect(jsonPath("$.type").value("https://livecomerce.com/errors/live-not-active"))
+                .andExpect(jsonPath("$.code").value("LIVE_NOT_ACTIVE"));
     }
 
     @Test
@@ -118,7 +121,8 @@ class IvsChatControllerTest {
 
         mvc.perform(get(PATH, LIVE_ID).with(as("ROLE_BUYER")))
                 .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.type").value("https://livecomerce.com/errors/live-chat-room-not-available"));
+                .andExpect(jsonPath("$.type").value("https://livecomerce.com/errors/live-chat-room-not-available"))
+                .andExpect(jsonPath("$.code").value("LIVE_CHAT_ROOM_NOT_AVAILABLE"));
     }
 
     @Test
@@ -139,6 +143,7 @@ class IvsChatControllerTest {
 
         mvc.perform(get(PATH, LIVE_ID).with(as("ROLE_BUYER")))
                 .andExpect(status().isServiceUnavailable())
-                .andExpect(jsonPath("$.type").value("https://livecomerce.com/errors/chat-provider-unavailable"));
+                .andExpect(jsonPath("$.type").value("https://livecomerce.com/errors/chat-provider-unavailable"))
+                .andExpect(jsonPath("$.code").value("CHAT_PROVIDER_UNAVAILABLE"));
     }
 }

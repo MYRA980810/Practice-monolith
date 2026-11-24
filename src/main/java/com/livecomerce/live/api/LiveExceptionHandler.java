@@ -39,6 +39,7 @@ class LiveExceptionHandler {
     ProblemDetail handleNotFound(LiveNotFoundException e) {
         var detail = ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, e.getMessage());
         detail.setType(URI.create("https://livecomerce.com/errors/live-not-found"));
+        detail.setProperty("code", LiveNotFoundException.CODE);
         return detail;
     }
 
@@ -74,6 +75,7 @@ class LiveExceptionHandler {
     ProblemDetail handleNotLive(LiveNotLiveException e) {
         var detail = ProblemDetail.forStatusAndDetail(HttpStatus.FORBIDDEN, e.getMessage());
         detail.setType(URI.create("https://livecomerce.com/errors/live-not-active"));
+        detail.setProperty("code", LiveNotLiveException.CODE);
         return detail;
     }
 
@@ -109,6 +111,7 @@ class LiveExceptionHandler {
     ProblemDetail handleChatRoomNotAvailable(LiveChatRoomNotAvailableException e) {
         var detail = ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, e.getMessage());
         detail.setType(URI.create("https://livecomerce.com/errors/live-chat-room-not-available"));
+        detail.setProperty("code", LiveChatRoomNotAvailableException.CODE);
         return detail;
     }
 
@@ -150,6 +153,7 @@ class LiveExceptionHandler {
         log.error("Chat provider unavailable: {}", e.getMessage(), e);
         var detail = ProblemDetail.forStatusAndDetail(HttpStatus.SERVICE_UNAVAILABLE, e.getMessage());
         detail.setType(URI.create("https://livecomerce.com/errors/chat-provider-unavailable"));
+        detail.setProperty("code", ChatProviderUnavailableException.CODE);
         return detail;
     }
 
