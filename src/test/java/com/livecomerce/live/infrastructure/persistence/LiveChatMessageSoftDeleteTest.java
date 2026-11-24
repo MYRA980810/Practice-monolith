@@ -1,5 +1,6 @@
 package com.livecomerce.live.infrastructure.persistence;
 
+import com.livecomerce.live.api.ChatMessageResponse;
 import com.livecomerce.live.domain.Live;
 import com.livecomerce.live.domain.LiveChatMessage;
 import com.livecomerce.live.domain.LiveContext;
@@ -79,6 +80,23 @@ class LiveChatMessageSoftDeleteTest {
                 .extracting(LiveChatMessage::getProviderMsgId).containsExactly(kept);
         assertThat(adapter.findByLiveIdBefore(live.getId(), T0.plusMinutes(5), 50))
                 .extracting(LiveChatMessage::getProviderMsgId).containsExactly(kept);
+    }
+
+    @Test
+    void historyProviderMessageId_isTheIdThatDeleteMessageMarks() {
+        var msgId = "ivs-" + UUID.randomUUID();
+        persistMessage(live, msgId, T0);
+        entityManager.clear();
+
+        var fromHistory = adapter.findByLiveIdLatest(live.getId(), 50).stream()
+                .map(ChatMessageResponse::from).toList();
+        assertThat(fromHistory).singleElement()
+                .extracting(ChatMessageResponse::providerMessageId).isEqualTo(msgId);
+
+        // The DELETE endpoint passes its path id straight to markDeleted (after IVS DeleteMessage).
+        assertThat(adapter.markDeleted(live.getId(), fromHistory.get(0).providerMessageId(), T0.plusMinutes(1)))
+                .isEqualTo(1);
+        assertThat(deletedAt(msgId)).isNotNull();
     }
 
     private Live persistLive(UUID sellerId) {

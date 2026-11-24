@@ -48,6 +48,18 @@ class GetChatHistoryServiceTest {
     }
 
     @Test
+    void getChatHistory_returnedMessagesCarryTheProviderMessageId() {
+        var live = com.livecomerce.live.domain.Live.create(UUID.randomUUID(), UUID.randomUUID(),
+                com.livecomerce.live.domain.LiveContext.STORE, "Live", null, null, 60);
+        var msg  = LiveChatMessage.create(live, "ivs-msg-001", UUID.randomUUID(), "alice", "hi", OffsetDateTime.now());
+        when(loadChatMessagePort.findByLiveIdLatest(LIVE_ID, 50)).thenReturn(List.of(msg));
+
+        var result = sut.getChatHistory(new GetChatHistoryCommand(LIVE_ID, null, 0));
+
+        assertThat(result).extracting(LiveChatMessage::getProviderMsgId).containsExactly("ivs-msg-001");
+    }
+
+    @Test
     void getChatHistory_zeroLimit_clampsToFifty() {
         when(loadChatMessagePort.findByLiveIdLatest(LIVE_ID, 50)).thenReturn(List.of());
 
