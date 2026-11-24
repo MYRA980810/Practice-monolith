@@ -350,4 +350,31 @@ class LiveTest {
                 .isInstanceOf(NullPointerException.class);
         assertThat(live.getCategoryId()).isEqualTo(categoryId);
     }
+
+    // ── Chat provider ────────────────────────────────────────────────────────
+
+    @Test
+    void hasIvsChatRoom_withRoomArn_isTrue() {
+        var live = Live.create(SELLER_ID, STORE_ID, LiveContext.STORE, "My Live", null, null, 60);
+        live.setChatRoom("arn:aws:ivschat:us-east-1:123456789012:room/abc");
+
+        assertThat(live.hasIvsChatRoom()).isTrue();
+    }
+
+    @Test
+    void hasIvsChatRoom_withoutRoomArn_isFalse() {
+        var live = Live.create(SELLER_ID, STORE_ID, LiveContext.STORE, "My Live", null, null, 60);
+
+        assertThat(live.hasIvsChatRoom()).isFalse();
+    }
+
+    @Test
+    void hasIvsChatRoom_staysTrueAfterLiveEnds() {
+        var live = Live.create(SELLER_ID, STORE_ID, LiveContext.STORE, "My Live", null, null, 60);
+        live.setChatRoom("arn:aws:ivschat:us-east-1:123456789012:room/abc");
+        live.start();
+        live.end();
+
+        assertThat(live.hasIvsChatRoom()).isTrue();
+    }
 }
