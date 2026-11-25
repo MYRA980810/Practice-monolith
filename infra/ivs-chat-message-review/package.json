@@ -11,7 +11,7 @@
   "scripts": {
     "test": "node --test",
     "package": "npm ci --omit=dev && rm -f function.zip && zip -qr function.zip src banned-words.json package.json node_modules",
-    "package:windows": "npm ci --omit=dev && powershell -NoProfile -Command \"Compress-Archive -Force -Path src,banned-words.json,package.json,node_modules -DestinationPath function.zip\""
+    "package:windows": "npm ci --omit=dev && \"%SystemRoot%\\System32\\tar.exe\" -a -c -f function.zip src banned-words.json package.json node_modules"
   },
   "dependencies": {
     "@aws-sdk/client-sqs": "^3.700.0"
