@@ -147,6 +147,50 @@ test('ALLOW: words glued by a period are not links', async () => {
   }
 });
 
+test('DENY: email addresses are reported as EMAIL, not LINK', async () => {
+  const { handler, sent } = setup();
+
+  for (const content of [
+    'juan@gmail.com',
+    'escríbeme a Juan.Perez+x@empresa.com.mx porfa',
+    'JUAN@GMAIL.COM',
+    'mi correo: (juan_99@hotmail.com).',
+    'correo<ventas@tienda-mx.net>',
+    'josé@gmail.com',
+    'juan@empresa.es',
+    'juan @ gmail.com',
+    'juan@ gmail.com',
+    'juan  @  outlook.com.mx',
+    'juan arroba gmail.com',
+    'juan ARROBA yahoo.com.mx',
+    'juan(at)gmail.com',
+    'juan [at] gmail.com',
+  ]) {
+    const result = await handler(event(content));
+    assert.equal(result.ReviewResult, 'DENY', content);
+    assert.equal(result.Attributes.Reason, 'EMAIL', content);
+  }
+  assert.equal(sent.length, 0);
+});
+
+test('ALLOW: @ mentions and @ without a domain-shaped part are not emails', async () => {
+  const { handler } = setup();
+
+  for (const content of [
+    '@juan me encanta',
+    'hola @maria',
+    'precio @ 200',
+    '2x1 @ tienda',
+    'correo@gmail',
+    'juan arroba gmail',
+    'una arroba de maíz',
+    'nos vemos @ casa.Me gusta',
+    'mira el (at) de la foto',
+  ]) {
+    assert.equal((await handler(event(content))).ReviewResult, 'ALLOW', content);
+  }
+});
+
 test('DENY: phone numbers', async () => {
   const { handler, sent } = setup();
 
@@ -193,6 +237,12 @@ test('review cost stays trivial on worst-case 500-char input', () => {
     'a.'.repeat(250),
     'ab.'.repeat(166) + 'x',
     '+('.repeat(250),
+    'a'.repeat(500),
+    'a@'.repeat(250),
+    'a.'.repeat(249) + '@',
+    'a @ '.repeat(125),
+    'a arroba '.repeat(55),
+    'x@' + 'a.'.repeat(249),
   ];
   const started = performance.now();
   for (let i = 0; i < 100; i++) {
@@ -285,10 +335,11 @@ test('message content never reaches the logs', async () => {
   await handler(event('secreto-allow'));
   await handler(event('tonto secreto-deny'));
   await handler(event('llama 5512345678'));
+  await handler(event('secreto@gmail.com'));
 
   assert.ok(lines.length > 0);
   for (const line of lines) {
-    assert.ok(!line.includes('secreto') && !line.includes('5512345678'), line);
+    assert.ok(!line.includes('secreto') && !line.includes('5512345678') && !line.includes('gmail'), line);
   }
 });
 

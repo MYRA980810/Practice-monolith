@@ -20,6 +20,26 @@ const BARE_DOMAIN = new RegExp(
   'i',
 );
 
+// Emails, matched on normalized (lowercase, accent-free) text. The local part must start a token (the
+// lookbehind keeps the scan linear) and the domain must look like a host with a TLD, so "@juan",
+// "precio @ 200" or "2x1 @ tienda" never match. Every quantifier is on a class disjoint from what follows.
+const EMAIL_LOCAL = String.raw`(?<![a-z0-9._%+-])[a-z0-9._%+-]+`;
+const EMAIL_HOST = String.raw`[a-z0-9-]+(?:\.[a-z0-9-]+)*`;
+// Plain "x@y.tld": the glued shape is unambiguous, so any alphabetic TLD counts ("juan@empresa.es").
+const EMAIL = new RegExp(String.raw`${EMAIL_LOCAL}@${EMAIL_HOST}\.[a-z]{2,}(?![a-z0-9-])`);
+// Spaced/obfuscated "x @ y.tld", "x (at) y.tld", "x [at] y.tld", "x arroba y.tld": only on the curated
+// TLD list, so "nos vemos @ casa.Me gusta" is not an email.
+const OBFUSCATED_EMAIL = new RegExp(
+  String.raw`${EMAIL_LOCAL}(?:\s{0,3}(?:@|\(at\)|\[at\])\s{0,3}|\s{1,3}arroba\s{1,3})` +
+    String.raw`${EMAIL_HOST}\.(?:${BARE_DOMAIN_TLDS.join('|')})(?![a-z0-9-])`,
+);
+
+function hasEmail(content) {
+  if (!/[@(\[]|arroba/i.test(content)) return false; // cheap pre-check, no normalization needed
+  const text = normalize(content);
+  return EMAIL.test(text) || OBFUSCATED_EMAIL.test(text);
+}
+
 /** Lowercase and strip accents/diacritics: "TÓNTÖ" -> "tonto". */
 export function normalize(text) {
   return text.normalize('NFD').replace(/\p{M}+/gu, '').toLowerCase();
@@ -95,11 +115,13 @@ function joins(separator, previousLength, length, international) {
 /**
  * @param {string} content message text
  * @param {string[]} bannedWords already normalized (see mergeBannedWords)
- * @returns {{result: 'ALLOW'} | {result: 'DENY', reason: 'EMPTY'|'BANNED_WORD'|'LINK'|'PHONE'}}
+ * @returns {{result: 'ALLOW'} | {result: 'DENY', reason: 'EMPTY'|'BANNED_WORD'|'EMAIL'|'LINK'|'PHONE'}}
  */
 export function reviewContent(content, bannedWords) {
   if (content.trim().length === 0) return { result: 'DENY', reason: 'EMPTY' };
   if (hasBannedWord(content, bannedWords)) return { result: 'DENY', reason: 'BANNED_WORD' };
+  // Before LINK: an email's domain ("juan @ gmail.com") would otherwise be reported as a bare-domain link.
+  if (hasEmail(content)) return { result: 'DENY', reason: 'EMAIL' };
   if (hasLink(content)) return { result: 'DENY', reason: 'LINK' };
   if (hasPhoneNumber(content)) return { result: 'DENY', reason: 'PHONE' };
   return { result: 'ALLOW' };
