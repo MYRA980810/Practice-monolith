@@ -3,6 +3,7 @@ package com.livecomerce.live.api;
 import com.livecomerce.live.application.port.in.ModerateLiveChatUseCase;
 import com.livecomerce.live.application.port.in.ModerateLiveChatUseCase.BanChatUserCommand;
 import com.livecomerce.live.application.port.in.ModerateLiveChatUseCase.DeleteChatMessageCommand;
+import com.livecomerce.live.application.port.in.ModerateLiveChatUseCase.ListChatBansQuery;
 import com.livecomerce.live.application.port.in.ModerateLiveChatUseCase.UnbanChatUserCommand;
 import com.livecomerce.shared.UserPrincipal;
 import jakarta.validation.Valid;
@@ -13,12 +14,14 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
 import java.util.UUID;
 
 /** Chat moderation of a live by its seller (bans are per seller; messages are IVS Chat messages). */
@@ -34,6 +37,24 @@ class IvsChatModerationController {
     static final int MAX_MESSAGE_ID_LENGTH = 128;
 
     private final ModerateLiveChatUseCase moderateLiveChatUseCase;
+
+    /**
+     * Every active chat ban of the live's seller (bans are per seller, so bans made from other lives
+     * of the seller are included), newest first by original ban time. Works for any live status.
+     * Always a JSON array ({@code []} when empty). Safety cap: at most the newest 1000 bans
+     * ({@code ModerateLiveChatService.MAX_LISTED_BANS}); there is no pagination.
+     * Non-owner seller: 403; unknown live: 404.
+     */
+    @GetMapping("/bans")
+    @PreAuthorize("hasRole('SELLER')")
+    List<ChatBanResponse> listBans(
+            @PathVariable UUID liveId,
+            @AuthenticationPrincipal UserPrincipal principal) {
+
+        return moderateLiveChatUseCase.listBans(new ListChatBansQuery(liveId, principal.getUserId())).stream()
+                .map(ChatBanResponse::from)
+                .toList();
+    }
 
     /** Idempotent: banning an already banned user answers 204 and retries the disconnect. */
     @PostMapping("/bans")
