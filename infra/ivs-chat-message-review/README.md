@@ -9,6 +9,11 @@ It does two things:
 1. **Reviews** the message with stateless checks only (IVS gives the whole review 200 ms):
    - empty / whitespace-only → `DENY` (`Reason: EMPTY`)
    - banned word or phrase, matched as whole words after lowercasing and stripping accents → `DENY` (`BANNED_WORD`)
+   - email addresses → `DENY` (`EMAIL`), checked before links so `juan @ gmail.com` is reported
+     as `EMAIL`, not `LINK`: `juan@gmail.com`, `Juan.Perez+x@empresa.com.mx` (any alphabetic TLD), plus
+     the spaced/obfuscated forms `juan @ gmail.com`, `juan(at)gmail.com`, `juan [at] gmail.com` and
+     `juan arroba gmail.com` on the curated link TLD list below; `@juan` mentions and `precio @ 200`
+     (no domain-shaped part) are allowed
    - links → `DENY` (`LINK`): anything with `http(s)://` or `www.`, plus bare domains
      (`mitienda.com`, `bit.ly/x`) on a curated TLD list that leaves out TLDs that are also short
      Spanish words (`me`, `es`, `do`, `co`, ...), so "ok.me interesa" is not a link; the
@@ -47,7 +52,7 @@ Output:
 ```
 
 On `ALLOW` the original `Content` and `Attributes` are returned unchanged. On `DENY`,
-`Attributes.Reason` is one of `EMPTY`, `BANNED_WORD`, `LINK`, `PHONE`; the sender gets it in the
+`Attributes.Reason` is one of `EMPTY`, `BANNED_WORD`, `EMAIL`, `LINK`, `PHONE`; the sender gets it in the
 WebSocket 406 error.
 
 SQS message body (on `ALLOW` only, and only when `Sender.Attributes.liveId` is present):
@@ -298,3 +303,8 @@ Denied messages log `"event":"message_denied"` with the `reason`, if you also wa
   Matching is whole-word on normalized text, so leetspeak and spacing tricks ("t o n t o") pass.
 - Bare domains on the excluded TLDs (`tienda.me`, `ejemplo.es`) pass unless written with
   `http(s)://` or `www.`; `t.me` and `wa.me` are the only `.me` hosts blocked without them.
+- Emails: spelled-out dots (`juan arroba gmail punto com`, `juan@gmail dot com`), letter-spaced
+  text, the English ` at ` (`juan at gmail.com`, too common a word) and look-alike characters such
+  as the full-width `＠` pass. Spaced/obfuscated forms (`juan @ tienda.es`) on the excluded TLDs pass
+  too; only the glued `x@y.tld` form accepts any TLD. Conversely, a glued `palabra@palabra.xx`
+  (`gracias@maria.perez`) is denied as `EMAIL`.
