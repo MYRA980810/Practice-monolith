@@ -3,10 +3,12 @@ package com.livecomerce.live.infrastructure.persistence;
 import com.livecomerce.live.application.port.out.ChatBanPort;
 import com.livecomerce.live.domain.ChatBan;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Limit;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.UUID;
 
 @Component
@@ -38,5 +40,11 @@ class ChatBanPersistenceAdapter implements ChatBanPort {
     @Transactional
     public void delete(UUID sellerId, UUID userId) {
         repository.deleteBySellerIdAndUserId(sellerId, userId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<ChatBan> findBySeller(UUID sellerId, int limit) {
+        return repository.findBySellerIdOrderByCreatedAtDescIdDesc(sellerId, Limit.of(limit));
     }
 }

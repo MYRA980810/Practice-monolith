@@ -9,9 +9,11 @@ import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabas
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.OffsetDateTime;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -91,6 +93,80 @@ class ChatBanPersistenceAdapterTest {
         adapter.delete(sellerId, userId);
 
         assertThat(adapter.isBanned(sellerId, userId)).isFalse();
+    }
+
+    // ── findBySeller ─────────────────────────────────────────────────────────
+
+    @Test
+    void findBySeller_returnsOnlyThatSellersBans_newestFirst() {
+        var oldUser   = UUID.randomUUID();
+        var newUser   = UUID.randomUUID();
+        insertBan(sellerId, oldUser, OffsetDateTime.parse("2026-11-20T10:00:00Z"));
+        insertBan(sellerId, newUser, OffsetDateTime.parse("2026-11-22T10:00:00Z"));
+        insertBan(otherSellerId, UUID.randomUUID(), OffsetDateTime.parse("2026-11-23T10:00:00Z"));
+
+        var bans = adapter.findBySeller(sellerId, 1000);
+
+        // Bans are per seller (not per live): every ban of the seller is listed, no other seller's.
+        assertThat(bans).extracting(ChatBan::getUserId).containsExactly(newUser, oldUser);
+        assertThat(bans).allMatch(b -> b.getSellerId().equals(sellerId));
+    }
+
+    @Test
+    void findBySeller_sameCreatedAt_isOrderedDeterministicallyByIdDesc() {
+        var at   = OffsetDateTime.parse("2026-11-22T10:00:00Z");
+        var lowId  = UUID.fromString("00000000-0000-0000-0000-000000000001");
+        var highId = UUID.fromString("ffffffff-0000-0000-0000-000000000001");
+        var lowUser  = UUID.randomUUID();
+        var highUser = UUID.randomUUID();
+        insertBan(lowId, sellerId, lowUser, at);
+        insertBan(highId, sellerId, highUser, at);
+
+        var bans = adapter.findBySeller(sellerId, 1000);
+
+        assertThat(bans).extracting(ChatBan::getUserId).containsExactly(highUser, lowUser);
+    }
+
+    @Test
+    void findBySeller_isCappedAtTheLimit_keepingTheNewest() {
+        var oldest = UUID.randomUUID();
+        var middle = UUID.randomUUID();
+        var newest = UUID.randomUUID();
+        insertBan(sellerId, oldest, OffsetDateTime.parse("2026-11-20T10:00:00Z"));
+        insertBan(sellerId, middle, OffsetDateTime.parse("2026-11-21T10:00:00Z"));
+        insertBan(sellerId, newest, OffsetDateTime.parse("2026-11-22T10:00:00Z"));
+
+        assertThat(adapter.findBySeller(sellerId, 2)).extracting(ChatBan::getUserId).containsExactly(newest, middle);
+    }
+
+    @Test
+    void findBySeller_noBans_returnsEmptyList() {
+        assertThat(adapter.findBySeller(sellerId, 1000)).isEmpty();
+    }
+
+    @Test
+    void reBan_keepsTheOriginalBanTime() {
+        var original = ChatBan.create(sellerId, userId, "first", sellerId);
+        var originalAt = OffsetDateTime.parse("2026-11-01T08:00:00Z");
+        ReflectionTestUtils.setField(original, "createdAt", originalAt);
+        adapter.banIfAbsent(original);
+
+        adapter.banIfAbsent(ChatBan.create(sellerId, userId, "second", sellerId));
+
+        var bans = adapter.findBySeller(sellerId, 1000);
+        assertThat(bans).hasSize(1);
+        assertThat(bans.getFirst().getCreatedAt().toInstant()).isEqualTo(originalAt.toInstant());
+    }
+
+    private void insertBan(UUID seller, UUID user, OffsetDateTime createdAt) {
+        insertBan(UUID.randomUUID(), seller, user, createdAt);
+    }
+
+    private void insertBan(UUID id, UUID seller, UUID user, OffsetDateTime createdAt) {
+        jdbc.update("""
+                INSERT INTO chat_bans (id, seller_id, user_id, reason, banned_by, created_at)
+                VALUES (?, ?, ?, NULL, ?, ?)
+                """, id, seller, user, seller, createdAt);
     }
 
     private UUID seedSeller() {

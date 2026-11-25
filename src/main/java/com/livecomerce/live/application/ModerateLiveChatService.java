@@ -1,5 +1,6 @@
 package com.livecomerce.live.application;
 
+import com.livecomerce.live.LoadSellerNamesPort;
 import com.livecomerce.live.application.port.in.ModerateLiveChatUseCase;
 import com.livecomerce.live.application.port.out.ChatBanPort;
 import com.livecomerce.live.application.port.out.ChatModerationPort;
@@ -18,6 +19,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -33,10 +35,15 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class ModerateLiveChatService implements ModerateLiveChatUseCase {
 
+    /** Safety cap of the ban list (newest first); there is no pagination. */
+    static final int MAX_LISTED_BANS = 1000;
+
     private final LoadLivePort        loadLivePort;
     private final ChatBanPort         chatBanPort;
     private final ChatModerationPort  chatModerationPort;
     private final SaveChatMessagePort saveChatMessagePort;
+    /** Resolves any user's display name (alias, else first + last name), not only sellers. */
+    private final LoadSellerNamesPort loadUserNamesPort;
 
     /**
      * Disconnect + token check is enough: IVS chat tokens are single-use and a closed connection needs
@@ -87,6 +94,23 @@ public class ModerateLiveChatService implements ModerateLiveChatUseCase {
         // Scoped to this live: a message id of another live is never marked. 0 rows is fine,
         // IVS messages are not persisted yet.
         saveChatMessagePort.markDeleted(live.getId(), command.messageId(), OffsetDateTime.now());
+    }
+
+    /**
+     * Like unban, works for any live status and chat provider: bans are per seller and the live
+     * only proves ownership. Names are resolved in one batch with the same rules as the chat token.
+     */
+    @Override
+    public List<BannedChatUser> listBans(ListChatBansQuery query) {
+        var live = loadOwnedLive(query.liveId(), query.sellerId());
+        var bans = chatBanPort.findBySeller(live.getSellerId(), MAX_LISTED_BANS);
+        if (bans.isEmpty()) {
+            return List.of();
+        }
+        var names = ChatDisplayNames.resolve(loadUserNamesPort, bans.stream().map(ChatBan::getUserId).toList());
+        return bans.stream()
+                .map(ban -> new BannedChatUser(ban.getUserId(), names.get(ban.getUserId()), ban.getCreatedAt().toInstant()))
+                .toList();
     }
 
     private Live loadOwnedLive(UUID liveId, UUID sellerId) {

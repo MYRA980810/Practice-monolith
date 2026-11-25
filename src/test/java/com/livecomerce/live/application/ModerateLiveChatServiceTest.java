@@ -1,6 +1,9 @@
 package com.livecomerce.live.application;
 
+import com.livecomerce.live.LoadSellerNamesPort;
 import com.livecomerce.live.application.port.in.ModerateLiveChatUseCase.BanChatUserCommand;
+import com.livecomerce.live.application.port.in.ModerateLiveChatUseCase.BannedChatUser;
+import com.livecomerce.live.application.port.in.ModerateLiveChatUseCase.ListChatBansQuery;
 import com.livecomerce.live.application.port.in.ModerateLiveChatUseCase.DeleteChatMessageCommand;
 import com.livecomerce.live.application.port.in.ModerateLiveChatUseCase.UnbanChatUserCommand;
 import com.livecomerce.live.application.port.out.ChatBanPort;
@@ -24,8 +27,14 @@ import org.mockito.InOrder;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
 
+import java.time.Instant;
+import java.time.OffsetDateTime;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -35,6 +44,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -46,6 +56,7 @@ class ModerateLiveChatServiceTest {
     @Mock ChatBanPort         chatBanPort;
     @Mock ChatModerationPort  chatModerationPort;
     @Mock SaveChatMessagePort saveChatMessagePort;
+    @Mock LoadSellerNamesPort loadUserNamesPort;
 
     @InjectMocks ModerateLiveChatService sut;
 
@@ -187,6 +198,106 @@ class ModerateLiveChatServiceTest {
                 .isInstanceOf(LiveNotOwnedBySellerException.class);
 
         verifyNoInteractions(chatBanPort);
+    }
+
+    // ── list bans ────────────────────────────────────────────────────────────
+
+    private static ChatBan banAt(UUID userId, String createdAt) {
+        var ban = ChatBan.create(SELLER_ID, userId, null, SELLER_ID);
+        ReflectionTestUtils.setField(ban, "createdAt", OffsetDateTime.parse(createdAt));
+        return ban;
+    }
+
+    @Test
+    void listBans_owner_returnsSellerBansInPortOrder_withNamesResolvedInOneBatch() {
+        var live = given(activeLiveWithRoom());
+        var newer = UUID.randomUUID();
+        var older = UUID.randomUUID();
+        when(chatBanPort.findBySeller(SELLER_ID, ModerateLiveChatService.MAX_LISTED_BANS)).thenReturn(List.of(
+                banAt(newer, "2026-11-24T09:04:05-06:00"),
+                banAt(older, "2026-11-20T10:00:00Z")));
+        when(loadUserNamesPort.loadNames(any())).thenReturn(Map.of(newer, "  Bob Buyer  ", older, "Ann"));
+
+        var result = sut.listBans(new ListChatBansQuery(live.getId(), SELLER_ID));
+
+        assertThat(result).containsExactly(
+                new BannedChatUser(newer, "Bob Buyer", Instant.parse("2026-11-24T15:04:05Z")),
+                new BannedChatUser(older, "Ann", Instant.parse("2026-11-20T10:00:00Z")));
+        verify(loadUserNamesPort, times(1)).loadNames(Set.of(newer, older));
+    }
+
+    @Test
+    void listBans_noBans_returnsEmptyList_withoutNameLookup() {
+        var live = given(activeLiveWithRoom());
+        when(chatBanPort.findBySeller(SELLER_ID, ModerateLiveChatService.MAX_LISTED_BANS)).thenReturn(List.of());
+
+        assertThat(sut.listBans(new ListChatBansQuery(live.getId(), SELLER_ID))).isEmpty();
+        verifyNoInteractions(loadUserNamesPort);
+    }
+
+    @Test
+    void listBans_unknownName_fallsBackToUser() {
+        var live = given(activeLiveWithRoom());
+        var userId = UUID.randomUUID();
+        when(chatBanPort.findBySeller(SELLER_ID, ModerateLiveChatService.MAX_LISTED_BANS))
+                .thenReturn(List.of(banAt(userId, "2026-11-20T10:00:00Z")));
+        when(loadUserNamesPort.loadNames(any())).thenReturn(Map.of());
+
+        var result = sut.listBans(new ListChatBansQuery(live.getId(), SELLER_ID));
+
+        assertThat(result.getFirst().displayName()).isEqualTo("User");
+    }
+
+    @Test
+    void listBans_nameLookupFails_stillListsBansWithFallbackName() {
+        var live = given(activeLiveWithRoom());
+        var userId = UUID.randomUUID();
+        when(chatBanPort.findBySeller(SELLER_ID, ModerateLiveChatService.MAX_LISTED_BANS))
+                .thenReturn(List.of(banAt(userId, "2026-11-20T10:00:00Z")));
+        when(loadUserNamesPort.loadNames(any())).thenThrow(new IllegalStateException("db down"));
+
+        var result = sut.listBans(new ListChatBansQuery(live.getId(), SELLER_ID));
+
+        assertThat(result).extracting(BannedChatUser::displayName).containsExactly("User");
+    }
+
+    @Test
+    void listBans_endedLive_isAllowed_becauseBansArePerSeller() {
+        var live = activeLiveWithRoom();
+        live.end();
+        given(live);
+        when(chatBanPort.findBySeller(SELLER_ID, ModerateLiveChatService.MAX_LISTED_BANS)).thenReturn(List.of());
+
+        assertThat(sut.listBans(new ListChatBansQuery(live.getId(), SELLER_ID))).isEmpty();
+    }
+
+    @Test
+    void listBans_scheduledLiveWithoutRoom_isAllowed() {
+        var live = given(Live.create(SELLER_ID, UUID.randomUUID(), LiveContext.STORE, "Live", "thumb", null, 60));
+        when(chatBanPort.findBySeller(SELLER_ID, ModerateLiveChatService.MAX_LISTED_BANS)).thenReturn(List.of());
+
+        assertThat(sut.listBans(new ListChatBansQuery(live.getId(), SELLER_ID))).isEmpty();
+    }
+
+    @Test
+    void listBans_nonOwner_throwsNotOwned_andReadsNoBans() {
+        var live = given(activeLiveWithRoom());
+
+        assertThatThrownBy(() -> sut.listBans(new ListChatBansQuery(live.getId(), OTHER_SELLER_ID)))
+                .isInstanceOf(LiveNotOwnedBySellerException.class);
+
+        verifyNoInteractions(chatBanPort, loadUserNamesPort);
+    }
+
+    @Test
+    void listBans_unknownLive_throwsNotFound() {
+        var liveId = UUID.randomUUID();
+        when(loadLivePort.loadById(liveId)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> sut.listBans(new ListChatBansQuery(liveId, SELLER_ID)))
+                .isInstanceOf(LiveNotFoundException.class);
+
+        verifyNoInteractions(chatBanPort, loadUserNamesPort);
     }
 
     // ── delete message ───────────────────────────────────────────────────────

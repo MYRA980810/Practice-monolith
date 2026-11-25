@@ -1,17 +1,22 @@
 package com.livecomerce.live.infrastructure.persistence;
 
 import com.livecomerce.live.domain.ChatBan;
+import org.springframework.data.domain.Limit;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.UUID;
 
 interface ChatBanJpaRepository extends JpaRepository<ChatBan, UUID> {
 
     boolean existsBySellerIdAndUserId(UUID sellerId, UUID userId);
+
+    /** Newest first; the id tiebreaker keeps the order deterministic for equal timestamps. */
+    List<ChatBan> findBySellerIdOrderByCreatedAtDescIdDesc(UUID sellerId, Limit limit);
 
     /**
      * Race-safe idempotent insert: a duplicate (seller, user) is skipped by the database instead
