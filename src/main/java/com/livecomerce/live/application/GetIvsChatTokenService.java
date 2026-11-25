@@ -10,8 +10,6 @@ import com.livecomerce.live.domain.LiveChatRoomNotAvailableException;
 import com.livecomerce.live.domain.LiveNotFoundException;
 import com.livecomerce.live.domain.LiveNotLiveException;
 import com.livecomerce.live.domain.LiveStatus;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -26,9 +24,7 @@ import java.util.UUID;
 @Service
 public class GetIvsChatTokenService implements GetIvsChatTokenUseCase {
 
-    private static final Logger log = LoggerFactory.getLogger(GetIvsChatTokenService.class);
-
-    static final String FALLBACK_DISPLAY_NAME = "User";
+    static final String FALLBACK_DISPLAY_NAME = ChatDisplayNames.FALLBACK;
 
     /** Token attribute keys: part of the wire contract with the chat clients, do not rename. */
     static final String ATTR_LIVE_ID      = "liveId";
@@ -37,9 +33,6 @@ public class GetIvsChatTokenService implements GetIvsChatTokenUseCase {
 
     /** Value of the {@value #ATTR_ROLE} attribute; the enum names are the wire values. */
     enum ChatRole { SELLER, BUYER }
-
-    /** IVS caps all token attributes at 1 KB in total, so the free-text name is bounded. */
-    private static final int MAX_DISPLAY_NAME_CODE_POINTS = 64;
 
     private final LoadLivePort        loadLivePort;
     private final IvsChatTokenPort    ivsChatTokenPort;
@@ -89,22 +82,8 @@ public class GetIvsChatTokenService implements GetIvsChatTokenUseCase {
                 token.token(), token.sessionExpirationTime(), token.tokenExpirationTime(), token.region());
     }
 
+    /** The name is cosmetic: a failed lookup falls back instead of failing the token. */
     private String displayName(UUID userId) {
-        String name;
-        try {
-            name = loadUserNamesPort.loadNames(List.of(userId)).get(userId);
-        } catch (RuntimeException e) {
-            // The name is cosmetic: never fail the token because of it.
-            log.warn("Display name lookup failed for user {}, using fallback", userId, e);
-            return FALLBACK_DISPLAY_NAME;
-        }
-        if (name == null || name.isBlank()) {
-            return FALLBACK_DISPLAY_NAME;
-        }
-        name = name.strip();
-        if (name.codePointCount(0, name.length()) > MAX_DISPLAY_NAME_CODE_POINTS) {
-            name = name.substring(0, name.offsetByCodePoints(0, MAX_DISPLAY_NAME_CODE_POINTS));
-        }
-        return name;
+        return ChatDisplayNames.resolve(loadUserNamesPort, List.of(userId)).get(userId);
     }
 }
