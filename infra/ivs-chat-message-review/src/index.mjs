@@ -16,7 +16,7 @@ const config = loadConfig({
 });
 
 // Created once per execution environment and reused across invocations.
-// A single attempt: there is no time budget for retries inside the 200 ms review window.
+// A single attempt: the send is capped by SQS_SEND_TIMEOUT_MS, below the 1 s function timeout.
 const sqs = new SQSClient({ maxAttempts: 1 });
 
 async function sendToQueue(body, abortSignal) {

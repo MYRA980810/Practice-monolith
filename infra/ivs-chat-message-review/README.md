@@ -23,8 +23,11 @@ It does two things:
      ("tallas 36 38 40 42 44 46") never join
    - anything else → `ALLOW`. Length and rate are enforced by the room limits.
 2. **Hands allowed messages to SQS** (`ivs-chat-messages`) so the backend persists the chat
-   history (`IvsChatMessageListener`). The send is capped at `SQS_SEND_TIMEOUT_MS` and never
-   changes the result: if SQS fails or is slow, the message is still `ALLOW`ed (just not persisted).
+   history (`IvsChatMessageListener`). The send is capped at `SQS_SEND_TIMEOUT_MS` (default 800 ms,
+   below the 1 s function timeout) and never changes the result: if SQS fails or exceeds the cap,
+   the message is still `ALLOW`ed (just not persisted). If the review takes longer than IVS's 200 ms
+   (e.g. a cold start), IVS falls back to `ALLOW` and delivers the message, but the Lambda keeps
+   running and the send still completes, so the message is persisted.
 
 The room's `fallbackResult` is `ALLOW`: if the Lambda errors or exceeds 200 ms, IVS delivers the
 message anyway. Message content, IPs and names are never logged, only message ids and room ARNs.
@@ -74,7 +77,7 @@ SQS message body (on `ALLOW` only, and only when `Sender.Attributes.liveId` is p
 | --- | --- | --- |
 | `QUEUE_URL` | yes | URL of the `ivs-chat-messages` queue. Without it nothing is persisted (still `ALLOW`). |
 | `BANNED_WORDS` | no | Comma-separated words/phrases, merged with `banned-words.json`. |
-| `SQS_SEND_TIMEOUT_MS` | no | Cap on the SQS send. Default `100`, max `150`. |
+| `SQS_SEND_TIMEOUT_MS` | no | Cap on the SQS send. Default `800`, max `900` (keep it below the 1 s function timeout). |
 
 `banned-words.json` is a packaged starter list (JSON array of strings); review it with the
 business before going live. Changing it requires a redeploy; `BANNED_WORDS` only a config update.
@@ -156,7 +159,7 @@ aws lambda create-function --function-name ${FUNCTION} \
   --role arn:aws:iam::${ACCOUNT_ID}:role/${FUNCTION}-role \
   --memory-size 256 --timeout 1 \
   --zip-file fileb://function.zip \
-  --environment '{"Variables":{"QUEUE_URL":"'"${QUEUE_URL}"'","SQS_SEND_TIMEOUT_MS":"100"}}'
+  --environment '{"Variables":{"QUEUE_URL":"'"${QUEUE_URL}"'","SQS_SEND_TIMEOUT_MS":"800"}}'
 
 export FUNCTION_ARN=$(aws lambda get-function --function-name ${FUNCTION} --query Configuration.FunctionArn --output text)
 ```
@@ -167,7 +170,7 @@ Updates:
 npm run package
 aws lambda update-function-code --function-name ${FUNCTION} --zip-file fileb://function.zip
 aws lambda update-function-configuration --function-name ${FUNCTION} \
-  --environment '{"Variables":{"QUEUE_URL":"'"${QUEUE_URL}"'","SQS_SEND_TIMEOUT_MS":"100","BANNED_WORDS":"palabra1,palabra2"}}'
+  --environment '{"Variables":{"QUEUE_URL":"'"${QUEUE_URL}"'","SQS_SEND_TIMEOUT_MS":"800","BANNED_WORDS":"palabra1,palabra2"}}'
 ```
 
 Always use the JSON form: the `Variables={K=V,...}` shorthand splits on commas, which breaks
@@ -288,9 +291,16 @@ Denied messages log `"event":"message_denied"` with the `reason`, if you also wa
 
 ## Known limitations
 
-- Messages allowed by the room's `fallbackResult` (Lambda error, cold start or > 200 ms) are
-  delivered but not persisted to the history. Keep the function warm or add provisioned
-  concurrency if that gap matters.
+- Messages that exceed IVS's 200 ms window (cold start, slow SQS connection) are delivered by the
+  room's `fallbackResult` **unmoderated** but are still persisted, because the Lambda keeps running
+  and finishes the SQS send. Keep the function warm or add provisioned concurrency if unmoderated
+  delivery matters.
+- Messages are still delivered but **not** persisted when the Lambda is throttled (account
+  concurrency limit) or errors, or when the SQS send fails or exceeds `SQS_SEND_TIMEOUT_MS`
+  (single attempt, `maxAttempts: 1`).
+- A longer send cap means a longer invocation, which holds a unit of concurrency longer. Raise the
+  account's Lambda concurrency limit before go-live (new accounts may have only 10), or busy rooms
+  get throttled and lose history.
 - `sentAt` is the review time, not a client timestamp (IVS does not pass one to the handler).
 
 ### Known limitations of the heuristics

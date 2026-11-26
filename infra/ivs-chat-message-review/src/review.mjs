@@ -138,11 +138,12 @@ const defaultLogger = {
  * @param {object} deps
  * @param {string[]} deps.bannedWords banned words/phrases (normalized here)
  * @param {(body: string, signal: AbortSignal) => Promise<unknown>} deps.sendToQueue sends one SQS message
- * @param {number} [deps.sendTimeoutMs] hard cap on the SQS send; IVS waits at most 200 ms for the review
+ * @param {number} [deps.sendTimeoutMs] hard cap on the SQS send. IVS waits at most 200 ms for the review;
+ *   exceeding that only means IVS falls back to ALLOW, while the send continues so history is kept
  * @param {() => Date} [deps.now]
  * @param {{info: Function, warn: Function}} [deps.logger]
  */
-export function createHandler({ bannedWords, sendToQueue, sendTimeoutMs = 100, now = () => new Date(), logger = defaultLogger }) {
+export function createHandler({ bannedWords, sendToQueue, sendTimeoutMs = 800, now = () => new Date(), logger = defaultLogger }) {
   const normalizedBannedWords = mergeBannedWords(bannedWords);
 
   async function enqueue(event, content) {
