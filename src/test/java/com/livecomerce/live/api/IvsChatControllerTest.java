@@ -73,16 +73,33 @@ class IvsChatControllerTest {
                 "ivs-token",
                 Instant.parse("2026-11-18T11:00:00Z"),
                 Instant.parse("2026-11-18T10:05:00Z"),
-                "us-east-1"));
+                "us-east-1",
+                true));
 
         mvc.perform(get(PATH, LIVE_ID).with(as(role)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.token").value("ivs-token"))
                 .andExpect(jsonPath("$.sessionExpirationTime").value("2026-11-18T11:00:00Z"))
                 .andExpect(jsonPath("$.tokenExpirationTime").value("2026-11-18T10:05:00Z"))
-                .andExpect(jsonPath("$.region").value("us-east-1"));
+                .andExpect(jsonPath("$.region").value("us-east-1"))
+                .andExpect(jsonPath("$.canSend").value(true));
 
         verify(getIvsChatTokenUseCase).getIvsChatToken(new GetIvsChatTokenCommand(LIVE_ID, USER_ID));
+    }
+
+    @Test
+    void getToken_bannedUser_returns200WithReceiveOnlyToken() throws Exception {
+        when(getIvsChatTokenUseCase.getIvsChatToken(any())).thenReturn(new IvsChatTokenResult(
+                "ivs-read-only-token",
+                Instant.parse("2026-11-18T11:00:00Z"),
+                Instant.parse("2026-11-18T10:05:00Z"),
+                "us-east-1",
+                false));
+
+        mvc.perform(get(PATH, LIVE_ID).with(as("ROLE_BUYER")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.token").value("ivs-read-only-token"))
+                .andExpect(jsonPath("$.canSend").value(false));
     }
 
     @Test
@@ -123,17 +140,6 @@ class IvsChatControllerTest {
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.type").value("https://livecomerce.com/errors/live-chat-room-not-available"))
                 .andExpect(jsonPath("$.code").value("LIVE_CHAT_ROOM_NOT_AVAILABLE"));
-    }
-
-    @Test
-    void getToken_bannedUser_returns403WithChatBannedCode() throws Exception {
-        when(getIvsChatTokenUseCase.getIvsChatToken(any()))
-                .thenThrow(new com.livecomerce.live.domain.ChatBannedException(LIVE_ID));
-
-        mvc.perform(get(PATH, LIVE_ID).with(as("ROLE_BUYER")))
-                .andExpect(status().isForbidden())
-                .andExpect(jsonPath("$.type").value("https://livecomerce.com/errors/chat-banned"))
-                .andExpect(jsonPath("$.code").value("CHAT_BANNED"));
     }
 
     @Test

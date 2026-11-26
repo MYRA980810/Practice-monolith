@@ -48,7 +48,7 @@ class IvsChatTokenAdapterTest {
                         .tokenExpirationTime(TOKEN_EXPIRY)
                         .build());
 
-        var token = adapter().createToken(ROOM_ARN, USER_ID, ATTRIBUTES, 60);
+        var token = adapter().createToken(ROOM_ARN, USER_ID, ATTRIBUTES, true, 60);
 
         assertThat(token.token()).isEqualTo("ivs-token");
         assertThat(token.sessionExpirationTime()).isEqualTo(SESSION_EXPIRY);
@@ -66,11 +66,33 @@ class IvsChatTokenAdapterTest {
     }
 
     @Test
+    void createToken_cannotSend_grantsNoCapabilities_soTheTokenIsReceiveOnly() {
+        when(ivschatClient.createChatToken(any(CreateChatTokenRequest.class)))
+                .thenReturn(CreateChatTokenResponse.builder()
+                        .token("ivs-token")
+                        .sessionExpirationTime(SESSION_EXPIRY)
+                        .tokenExpirationTime(TOKEN_EXPIRY)
+                        .build());
+
+        var token = adapter().createToken(ROOM_ARN, USER_ID, ATTRIBUTES, false, 60);
+
+        assertThat(token.token()).isEqualTo("ivs-token");
+        var captor = ArgumentCaptor.forClass(CreateChatTokenRequest.class);
+        verify(ivschatClient).createChatToken(captor.capture());
+        var request = captor.getValue();
+        assertThat(request.capabilities()).isEmpty();
+        assertThat(request.roomIdentifier()).isEqualTo(ROOM_ARN);
+        assertThat(request.userId()).isEqualTo(USER_ID);
+        assertThat(request.attributes()).containsExactlyInAnyOrderEntriesOf(ATTRIBUTES);
+        assertThat(request.sessionDurationInMinutes()).isEqualTo(60);
+    }
+
+    @Test
     void createToken_sdkFailure_throwsChatProviderUnavailable() {
         var sdkError = IvschatException.builder().message("throttled").build();
         when(ivschatClient.createChatToken(any(CreateChatTokenRequest.class))).thenThrow(sdkError);
 
-        assertThatThrownBy(() -> adapter().createToken(ROOM_ARN, USER_ID, ATTRIBUTES, 60))
+        assertThatThrownBy(() -> adapter().createToken(ROOM_ARN, USER_ID, ATTRIBUTES, true, 60))
                 .isInstanceOf(ChatProviderUnavailableException.class)
                 .hasCause(sdkError);
     }
@@ -80,7 +102,7 @@ class IvsChatTokenAdapterTest {
         when(ivschatClient.createChatToken(any(CreateChatTokenRequest.class)))
                 .thenThrow(IvschatException.builder().message("throttled").build());
 
-        assertThatThrownBy(() -> adapter().createToken(ROOM_ARN, USER_ID, ATTRIBUTES, 60))
+        assertThatThrownBy(() -> adapter().createToken(ROOM_ARN, USER_ID, ATTRIBUTES, true, 60))
                 .isInstanceOf(ChatProviderUnavailableException.class)
                 .message().doesNotContain(ROOM_ARN).doesNotContain("arn:");
     }
@@ -90,7 +112,7 @@ class IvsChatTokenAdapterTest {
         var timeout = ApiCallTimeoutException.create(3000);
         when(ivschatClient.createChatToken(any(CreateChatTokenRequest.class))).thenThrow(timeout);
 
-        assertThatThrownBy(() -> adapter().createToken(ROOM_ARN, USER_ID, ATTRIBUTES, 60))
+        assertThatThrownBy(() -> adapter().createToken(ROOM_ARN, USER_ID, ATTRIBUTES, true, 60))
                 .isInstanceOf(ChatProviderUnavailableException.class)
                 .hasCause(timeout);
     }
@@ -100,7 +122,7 @@ class IvsChatTokenAdapterTest {
         var timeout = ApiCallAttemptTimeoutException.create(1500);
         when(ivschatClient.createChatToken(any(CreateChatTokenRequest.class))).thenThrow(timeout);
 
-        assertThatThrownBy(() -> adapter().createToken(ROOM_ARN, USER_ID, ATTRIBUTES, 60))
+        assertThatThrownBy(() -> adapter().createToken(ROOM_ARN, USER_ID, ATTRIBUTES, true, 60))
                 .isInstanceOf(ChatProviderUnavailableException.class)
                 .hasCause(timeout);
     }

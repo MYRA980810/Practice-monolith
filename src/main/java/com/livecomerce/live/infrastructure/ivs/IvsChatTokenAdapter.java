@@ -11,6 +11,7 @@ import software.amazon.awssdk.services.ivschat.IvschatClient;
 import software.amazon.awssdk.services.ivschat.model.ChatTokenCapability;
 import software.amazon.awssdk.services.ivschat.model.CreateChatTokenRequest;
 
+import java.util.List;
 import java.util.Map;
 
 @Component
@@ -28,12 +29,13 @@ class IvsChatTokenAdapter implements IvsChatTokenPort {
 
     @Override
     public ChatToken createToken(String roomArn, String userId, Map<String, String> attributes,
-                                 int sessionDurationMinutes) {
+                                 boolean canSend, int sessionDurationMinutes) {
         var request = CreateChatTokenRequest.builder()
                 .roomIdentifier(roomArn)
                 .userId(userId)
-                // SEND_MESSAGE only, for sellers too: deleting messages and banning go through the backend.
-                .capabilities(ChatTokenCapability.SEND_MESSAGE)
+                // At most SEND_MESSAGE, for sellers too: deleting messages and banning go through the backend.
+                // No capability at all is a receive-only token: viewing messages and events is always implied.
+                .capabilities(canSend ? List.of(ChatTokenCapability.SEND_MESSAGE) : List.of())
                 .attributes(attributes)
                 .sessionDurationInMinutes(sessionDurationMinutes)
                 .build();

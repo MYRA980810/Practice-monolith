@@ -5,7 +5,6 @@ import com.livecomerce.live.application.port.in.GetIvsChatTokenUseCase;
 import com.livecomerce.live.application.port.out.ChatBanPort;
 import com.livecomerce.live.application.port.out.IvsChatTokenPort;
 import com.livecomerce.live.application.port.out.LoadLivePort;
-import com.livecomerce.live.domain.ChatBannedException;
 import com.livecomerce.live.domain.LiveChatRoomNotAvailableException;
 import com.livecomerce.live.domain.LiveNotFoundException;
 import com.livecomerce.live.domain.LiveNotLiveException;
@@ -67,19 +66,18 @@ public class GetIvsChatTokenService implements GetIvsChatTokenUseCase {
 
         var role = live.getSellerId().equals(command.userId()) ? ChatRole.SELLER : ChatRole.BUYER;
         // The owner is never banned from their own chat; bans are per seller, not per live.
-        if (role == ChatRole.BUYER && chatBanPort.isBanned(live.getSellerId(), command.userId())) {
-            throw new ChatBannedException(live.getId());
-        }
+        // A banned user still reads the chat: the token is receive-only instead of refused.
+        boolean canSend = role == ChatRole.SELLER || !chatBanPort.isBanned(live.getSellerId(), command.userId());
         var attributes = Map.of(
                 ATTR_LIVE_ID,      live.getId().toString(),
                 ATTR_DISPLAY_NAME, displayName(command.userId()),
                 ATTR_ROLE,         role.name());
 
         var token = ivsChatTokenPort.createToken(
-                live.getChatRoomArn(), command.userId().toString(), attributes, sessionDurationMinutes);
+                live.getChatRoomArn(), command.userId().toString(), attributes, canSend, sessionDurationMinutes);
 
         return new IvsChatTokenResult(
-                token.token(), token.sessionExpirationTime(), token.tokenExpirationTime(), token.region());
+                token.token(), token.sessionExpirationTime(), token.tokenExpirationTime(), token.region(), canSend);
     }
 
     /** The name is cosmetic: a failed lookup falls back instead of failing the token. */

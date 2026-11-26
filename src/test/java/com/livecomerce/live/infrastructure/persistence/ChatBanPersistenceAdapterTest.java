@@ -82,15 +82,15 @@ class ChatBanPersistenceAdapterTest {
         adapter.banIfAbsent(ChatBan.create(sellerId, userId, null, sellerId));
         adapter.banIfAbsent(ChatBan.create(otherSellerId, userId, null, otherSellerId));
 
-        adapter.delete(sellerId, userId);
+        assertThat(adapter.delete(sellerId, userId)).isTrue();
 
         assertThat(adapter.isBanned(sellerId, userId)).isFalse();
         assertThat(adapter.isBanned(otherSellerId, userId)).isTrue();
     }
 
     @Test
-    void delete_whenNotBanned_isNoOp() {
-        adapter.delete(sellerId, userId);
+    void delete_whenNotBanned_isNoOp_andReportsNothingRemoved() {
+        assertThat(adapter.delete(sellerId, userId)).isFalse();
 
         assertThat(adapter.isBanned(sellerId, userId)).isFalse();
     }
