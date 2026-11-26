@@ -38,8 +38,8 @@ class ChatBanPersistenceAdapter implements ChatBanPort {
 
     @Override
     @Transactional
-    public void delete(UUID sellerId, UUID userId) {
-        repository.deleteBySellerIdAndUserId(sellerId, userId);
+    public boolean delete(UUID sellerId, UUID userId) {
+        return repository.deleteBySellerIdAndUserId(sellerId, userId) > 0;
     }
 
     @Override

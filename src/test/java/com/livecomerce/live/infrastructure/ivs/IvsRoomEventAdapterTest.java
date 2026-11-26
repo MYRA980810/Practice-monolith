@@ -82,6 +82,15 @@ class IvsRoomEventAdapterTest {
     }
 
     @Test
+    void publish_chatUserUnbanned_sendsUserIdAttribute() {
+        var userId  = UUID.randomUUID();
+        var request = publishAndCapture(new RoomEvent.ChatUserUnbanned(userId));
+
+        assertThat(request.eventName()).isEqualTo("chat-user-unbanned");
+        assertThat(request.attributes()).containsExactlyEntriesOf(Map.of("userId", userId.toString()));
+    }
+
+    @Test
     void publish_hugeBigDecimal_usesPlainNotation() {
         var request = publishAndCapture(
                 new RoomEvent.ProductPinned(LIVE_PRODUCT_ID, "Shirt", new BigDecimal("1E+3"), 60));

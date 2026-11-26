@@ -16,8 +16,12 @@ public interface ChatBanPort {
 
     boolean isBanned(UUID sellerId, UUID userId);
 
-    /** Removes the ban; a no-op when the user is not banned. */
-    void delete(UUID sellerId, UUID userId);
+    /**
+     * Removes the ban; a no-op when the user is not banned.
+     *
+     * @return {@code true} if a ban was removed, {@code false} if there was none
+     */
+    boolean delete(UUID sellerId, UUID userId);
 
     /** The seller's bans, newest first ({@code createdAt} DESC, then id DESC), at most {@code limit}. */
     List<ChatBan> findBySeller(UUID sellerId, int limit);

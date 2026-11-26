@@ -30,6 +30,6 @@ class IvsChatController {
                 new GetIvsChatTokenCommand(liveId, principal.getUserId()));
 
         return ResponseEntity.ok(new IvsChatTokenResponse(
-                result.token(), result.sessionExpirationTime(), result.tokenExpirationTime(), result.region()));
+                result.token(), result.sessionExpirationTime(), result.tokenExpirationTime(), result.region(), result.canSend()));
     }
 }

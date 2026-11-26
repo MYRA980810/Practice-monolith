@@ -1,6 +1,5 @@
 package com.livecomerce.live.api;
 
-import com.livecomerce.live.domain.ChatBannedException;
 import com.livecomerce.live.domain.ChatProviderMisconfiguredException;
 import com.livecomerce.live.domain.ChatProviderUnavailableException;
 import com.livecomerce.live.domain.ChatRequestRejectedException;
@@ -112,14 +111,6 @@ class LiveExceptionHandler {
         var detail = ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, e.getMessage());
         detail.setType(URI.create("https://livecomerce.com/errors/live-chat-room-not-available"));
         detail.setProperty("code", LiveChatRoomNotAvailableException.CODE);
-        return detail;
-    }
-
-    @ExceptionHandler(ChatBannedException.class)
-    ProblemDetail handleChatBanned(ChatBannedException e) {
-        var detail = ProblemDetail.forStatusAndDetail(HttpStatus.FORBIDDEN, e.getMessage());
-        detail.setType(URI.create("https://livecomerce.com/errors/chat-banned"));
-        detail.setProperty("code", ChatBannedException.CODE);
         return detail;
     }
 

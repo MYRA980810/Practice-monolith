@@ -66,6 +66,18 @@ public sealed interface RoomEvent {
         }
     }
 
+    /**
+     * The seller lifted a chat ban: the client whose user id matches gets a new token that can send.
+     * Broadcast to the whole room (IVS Chat SendEvent has no per-user target); others ignore it.
+     */
+    record ChatUserUnbanned(UUID userId) implements RoomEvent {
+        public String type() { return "chat-user-unbanned"; }
+
+        public Map<String, Object> attributes() {
+            return fields("userId", userId.toString());
+        }
+    }
+
     private static Map<String, Object> fields(Object... keysAndValues) {
         var map = new LinkedHashMap<String, Object>();
         for (int i = 0; i < keysAndValues.length; i += 2) {

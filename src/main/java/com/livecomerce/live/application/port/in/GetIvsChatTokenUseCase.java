@@ -10,6 +10,7 @@ public interface GetIvsChatTokenUseCase {
 
     record GetIvsChatTokenCommand(UUID liveId, UUID userId) {}
 
+    /** {@code canSend} is false for a user banned by the live's seller: the token is receive-only. */
     record IvsChatTokenResult(String token, Instant sessionExpirationTime,
-                              Instant tokenExpirationTime, String region) {}
+                              Instant tokenExpirationTime, String region, boolean canSend) {}
 }

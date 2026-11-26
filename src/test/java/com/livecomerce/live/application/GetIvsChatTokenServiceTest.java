@@ -6,7 +6,6 @@ import com.livecomerce.live.application.port.out.ChatBanPort;
 import com.livecomerce.live.application.port.out.IvsChatTokenPort;
 import com.livecomerce.live.application.port.out.IvsChatTokenPort.ChatToken;
 import com.livecomerce.live.application.port.out.LoadLivePort;
-import com.livecomerce.live.domain.ChatBannedException;
 import com.livecomerce.live.domain.Live;
 import com.livecomerce.live.domain.LiveChatRoomNotAvailableException;
 import com.livecomerce.live.domain.LiveContext;
@@ -27,6 +26,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -54,7 +54,7 @@ class GetIvsChatTokenServiceTest {
     @BeforeEach
     void setUp() {
         sut = new GetIvsChatTokenService(loadLivePort, ivsChatTokenPort, loadUserNamesPort, chatBanPort, 60);
-        lenient().when(ivsChatTokenPort.createToken(anyString(), anyString(), any(), anyInt()))
+        lenient().when(ivsChatTokenPort.createToken(anyString(), anyString(), any(), anyBoolean(), anyInt()))
                 .thenReturn(new ChatToken("ivs-token", SESSION_EXPIRY, TOKEN_EXPIRY, "us-east-1"));
     }
 
@@ -76,7 +76,7 @@ class GetIvsChatTokenServiceTest {
     @SuppressWarnings("unchecked")
     private Map<String, String> capturedAttributes() {
         ArgumentCaptor<Map<String, String>> captor = ArgumentCaptor.forClass(Map.class);
-        verify(ivsChatTokenPort).createToken(eq(ROOM_ARN), anyString(), captor.capture(), anyInt());
+        verify(ivsChatTokenPort).createToken(eq(ROOM_ARN), anyString(), captor.capture(), anyBoolean(), anyInt());
         return captor.getValue();
     }
 
@@ -92,7 +92,7 @@ class GetIvsChatTokenServiceTest {
         assertThat(result.sessionExpirationTime()).isEqualTo(SESSION_EXPIRY);
         assertThat(result.tokenExpirationTime()).isEqualTo(TOKEN_EXPIRY);
         assertThat(result.region()).isEqualTo("us-east-1");
-        verify(ivsChatTokenPort).createToken(eq(ROOM_ARN), eq(SELLER_ID.toString()), any(), eq(60));
+        verify(ivsChatTokenPort).createToken(eq(ROOM_ARN), eq(SELLER_ID.toString()), any(), anyBoolean(), eq(60));
         assertThat(capturedAttributes()).containsExactlyInAnyOrderEntriesOf(Map.of(
                 "liveId",      live.getId().toString(),
                 "displayName", "Ana Store",
@@ -107,7 +107,7 @@ class GetIvsChatTokenServiceTest {
 
         sut.getIvsChatToken(new GetIvsChatTokenCommand(live.getId(), BUYER_ID));
 
-        verify(ivsChatTokenPort).createToken(eq(ROOM_ARN), eq(BUYER_ID.toString()), any(), anyInt());
+        verify(ivsChatTokenPort).createToken(eq(ROOM_ARN), eq(BUYER_ID.toString()), any(), anyBoolean(), anyInt());
         assertThat(capturedAttributes())
                 .containsEntry("role", "BUYER")
                 .containsEntry("displayName", "Bob Buyer");
@@ -233,26 +233,47 @@ class GetIvsChatTokenServiceTest {
     }
 
     @Test
-    void bannedUser_isRejectedBeforeCallingIvs() {
+    void bannedBuyer_getsReceiveOnlyToken_withTheSameAttributes() {
         var live = liveLiveWithRoom();
         givenLive(live);
+        givenName(BUYER_ID, "Bob Buyer");
         when(chatBanPort.isBanned(SELLER_ID, BUYER_ID)).thenReturn(true);
 
-        assertThatThrownBy(() -> sut.getIvsChatToken(new GetIvsChatTokenCommand(live.getId(), BUYER_ID)))
-                .isInstanceOf(ChatBannedException.class);
-        verifyNoInteractions(ivsChatTokenPort);
+        var result = sut.getIvsChatToken(new GetIvsChatTokenCommand(live.getId(), BUYER_ID));
+
+        assertThat(result.canSend()).isFalse();
+        assertThat(result.token()).isEqualTo("ivs-token");
+        verify(ivsChatTokenPort).createToken(eq(ROOM_ARN), eq(BUYER_ID.toString()), any(), eq(false), eq(60));
+        assertThat(capturedAttributes()).containsExactlyInAnyOrderEntriesOf(Map.of(
+                "liveId",      live.getId().toString(),
+                "displayName", "Bob Buyer",
+                "role",        "BUYER"));
     }
 
     @Test
-    void owner_isNeverCheckedAgainstBans() {
+    void notBannedBuyer_getsTokenThatCanSend() {
+        var live = liveLiveWithRoom();
+        givenLive(live);
+        givenName(BUYER_ID, "Bob");
+        when(chatBanPort.isBanned(SELLER_ID, BUYER_ID)).thenReturn(false);
+
+        var result = sut.getIvsChatToken(new GetIvsChatTokenCommand(live.getId(), BUYER_ID));
+
+        assertThat(result.canSend()).isTrue();
+        verify(ivsChatTokenPort).createToken(eq(ROOM_ARN), eq(BUYER_ID.toString()), any(), eq(true), anyInt());
+    }
+
+    @Test
+    void owner_isNeverCheckedAgainstBans_andCanSend() {
         var live = liveLiveWithRoom();
         givenLive(live);
         givenName(SELLER_ID, "Ana");
 
-        sut.getIvsChatToken(new GetIvsChatTokenCommand(live.getId(), SELLER_ID));
+        var result = sut.getIvsChatToken(new GetIvsChatTokenCommand(live.getId(), SELLER_ID));
 
+        assertThat(result.canSend()).isTrue();
         verifyNoInteractions(chatBanPort);
-        verify(ivsChatTokenPort).createToken(eq(ROOM_ARN), eq(SELLER_ID.toString()), any(), anyInt());
+        verify(ivsChatTokenPort).createToken(eq(ROOM_ARN), eq(SELLER_ID.toString()), any(), eq(true), anyInt());
     }
 
     @Test
@@ -264,6 +285,6 @@ class GetIvsChatTokenServiceTest {
 
         sut.getIvsChatToken(new GetIvsChatTokenCommand(live.getId(), BUYER_ID));
 
-        verify(ivsChatTokenPort).createToken(anyString(), anyString(), any(), eq(30));
+        verify(ivsChatTokenPort).createToken(anyString(), anyString(), any(), anyBoolean(), eq(30));
     }
 }

@@ -8,7 +8,9 @@ import com.livecomerce.live.application.port.in.ModerateLiveChatUseCase.DeleteCh
 import com.livecomerce.live.application.port.in.ModerateLiveChatUseCase.UnbanChatUserCommand;
 import com.livecomerce.live.application.port.out.ChatBanPort;
 import com.livecomerce.live.application.port.out.ChatModerationPort;
+import com.livecomerce.live.application.port.out.LiveRoomEventPort;
 import com.livecomerce.live.application.port.out.LoadLivePort;
+import com.livecomerce.live.application.port.out.RoomEvent;
 import com.livecomerce.live.application.port.out.SaveChatMessagePort;
 import com.livecomerce.live.domain.ChatBan;
 import com.livecomerce.live.domain.ChatProviderUnavailableException;
@@ -28,6 +30,10 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.support.AbstractPlatformTransactionManager;
+import org.springframework.transaction.support.DefaultTransactionStatus;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.Instant;
 import java.time.OffsetDateTime;
@@ -38,6 +44,7 @@ import java.util.Set;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -57,6 +64,7 @@ class ModerateLiveChatServiceTest {
     @Mock ChatModerationPort  chatModerationPort;
     @Mock SaveChatMessagePort saveChatMessagePort;
     @Mock LoadSellerNamesPort loadUserNamesPort;
+    @Mock LiveRoomEventPort   liveRoomEventPort;
 
     @InjectMocks ModerateLiveChatService sut;
 
@@ -182,12 +190,119 @@ class ModerateLiveChatServiceTest {
     // ── unban ────────────────────────────────────────────────────────────────
 
     @Test
-    void unban_owner_deletesBanOfTheSeller() {
+    void unban_owner_deletesBanOfTheSeller_thenTellsTheRoom() {
         var live = given(activeLiveWithRoom());
+        when(chatBanPort.delete(SELLER_ID, BUYER_ID)).thenReturn(true);
+
+        sut.unbanUser(new UnbanChatUserCommand(live.getId(), SELLER_ID, BUYER_ID));
+
+        InOrder order = inOrder(chatBanPort, liveRoomEventPort);
+        order.verify(chatBanPort).delete(SELLER_ID, BUYER_ID);
+        order.verify(liveRoomEventPort).publish(live, new RoomEvent.ChatUserUnbanned(BUYER_ID));
+    }
+
+    @Test
+    void unban_reconnectingLive_tellsTheRoom() {
+        var live = activeLiveWithRoom();
+        live.beginReconnecting();
+        given(live);
+        when(chatBanPort.delete(SELLER_ID, BUYER_ID)).thenReturn(true);
+
+        sut.unbanUser(new UnbanChatUserCommand(live.getId(), SELLER_ID, BUYER_ID));
+
+        verify(liveRoomEventPort).publish(live, new RoomEvent.ChatUserUnbanned(BUYER_ID));
+    }
+
+    @Test
+    void unban_userWasNotBanned_isIdempotent_andTellsNobody() {
+        var live = given(activeLiveWithRoom());
+        when(chatBanPort.delete(SELLER_ID, BUYER_ID)).thenReturn(false);
+
+        sut.unbanUser(new UnbanChatUserCommand(live.getId(), SELLER_ID, BUYER_ID));
+
+        verifyNoInteractions(liveRoomEventPort);
+    }
+
+    @Test
+    void unban_endedLive_deletesBan_withoutRoomEvent_becauseTheRoomIsGone() {
+        var live = activeLiveWithRoom();
+        live.end();
+        given(live);
+        when(chatBanPort.delete(SELLER_ID, BUYER_ID)).thenReturn(true);
 
         sut.unbanUser(new UnbanChatUserCommand(live.getId(), SELLER_ID, BUYER_ID));
 
         verify(chatBanPort).delete(SELLER_ID, BUYER_ID);
+        verifyNoInteractions(liveRoomEventPort);
+    }
+
+    @Test
+    void unban_scheduledLive_deletesBan_withoutRoomEvent() {
+        var live = given(Live.create(SELLER_ID, UUID.randomUUID(), LiveContext.STORE, "Live", "thumb", null, 60));
+        when(chatBanPort.delete(SELLER_ID, BUYER_ID)).thenReturn(true);
+
+        sut.unbanUser(new UnbanChatUserCommand(live.getId(), SELLER_ID, BUYER_ID));
+
+        verify(chatBanPort).delete(SELLER_ID, BUYER_ID);
+        verifyNoInteractions(liveRoomEventPort);
+    }
+
+    @Test
+    void unban_liveWithoutChatRoom_deletesBan_withoutRoomEvent() {
+        var live = given(activeLiveWithoutRoom());
+        when(chatBanPort.delete(SELLER_ID, BUYER_ID)).thenReturn(true);
+
+        sut.unbanUser(new UnbanChatUserCommand(live.getId(), SELLER_ID, BUYER_ID));
+
+        verify(chatBanPort).delete(SELLER_ID, BUYER_ID);
+        verifyNoInteractions(liveRoomEventPort);
+    }
+
+    @Test
+    void unban_roomEventNotDelivered_unbanStillSucceeds() {
+        var live = given(activeLiveWithRoom());
+        when(chatBanPort.delete(SELLER_ID, BUYER_ID)).thenReturn(true);
+        when(liveRoomEventPort.publish(any(), any())).thenReturn(false);
+
+        assertThatCode(() -> sut.unbanUser(new UnbanChatUserCommand(live.getId(), SELLER_ID, BUYER_ID)))
+                .doesNotThrowAnyException();
+    }
+
+    @Test
+    void unban_roomEventThrows_unbanStillSucceeds() {
+        var live = given(activeLiveWithRoom());
+        when(chatBanPort.delete(SELLER_ID, BUYER_ID)).thenReturn(true);
+        when(liveRoomEventPort.publish(any(), any())).thenThrow(new RuntimeException("IVS down"));
+
+        assertThatCode(() -> sut.unbanUser(new UnbanChatUserCommand(live.getId(), SELLER_ID, BUYER_ID)))
+                .doesNotThrowAnyException();
+        verify(chatBanPort).delete(SELLER_ID, BUYER_ID);
+    }
+
+    @Test
+    void unban_insideCallerTransaction_defersRoomEventUntilCommit() {
+        var live = given(activeLiveWithRoom());
+        when(chatBanPort.delete(SELLER_ID, BUYER_ID)).thenReturn(true);
+
+        tx.executeWithoutResult(status -> {
+            sut.unbanUser(new UnbanChatUserCommand(live.getId(), SELLER_ID, BUYER_ID));
+            verifyNoInteractions(liveRoomEventPort);
+        });
+
+        verify(liveRoomEventPort).publish(live, new RoomEvent.ChatUserUnbanned(BUYER_ID));
+    }
+
+    @Test
+    void unban_callerTransactionRolledBack_tellsNobody() {
+        var live = given(activeLiveWithRoom());
+        when(chatBanPort.delete(SELLER_ID, BUYER_ID)).thenReturn(true);
+
+        assertThatThrownBy(() -> tx.executeWithoutResult(status -> {
+            sut.unbanUser(new UnbanChatUserCommand(live.getId(), SELLER_ID, BUYER_ID));
+            throw new IllegalStateException("rolled back after unban");
+        })).isInstanceOf(IllegalStateException.class);
+
+        verifyNoInteractions(liveRoomEventPort);
     }
 
     @Test
@@ -197,7 +312,17 @@ class ModerateLiveChatServiceTest {
         assertThatThrownBy(() -> sut.unbanUser(new UnbanChatUserCommand(live.getId(), OTHER_SELLER_ID, BUYER_ID)))
                 .isInstanceOf(LiveNotOwnedBySellerException.class);
 
-        verifyNoInteractions(chatBanPort);
+        verifyNoInteractions(chatBanPort, liveRoomEventPort);
+    }
+
+    private final TransactionTemplate tx = new TransactionTemplate(new NoOpTransactionManager());
+
+    /** Real Spring transaction synchronization lifecycle without a database. */
+    private static final class NoOpTransactionManager extends AbstractPlatformTransactionManager {
+        @Override protected Object doGetTransaction() { return new Object(); }
+        @Override protected void doBegin(Object transaction, TransactionDefinition definition) { }
+        @Override protected void doCommit(DefaultTransactionStatus status) { }
+        @Override protected void doRollback(DefaultTransactionStatus status) { }
     }
 
     // ── list bans ────────────────────────────────────────────────────────────

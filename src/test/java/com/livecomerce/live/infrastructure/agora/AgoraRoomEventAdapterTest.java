@@ -128,6 +128,17 @@ class AgoraRoomEventAdapterTest {
         assertSameAsLegacy(payload, Map.of("type", "live-ended", "liveId", live.getId()));
     }
 
+    /** Agora clients demultiplex live-chat messages by "type", so an unknown type is ignored there. */
+    @Test
+    void publish_chatUserUnbanned_sendsTypedPayloadWithUserIdAsString() throws Exception {
+        var live   = live();
+        var userId = UUID.randomUUID();
+
+        var payload = publishAndCapture(live, new RoomEvent.ChatUserUnbanned(userId));
+
+        assertSameAsLegacy(payload, Map.of("type", "chat-user-unbanned", "userId", userId.toString()));
+    }
+
     @Test
     void publish_rtmAccepted_returnsDelivered() {
         when(agoraRtmMessagePort.sendChannelMessage(any(), any())).thenReturn(true);
