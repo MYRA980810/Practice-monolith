@@ -22,16 +22,18 @@ test('an unreadable or invalid banned-words file falls back to BANNED_WORDS only
   }
 });
 
-test('SQS send timeout defaults to 100 ms and is capped below the 200 ms review budget', () => {
+test('SQS send timeout defaults to 800 ms and is capped below the 1 s Lambda timeout', () => {
   const timeout = (value) => loadConfig({
     env: value === undefined ? {} : { SQS_SEND_TIMEOUT_MS: value },
     readBannedWordsFile: () => '[]',
     logger: quiet,
   }).sendTimeoutMs;
 
-  assert.equal(timeout(undefined), 100);
-  assert.equal(timeout('abc'), 100);
-  assert.equal(timeout('0'), 100);
+  assert.equal(timeout(undefined), 800);
+  assert.equal(timeout('abc'), 800);
+  assert.equal(timeout('0'), 800);
+  assert.equal(timeout('-5'), 800);
   assert.equal(timeout('80'), 80);
-  assert.equal(timeout('500'), 150);
+  assert.equal(timeout('900'), 900);
+  assert.equal(timeout('5000'), 900);
 });

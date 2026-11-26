@@ -321,6 +321,26 @@ test('enqueue failures log a stable, filterable event token', async () => {
   assert.deepEqual(denied.entries.map((e) => [e.event, e.reason]), [['message_denied', 'EMPTY']]);
 });
 
+test('by default a send slower than the 200 ms IVS review window still reaches SQS', async () => {
+  const entries = [];
+  let delivered = false;
+  const handler = createHandler({
+    bannedWords: [],
+    now: () => NOW,
+    logger: { info: (e) => entries.push(e), warn: (e) => entries.push(e) },
+    sendToQueue: (_body, signal) => new Promise((resolve, reject) => {
+      const timer = setTimeout(() => { delivered = true; resolve(); }, 250);
+      signal.addEventListener('abort', () => { clearTimeout(timer); reject(new Error('aborted')); });
+    }),
+  });
+
+  const result = await handler(event('hola'));
+
+  assert.equal(result.ReviewResult, 'ALLOW');
+  assert.equal(delivered, true);
+  assert.deepEqual(entries, []);
+});
+
 test('message content never reaches the logs', async () => {
   const lines = [];
   const logger = { info: (...a) => lines.push(JSON.stringify(a)), warn: (...a) => lines.push(JSON.stringify(a)) };
