@@ -1,6 +1,6 @@
 # ivs-chat-message-review
 
-Amazon IVS Chat **message review handler** (Lambda, Node.js 20, ESM). IVS Chat calls it for every
+Amazon IVS Chat **message review handler** (Lambda, Node.js 22, ESM). IVS Chat calls it for every
 message sent to a room created with `messageReviewHandler` (the backend sets it when
 `IVS_CHAT_REVIEW_HANDLER_ARN` is configured, see `IvsChatRoomAdapter`).
 
@@ -154,7 +154,7 @@ aws iam put-role-policy --role-name ${FUNCTION}-role --policy-name send-chat-mes
 npm run package
 
 aws lambda create-function --function-name ${FUNCTION} \
-  --runtime nodejs20.x --architectures arm64 \
+  --runtime nodejs22.x --architectures arm64 \
   --handler src/index.handler \
   --role arn:aws:iam::${ACCOUNT_ID}:role/${FUNCTION}-role \
   --memory-size 256 --timeout 1 \
