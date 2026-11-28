@@ -2,6 +2,7 @@ package com.livecomerce.store.infrastructure.persistence;
 
 import com.livecomerce.store.application.port.out.LoadStorePort;
 import com.livecomerce.store.domain.Store;
+import com.livecomerce.store.domain.SuspensionReason;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -53,5 +54,52 @@ class StoreOwnerAdapterTest {
         when(loadStorePort.loadByUserId(sellerId)).thenReturn(Optional.empty());
 
         assertThat(adapter.findStoreIdBySellerId(sellerId)).isEmpty();
+    }
+
+    @Test
+    void findOpenStoreIdBySellerId_openStore_returnsItsId() {
+        var sellerId = UUID.randomUUID();
+        var store = Store.create(sellerId, "My Store", "my-store", null, null);
+        when(loadStorePort.loadByUserId(sellerId)).thenReturn(Optional.of(store));
+
+        assertThat(adapter.findOpenStoreIdBySellerId(sellerId)).contains(store.getId());
+    }
+
+    @Test
+    void findOpenStoreIdBySellerId_sellerWithoutStore_returnsEmpty() {
+        var sellerId = UUID.randomUUID();
+        when(loadStorePort.loadByUserId(sellerId)).thenReturn(Optional.empty());
+
+        assertThat(adapter.findOpenStoreIdBySellerId(sellerId)).isEmpty();
+    }
+
+    @Test
+    void findOpenStoreIdBySellerId_deactivatedStore_returnsEmpty() {
+        var sellerId = UUID.randomUUID();
+        var store = Store.create(sellerId, "My Store", "my-store", null, null);
+        store.deactivate();
+        when(loadStorePort.loadByUserId(sellerId)).thenReturn(Optional.of(store));
+
+        assertThat(adapter.findOpenStoreIdBySellerId(sellerId)).isEmpty();
+    }
+
+    @Test
+    void findOpenStoreIdBySellerId_suspendedStore_returnsEmpty() {
+        var sellerId = UUID.randomUUID();
+        var store = Store.create(sellerId, "My Store", "my-store", null, null);
+        store.suspend(SuspensionReason.BILLING);
+        when(loadStorePort.loadByUserId(sellerId)).thenReturn(Optional.of(store));
+
+        assertThat(adapter.findOpenStoreIdBySellerId(sellerId)).isEmpty();
+    }
+
+    @Test
+    void findOpenStoreIdBySellerId_temporarilyClosedStore_returnsEmpty() {
+        var sellerId = UUID.randomUUID();
+        var store = Store.create(sellerId, "My Store", "my-store", null, null);
+        store.closeTemporarily();
+        when(loadStorePort.loadByUserId(sellerId)).thenReturn(Optional.of(store));
+
+        assertThat(adapter.findOpenStoreIdBySellerId(sellerId)).isEmpty();
     }
 }

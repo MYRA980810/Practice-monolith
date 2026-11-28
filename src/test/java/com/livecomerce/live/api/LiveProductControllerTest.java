@@ -2,7 +2,9 @@ package com.livecomerce.live.api;
 
 import com.livecomerce.live.application.port.in.*;
 import com.livecomerce.live.application.port.out.LoadLiveProductPort;
+import com.livecomerce.live.domain.CatalogProductNotAvailableException;
 import com.livecomerce.live.domain.Live;
+import com.livecomerce.live.domain.SellerStoreNotOpenException;
 import com.livecomerce.live.domain.LiveNotFoundException;
 import com.livecomerce.live.domain.LiveNotOwnedBySellerException;
 import com.livecomerce.live.domain.LiveProduct;
@@ -118,6 +120,8 @@ class LiveProductControllerTest {
     @Test
     void addCatalogProduct_asSeller_returns201() throws Exception {
         when(addCatalogProductUseCase.addCatalogProduct(any())).thenReturn(buildCatalogProduct());
+        var productId = UUID.randomUUID();
+        var variantId = UUID.randomUUID();
 
         mvc.perform(post("/api/lives/{liveId}/products/catalog", LIVE_ID)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -125,13 +129,10 @@ class LiveProductControllerTest {
                                 {
                                   "productId": "%s",
                                   "variantId": "%s",
-                                  "nameSnapshot": "Test Product",
-                                  "priceSnapshot": 99.00,
-                                  "currency": "MXN",
                                   "stockAllocated": 10,
                                   "imageUrl": "https://cdn.test/product.jpg"
                                 }
-                                """.formatted(UUID.randomUUID(), UUID.randomUUID())))
+                                """.formatted(productId, variantId)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.productNameSnapshot").value("Test Product"))
                 .andExpect(jsonPath("$.isHot").value(false))
@@ -139,7 +140,71 @@ class LiveProductControllerTest {
 
         var captor = org.mockito.ArgumentCaptor.forClass(AddCatalogProductUseCase.AddCatalogProductCommand.class);
         verify(addCatalogProductUseCase).addCatalogProduct(captor.capture());
-        assertThat(captor.getValue().imageUrl()).isEqualTo("https://cdn.test/product.jpg");
+        var command = captor.getValue();
+        assertThat(command.liveId()).isEqualTo(LIVE_ID);
+        assertThat(command.sellerId()).isEqualTo(SELLER_ID);
+        assertThat(command.productId()).isEqualTo(productId);
+        assertThat(command.variantId()).isEqualTo(variantId);
+        assertThat(command.stockAllocated()).isEqualTo(10);
+        assertThat(command.imageUrl()).isEqualTo("https://cdn.test/product.jpg");
+    }
+
+    @Test
+    void addCatalogProduct_legacyClientSendingSnapshotFields_isAcceptedAndFieldsIgnored() throws Exception {
+        when(addCatalogProductUseCase.addCatalogProduct(any())).thenReturn(buildCatalogProduct());
+
+        // Old clients still send name/price/currency; they must not break the request,
+        // and the use case never receives them (the snapshot comes from the catalog).
+        mvc.perform(post("/api/lives/{liveId}/products/catalog", LIVE_ID)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "productId": "%s",
+                                  "variantId": "%s",
+                                  "nameSnapshot": "Forged Name",
+                                  "priceSnapshot": 0.01,
+                                  "currency": "USD",
+                                  "stockAllocated": 10
+                                }
+                                """.formatted(UUID.randomUUID(), UUID.randomUUID())))
+                .andExpect(status().isCreated())
+                // The use case (stubbed with catalog values) decides the snapshot, not the client.
+                .andExpect(jsonPath("$.productNameSnapshot").value("Test Product"))
+                .andExpect(jsonPath("$.priceSnapshot").value(99.00))
+                .andExpect(jsonPath("$.currencySnapshot").value("MXN"));
+
+        var captor = org.mockito.ArgumentCaptor.forClass(AddCatalogProductUseCase.AddCatalogProductCommand.class);
+        verify(addCatalogProductUseCase).addCatalogProduct(captor.capture());
+        assertThat(captor.getValue().stockAllocated()).isEqualTo(10);
+        assertThat(captor.getValue().toString()).doesNotContain("Forged Name").doesNotContain("USD");
+    }
+
+    @Test
+    void addCatalogProduct_sellerWithoutOpenStore_returns409() throws Exception {
+        when(addCatalogProductUseCase.addCatalogProduct(any()))
+                .thenThrow(new SellerStoreNotOpenException(SELLER_ID));
+
+        mvc.perform(post("/api/lives/{liveId}/products/catalog", LIVE_ID)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"productId": "%s", "variantId": "%s", "stockAllocated": 1}
+                                """.formatted(UUID.randomUUID(), UUID.randomUUID())))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.type").value("https://livecomerce.com/errors/seller-store-not-open"));
+    }
+
+    @Test
+    void addCatalogProduct_productNotInSellersStore_returns422() throws Exception {
+        when(addCatalogProductUseCase.addCatalogProduct(any()))
+                .thenThrow(CatalogProductNotAvailableException.notInSellerStore(PRODUCT_ID, UUID.randomUUID()));
+
+        mvc.perform(post("/api/lives/{liveId}/products/catalog", LIVE_ID)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"productId": "%s", "variantId": "%s", "stockAllocated": 1}
+                                """.formatted(PRODUCT_ID, UUID.randomUUID())))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.type").value("https://livecomerce.com/errors/catalog-product-not-available"));
     }
 
     @Test

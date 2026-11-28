@@ -172,6 +172,16 @@ public class Store implements Persistable<UUID> {
         this.updatedAt      = OffsetDateTime.now();
     }
 
+    /**
+     * Whether the store can currently sell its catalog (including during its owner's lives):
+     * active (not deactivated by the seller), not suspended (billing/moderation) and not
+     * temporarily closed. Stricter than the public listing filter, which does not look at
+     * {@code suspended}.
+     */
+    public boolean isOpenForSales() {
+        return active && !suspended && !temporarilyClosed;
+    }
+
     public void deactivate() {
         this.active    = false;
         this.updatedAt = OffsetDateTime.now();
