@@ -4,7 +4,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.livecomerce.live.application.port.out.AgoraRtmMessagePort;
 import com.livecomerce.live.application.port.out.RoomEvent;
 import com.livecomerce.live.domain.Live;
-import com.livecomerce.live.domain.LiveContext;
 import com.livecomerce.live.infrastructure.RoomEventFailureReporter;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -39,7 +38,7 @@ class AgoraRoomEventAdapterTest {
     }
 
     private Live live() {
-        return Live.create(UUID.randomUUID(), UUID.randomUUID(), LiveContext.STORE, "Live", null, null, 60);
+        return Live.create(UUID.randomUUID(), "Live", null, null, 60);
     }
 
     /** Publishes the event and returns the payload sent to the live's channel. */

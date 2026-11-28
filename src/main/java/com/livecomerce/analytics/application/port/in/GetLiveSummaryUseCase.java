@@ -7,7 +7,8 @@ import java.util.UUID;
 
 public interface GetLiveSummaryUseCase {
 
-    LiveSummaryResult getSummary(UUID liveId, UUID storeId);
+    /** {@code sellerId} is the caller: a live summary belongs to the seller who ran the live. */
+    LiveSummaryResult getSummary(UUID liveId, UUID sellerId);
 
     /**
      * Carrier for the frozen summary plus its read-time (not frozen)

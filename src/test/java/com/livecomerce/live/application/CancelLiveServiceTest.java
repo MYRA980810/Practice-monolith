@@ -35,11 +35,10 @@ class CancelLiveServiceTest {
     @InjectMocks CancelLiveService sut;
 
     private static final UUID SELLER_ID = UUID.randomUUID();
-    private static final UUID STORE_ID  = UUID.randomUUID();
 
     @Test
     void cancelLive_fromScheduled_transitionsToCancelled() {
-        var live = Live.create(SELLER_ID, STORE_ID, LiveContext.STORE, "My Live", null, null, 60);
+        var live = Live.create(SELLER_ID, "My Live", null, null, 60);
         when(loadLivePort.loadById(live.getId())).thenReturn(Optional.of(live));
         when(saveLivePort.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
@@ -50,7 +49,7 @@ class CancelLiveServiceTest {
 
     @Test
     void cancelLive_fromEnded_throwsInvalidLiveState() {
-        var live = Live.create(SELLER_ID, STORE_ID, LiveContext.STORE, "My Live", null, null, 60);
+        var live = Live.create(SELLER_ID, "My Live", null, null, 60);
         live.start();
         live.end();
         when(loadLivePort.loadById(live.getId())).thenReturn(Optional.of(live));
@@ -61,7 +60,7 @@ class CancelLiveServiceTest {
 
     @Test
     void cancelLive_wrongSeller_throwsLiveNotOwned() {
-        var live        = Live.create(SELLER_ID, STORE_ID, LiveContext.STORE, "My Live", null, null, 60);
+        var live        = Live.create(SELLER_ID, "My Live", null, null, 60);
         var wrongSeller = UUID.randomUUID();
         when(loadLivePort.loadById(live.getId())).thenReturn(Optional.of(live));
 
@@ -72,7 +71,7 @@ class CancelLiveServiceTest {
     @Test
     @SuppressWarnings("null")
     void cancelLive_withSubscribers_publishesEventAndDeletesSubscriptions() {
-        var live = Live.create(SELLER_ID, STORE_ID, LiveContext.STORE, "My Live", null, null, 60);
+        var live = Live.create(SELLER_ID, "My Live", null, null, 60);
         var subscriber1 = UUID.randomUUID();
         var subscriber2 = UUID.randomUUID();
         when(loadLivePort.loadById(live.getId())).thenReturn(Optional.of(live));
@@ -89,7 +88,6 @@ class CancelLiveServiceTest {
         assertThat(event.title()).isEqualTo("My Live");
         assertThat(event.subscriberIds()).containsExactlyInAnyOrder(subscriber1, subscriber2);
         assertThat(event.sellerId()).isEqualTo(SELLER_ID);
-        assertThat(event.storeId()).isEqualTo(STORE_ID);
         assertThat(event.occurredAt()).isNotNull();
         assertThat(event.wasLive()).isFalse();
         verify(saveLiveSubscriptionPort).deleteAllByLiveId(live.getId());
@@ -97,7 +95,7 @@ class CancelLiveServiceTest {
 
     @Test
     void cancelLive_withNoSubscribers_publishesEventWithEmptyList() {
-        var live = Live.create(SELLER_ID, STORE_ID, LiveContext.STORE, "My Live", null, null, 60);
+        var live = Live.create(SELLER_ID, "My Live", null, null, 60);
         when(loadLivePort.loadById(live.getId())).thenReturn(Optional.of(live));
         when(saveLivePort.save(any())).thenAnswer(inv -> inv.getArgument(0));
         when(loadLiveSubscriptionPort.loadSubscriberIdsByLiveId(live.getId())).thenReturn(List.of());
@@ -111,14 +109,14 @@ class CancelLiveServiceTest {
     }
 
     private Live startedLive() {
-        var live = Live.create(SELLER_ID, STORE_ID, LiveContext.STORE, "My Live", null, null, 60);
+        var live = Live.create(SELLER_ID, "My Live", null, null, 60);
         live.start();
         return live;
     }
 
     @Test
     void cancelLive_fromScheduled_doesNotCloseRoom() {
-        var live = Live.create(SELLER_ID, STORE_ID, LiveContext.STORE, "My Live", null, null, 60);
+        var live = Live.create(SELLER_ID, "My Live", null, null, 60);
         live.setIvsChannel("arn:ivs:channel", "rtmps://ingest", "arn:ivs:key", "sk_stream_key", "https://playback.url");
         when(loadLivePort.loadById(live.getId())).thenReturn(Optional.of(live));
         when(saveLivePort.save(any())).thenAnswer(inv -> inv.getArgument(0));
@@ -142,7 +140,7 @@ class CancelLiveServiceTest {
         var captor = ArgumentCaptor.forClass(LiveCancelledEvent.class);
         verify(eventPublisher).publishEvent(captor.capture());
         assertThat(captor.getValue().wasLive()).isTrue();
-        assertThat(captor.getValue().storeId()).isEqualTo(STORE_ID);
+        assertThat(captor.getValue().sellerId()).isEqualTo(SELLER_ID);
     }
 
     @Test

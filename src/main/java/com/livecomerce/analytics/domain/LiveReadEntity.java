@@ -23,9 +23,6 @@ public class LiveReadEntity {
     @Column(name = "id")
     private UUID id;
 
-    @Column(name = "store_id")
-    private UUID storeId;
-
     @Column(name = "title")
     private String title;
 

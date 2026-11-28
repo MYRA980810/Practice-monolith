@@ -36,10 +36,9 @@ class EndLiveServiceTest {
     @InjectMocks EndLiveService sut;
 
     private static final UUID SELLER_ID = UUID.randomUUID();
-    private static final UUID STORE_ID  = UUID.randomUUID();
 
     private Live liveLive() {
-        var live = Live.create(SELLER_ID, STORE_ID, LiveContext.STORE, "My Live", null, null, 60);
+        var live = Live.create(SELLER_ID, "My Live", null, null, 60);
         live.start();
         return live;
     }
@@ -181,7 +180,6 @@ class EndLiveServiceTest {
         var event = captor.getValue();
         assertThat(event.liveId()).isEqualTo(live.getId());
         assertThat(event.sellerId()).isEqualTo(SELLER_ID);
-        assertThat(event.storeId()).isEqualTo(STORE_ID);
         assertThat(event.occurredAt()).isNotNull();
     }
 

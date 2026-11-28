@@ -15,8 +15,6 @@ import java.util.UUID;
 public record LiveResponse(
         UUID id,
         UUID sellerId,
-        @Nullable UUID storeId,
-        String liveContext,
         String title,
         String status,
         @Nullable String agoraChannelId,
@@ -38,8 +36,6 @@ public record LiveResponse(
         return new LiveResponse(
                 live.getId(),
                 live.getSellerId(),
-                live.getStoreId(),
-                live.getContext().getCode(),
                 live.getTitle(),
                 live.getStatus().getCode(),
                 live.getAgoraChannelId(),

@@ -7,7 +7,7 @@ import java.util.UUID;
 
 /**
  * Read-only access to the shared {@code lives} table via {@link LiveReadEntity},
- * used to build the live-end summary snapshot (startedAt/endedAt/peakViewers/storeId).
+ * used to build the live-end summary snapshot (startedAt/endedAt/peakViewers).
  */
 interface LiveSummaryReadRepository extends JpaRepository<LiveReadEntity, UUID> {
 }

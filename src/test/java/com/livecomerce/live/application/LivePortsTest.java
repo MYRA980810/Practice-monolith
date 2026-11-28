@@ -1,7 +1,6 @@
 package com.livecomerce.live.application;
 
 import com.livecomerce.live.application.port.in.*;
-import com.livecomerce.live.domain.LiveContext;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
@@ -20,13 +19,10 @@ class LivePortsTest {
     @Test
     void createLiveCommand_hasCorrectFields() {
         var sellerId = UUID.randomUUID();
-        var storeId  = UUID.randomUUID();
         var cmd = new CreateLiveUseCase.CreateLiveCommand(
-                sellerId, storeId, LiveContext.STORE, "Test Live", null, Instant.now(), 60, null);
+                sellerId, "Test Live", null, Instant.now(), 60, null);
 
         assertThat(cmd.sellerId()).isEqualTo(sellerId);
-        assertThat(cmd.storeId()).isEqualTo(storeId);
-        assertThat(cmd.context()).isEqualTo(LiveContext.STORE);
         assertThat(cmd.title()).isEqualTo("Test Live");
         assertThat(cmd.categoryId()).isNull();
     }

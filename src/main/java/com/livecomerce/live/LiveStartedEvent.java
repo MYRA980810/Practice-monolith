@@ -10,4 +10,4 @@ import java.util.UUID;
  * later {@link LiveEndedEvent} for the same live even if delivery itself is
  * reordered by an at-least-once retry (see {@code StoreLiveStatusEventListener}).
  */
-public record LiveStartedEvent(UUID liveId, UUID storeId, String title, List<UUID> subscriberIds, Instant occurredAt) {}
+public record LiveStartedEvent(UUID liveId, UUID sellerId, String title, List<UUID> subscriberIds, Instant occurredAt) {}

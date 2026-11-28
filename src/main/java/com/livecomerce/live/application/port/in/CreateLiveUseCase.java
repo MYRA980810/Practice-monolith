@@ -1,7 +1,6 @@
 package com.livecomerce.live.application.port.in;
 
 import com.livecomerce.live.domain.Live;
-import com.livecomerce.live.domain.LiveContext;
 import jakarta.annotation.Nullable;
 
 import java.time.Instant;
@@ -13,8 +12,6 @@ public interface CreateLiveUseCase {
 
     record CreateLiveCommand(
             UUID sellerId,
-            @Nullable UUID storeId,
-            LiveContext context,
             String title,
             String thumbnailUrl,
             @Nullable Instant scheduledAt,

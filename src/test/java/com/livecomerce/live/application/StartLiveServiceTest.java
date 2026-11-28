@@ -51,7 +51,6 @@ class StartLiveServiceTest {
     @InjectMocks StartLiveService sut;
 
     private static final UUID SELLER_ID = UUID.randomUUID();
-    private static final UUID STORE_ID  = UUID.randomUUID();
     private static final String CHAT_ROOM_ARN = "arn:aws:ivschat:us-east-1:123:room/abc";
 
     @BeforeEach
@@ -60,7 +59,7 @@ class StartLiveServiceTest {
     }
 
     private Live scheduledLive() {
-        return Live.create(SELLER_ID, STORE_ID, LiveContext.STORE, "My Live", null, null, 60);
+        return Live.create(SELLER_ID, "My Live", null, null, 60);
     }
 
     @Test
@@ -326,6 +325,7 @@ class StartLiveServiceTest {
         verify(eventPublisher).publishEvent(captor.capture());
         var event = captor.getValue();
         assertThat(event.liveId()).isEqualTo(live.getId());
+        assertThat(event.sellerId()).isEqualTo(SELLER_ID);
         assertThat(event.subscriberIds()).containsExactlyInAnyOrder(subscriber1, subscriber2);
         verify(saveLiveSubscriptionPort).deleteAllByLiveId(live.getId());
     }

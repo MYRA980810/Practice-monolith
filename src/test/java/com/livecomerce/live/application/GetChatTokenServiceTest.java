@@ -29,7 +29,7 @@ class GetChatTokenServiceTest {
 
     @Test
     void getChatToken_activeLive_returnsToken() {
-        var live = Live.create(SELLER_ID, STORE_ID, LiveContext.STORE, "Test Live", null, null, 60);
+        var live = Live.create(SELLER_ID, "Test Live", null, null, 60);
         live.start();
 
         when(loadLivePort.loadById(live.getId())).thenReturn(Optional.of(live));
@@ -46,7 +46,7 @@ class GetChatTokenServiceTest {
 
     @Test
     void getChatToken_reconnectingLive_returnsToken() {
-        var live = Live.create(SELLER_ID, STORE_ID, LiveContext.STORE, "Test Live", null, null, 60);
+        var live = Live.create(SELLER_ID, "Test Live", null, null, 60);
         live.start();
         live.beginReconnecting();
 
@@ -71,7 +71,7 @@ class GetChatTokenServiceTest {
 
     @Test
     void getChatToken_endedLive_throwsLiveNotLiveException() {
-        var live = Live.create(SELLER_ID, STORE_ID, LiveContext.STORE, "Test Live", null, null, 60);
+        var live = Live.create(SELLER_ID, "Test Live", null, null, 60);
         live.start();
         live.end();
 
@@ -83,7 +83,7 @@ class GetChatTokenServiceTest {
 
     @Test
     void getChatToken_scheduledLive_throwsLiveNotLiveException() {
-        var live = Live.create(SELLER_ID, STORE_ID, LiveContext.STORE, "Test Live", null, null, 60);
+        var live = Live.create(SELLER_ID, "Test Live", null, null, 60);
         // status is SCHEDULED by default
 
         when(loadLivePort.loadById(live.getId())).thenReturn(Optional.of(live));

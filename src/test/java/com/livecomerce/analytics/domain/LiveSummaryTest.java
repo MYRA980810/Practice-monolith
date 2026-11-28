@@ -14,15 +14,13 @@ class LiveSummaryTest {
     void create_assignsAllFieldsAndZeroesAggregates() {
         var liveId    = UUID.randomUUID();
         var sellerId  = UUID.randomUUID();
-        var storeId   = UUID.randomUUID();
         var startedAt = OffsetDateTime.now().minusHours(1);
         var endedAt   = OffsetDateTime.now();
 
-        var summary = LiveSummary.create(liveId, sellerId, storeId, startedAt, endedAt, 3600L, 42);
+        var summary = LiveSummary.create(liveId, sellerId, startedAt, endedAt, 3600L, 42);
 
         assertThat(summary.getLiveId()).isEqualTo(liveId);
         assertThat(summary.getSellerId()).isEqualTo(sellerId);
-        assertThat(summary.getStoreId()).isEqualTo(storeId);
         assertThat(summary.getStartedAt()).isEqualTo(startedAt);
         assertThat(summary.getEndedAt()).isEqualTo(endedAt);
         assertThat(summary.getDurationSeconds()).isEqualTo(3600L);
@@ -34,7 +32,7 @@ class LiveSummaryTest {
 
     @Test
     void addOrder_appendsChildOrderLinkedToParent() {
-        var summary = LiveSummary.create(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(),
+        var summary = LiveSummary.create(UUID.randomUUID(), UUID.randomUUID(),
                 OffsetDateTime.now().minusHours(1), OffsetDateTime.now(), 3600L, 10);
         var orderId   = UUID.randomUUID();
         var buyerId   = UUID.randomUUID();
@@ -52,7 +50,7 @@ class LiveSummaryTest {
 
     @Test
     void finalizeTotals_overwritesTotalSalesOrderCountCurrencyUnitsSoldAndTotalAllocated() {
-        var summary = LiveSummary.create(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(),
+        var summary = LiveSummary.create(UUID.randomUUID(), UUID.randomUUID(),
                 OffsetDateTime.now().minusHours(1), OffsetDateTime.now(), 3600L, 10);
 
         summary.finalizeTotals(new BigDecimal("250.00"), 2, "MXN", 15, 50L);
@@ -66,7 +64,7 @@ class LiveSummaryTest {
 
     @Test
     void create_leavesEnrichmentFieldsNullUntilFinalized() {
-        var summary = LiveSummary.create(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(),
+        var summary = LiveSummary.create(UUID.randomUUID(), UUID.randomUUID(),
                 OffsetDateTime.now().minusHours(1), OffsetDateTime.now(), 3600L, 10);
 
         assertThat(summary.getCurrency()).isNull();

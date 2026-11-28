@@ -2,7 +2,6 @@ package com.livecomerce.live.infrastructure.persistence;
 
 import com.livecomerce.live.domain.Live;
 import com.livecomerce.live.domain.LiveChatMessage;
-import com.livecomerce.live.domain.LiveContext;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -43,7 +42,7 @@ class LiveChatMessageDedupeTest {
                 INSERT INTO users (id, email, password_hash, role, first_name, last_name)
                 VALUES (?, ?, 'hash', 'SELLER', 'Seller', 'Test')
                 """, sellerId, "seller-" + sellerId + "@test.com");
-        live = Live.create(sellerId, null, LiveContext.SELLER_PROFILE, "Live", null, null, 60);
+        live = Live.create(sellerId, "Live", null, null, 60);
         live.start();
         entityManager.persist(live);
         entityManager.flush();

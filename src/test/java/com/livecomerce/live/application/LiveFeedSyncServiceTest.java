@@ -3,7 +3,6 @@ package com.livecomerce.live.application;
 import com.livecomerce.live.application.port.out.LiveFeedPort;
 import com.livecomerce.live.application.port.out.LoadLivePort;
 import com.livecomerce.live.domain.Live;
-import com.livecomerce.live.domain.LiveContext;
 import com.livecomerce.live.domain.LiveStatus;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -35,7 +34,7 @@ class LiveFeedSyncServiceTest {
     @InjectMocks LiveFeedSyncService sut;
 
     private static Live scheduledLive() {
-        return Live.create(UUID.randomUUID(), null, LiveContext.SELLER_PROFILE, "My Live", null, null, 60, UUID.randomUUID());
+        return Live.create(UUID.randomUUID(), "My Live", null, null, 60, UUID.randomUUID());
     }
 
     private static Live onAirLive() {
@@ -45,7 +44,7 @@ class LiveFeedSyncServiceTest {
     }
 
     private static LiveFeedCard cardOf(Live live, String title, long viewers) {
-        return new LiveFeedCard(live.getId(), live.getSellerId(), null, title, "Seller", null, viewers,
+        return new LiveFeedCard(live.getId(), live.getSellerId(), title, "Seller", null, viewers,
                 Instant.parse("2026-10-06T10:00:00Z"), live.getCategoryId());
     }
 
@@ -130,7 +129,7 @@ class LiveFeedSyncServiceTest {
                 cardOf(unchanged, "Same", 0),
                 cardOf(changed, "Renamed", 0),
                 cardOf(missing, "New", 0)));
-        var extraCard = new LiveFeedCard(extraId, UUID.randomUUID(), null, "Gone", null, null, 0,
+        var extraCard = new LiveFeedCard(extraId, UUID.randomUUID(), "Gone", null, null, 0,
                 Instant.parse("2026-10-06T09:00:00Z"), null);
         when(liveFeedPort.snapshot()).thenReturn(new LiveFeedSnapshot(9L, List.of(
                 cardOf(unchanged, "Same", 0),

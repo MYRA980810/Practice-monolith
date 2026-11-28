@@ -3,7 +3,6 @@ package com.livecomerce.live.api;
 import com.livecomerce.live.application.port.in.*;
 import com.livecomerce.live.application.port.out.LoadLiveProductPort;
 import com.livecomerce.live.domain.Live;
-import com.livecomerce.live.domain.LiveContext;
 import com.livecomerce.live.domain.LiveNotFoundException;
 import com.livecomerce.live.domain.LiveNotOwnedBySellerException;
 import com.livecomerce.live.domain.LiveProduct;
@@ -96,7 +95,7 @@ class LiveProductControllerTest {
     }
 
     private static Live buildLive() {
-        return Live.create(SELLER_ID, null, LiveContext.SELLER_PROFILE, "Test Live", null, null, 60);
+        return Live.create(SELLER_ID, "Test Live", null, null, 60);
     }
 
     private static LiveProduct buildCatalogProduct() {

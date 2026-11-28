@@ -89,7 +89,7 @@ class LiveChatControllerTest {
 
     @Test
     void getChatHistory_returnsMessages() throws Exception {
-        var live = Live.create(UUID.randomUUID(), UUID.randomUUID(), LiveContext.STORE, "Live", null, null, 60);
+        var live = Live.create(UUID.randomUUID(), "Live", null, null, 60);
         var msg  = LiveChatMessage.create(live, "msg-001", USER_ID, "alice", "Hello!", OffsetDateTime.now());
         when(getChatHistoryUseCase.getChatHistory(any())).thenReturn(List.of(msg));
 
@@ -103,7 +103,7 @@ class LiveChatControllerTest {
 
     @Test
     void getChatHistory_exposesProviderMessageId_andKeepsInternalId() throws Exception {
-        var live = Live.create(UUID.randomUUID(), UUID.randomUUID(), LiveContext.STORE, "Live", null, null, 60);
+        var live = Live.create(UUID.randomUUID(), "Live", null, null, 60);
         var msg  = LiveChatMessage.create(live, "ivs-msg-001", USER_ID, "alice", "Hello!", OffsetDateTime.now());
         when(getChatHistoryUseCase.getChatHistory(any())).thenReturn(List.of(msg));
 

@@ -34,7 +34,7 @@ class ChangeLiveCategoryServiceTest {
     private static final UUID NEW_CATEGORY_ID = UUID.randomUUID();
 
     private static Live scheduledLive() {
-        return Live.create(SELLER_ID, null, LiveContext.SELLER_PROFILE, "My Live", null, null, 60, OLD_CATEGORY_ID);
+        return Live.create(SELLER_ID, "My Live", null, null, 60, OLD_CATEGORY_ID);
     }
 
     @Test

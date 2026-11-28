@@ -24,13 +24,6 @@ public class Live implements Persistable<UUID> {
     @Column(name = "seller_id", nullable = false)
     private UUID sellerId;
 
-    @Column(name = "store_id")
-    private UUID storeId;
-
-    @Convert(converter = com.livecomerce.live.infrastructure.persistence.LiveContextConverter.class)
-    @Column(name = "live_context", nullable = false, length = 20)
-    private LiveContext context;
-
     @Column(nullable = false, length = 255)
     private String title;
 
@@ -111,22 +104,18 @@ public class Live implements Persistable<UUID> {
         this.isNew = false;
     }
 
-    public static Live create(UUID sellerId, @Nullable UUID storeId, LiveContext context,
-                              String title, String thumbnailUrl, @Nullable Instant scheduledAt,
-                              int displayDurationSeconds) {
-        return create(sellerId, storeId, context, title, thumbnailUrl, scheduledAt,
-                displayDurationSeconds, null);
+    public static Live create(UUID sellerId, String title, String thumbnailUrl,
+                              @Nullable Instant scheduledAt, int displayDurationSeconds) {
+        return create(sellerId, title, thumbnailUrl, scheduledAt, displayDurationSeconds, null);
     }
 
-    public static Live create(UUID sellerId, @Nullable UUID storeId, LiveContext context,
-                              String title, String thumbnailUrl, @Nullable Instant scheduledAt,
-                              int displayDurationSeconds, @Nullable UUID categoryId) {
+    public static Live create(UUID sellerId, String title, String thumbnailUrl,
+                              @Nullable Instant scheduledAt, int displayDurationSeconds,
+                              @Nullable UUID categoryId) {
         var live = new Live();
         live.id                      = UUID.randomUUID();
         live.isNew                   = true;
         live.sellerId                = sellerId;
-        live.storeId                 = storeId;
-        live.context                 = context;
         live.title                   = title;
         live.status                  = LiveStatus.SCHEDULED;
         live.agoraChannelId          = UUID.randomUUID().toString();

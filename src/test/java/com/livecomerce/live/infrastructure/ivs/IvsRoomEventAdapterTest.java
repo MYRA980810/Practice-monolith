@@ -2,7 +2,6 @@ package com.livecomerce.live.infrastructure.ivs;
 
 import com.livecomerce.live.application.port.out.RoomEvent;
 import com.livecomerce.live.domain.Live;
-import com.livecomerce.live.domain.LiveContext;
 import com.livecomerce.live.infrastructure.RoomEventFailureReporter;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -38,7 +37,7 @@ class IvsRoomEventAdapterTest {
     }
 
     private Live liveWithRoom() {
-        var live = Live.create(UUID.randomUUID(), UUID.randomUUID(), LiveContext.STORE, "Live", null, null, 60);
+        var live = Live.create(UUID.randomUUID(), "Live", null, null, 60);
         live.setChatRoom(ROOM_ARN);
         return live;
     }
@@ -108,7 +107,7 @@ class IvsRoomEventAdapterTest {
 
     @Test
     void publish_liveWithoutChatRoom_skipsWithoutCallingIvs_andCountsAsDelivered() {
-        var live = Live.create(UUID.randomUUID(), UUID.randomUUID(), LiveContext.STORE, "Live", null, null, 60);
+        var live = Live.create(UUID.randomUUID(), "Live", null, null, 60);
 
         assertThat(adapter().publish(live, new RoomEvent.ViewerCount(1L))).isTrue();
         verifyNoInteractions(ivschatClient, failureReporter);

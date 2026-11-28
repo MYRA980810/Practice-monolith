@@ -35,9 +35,6 @@ public class LiveSummary {
     @Column(name = "seller_id", nullable = false)
     private UUID sellerId;
 
-    @Column(name = "store_id")
-    private UUID storeId;
-
     @Column(name = "started_at")
     private OffsetDateTime startedAt;
 
@@ -71,13 +68,12 @@ public class LiveSummary {
     @OneToMany(mappedBy = "liveSummary", cascade = CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = true)
     private List<LiveSummaryOrder> orders = new ArrayList<>();
 
-    public static LiveSummary create(UUID liveId, UUID sellerId, UUID storeId,
+    public static LiveSummary create(UUID liveId, UUID sellerId,
                                       OffsetDateTime startedAt, OffsetDateTime endedAt,
                                       long durationSeconds, int peakViewers) {
         var summary = new LiveSummary();
         summary.liveId          = liveId;
         summary.sellerId        = sellerId;
-        summary.storeId         = storeId;
         summary.startedAt       = startedAt;
         summary.endedAt         = endedAt;
         summary.durationSeconds = durationSeconds;

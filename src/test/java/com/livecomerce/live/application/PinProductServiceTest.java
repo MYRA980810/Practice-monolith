@@ -36,7 +36,7 @@ class PinProductServiceTest {
     private static final UUID VARIANT_ID = UUID.randomUUID();
 
     private Live liveLive() {
-        var live = Live.create(SELLER_ID, STORE_ID, LiveContext.STORE, "Live", null, null, 60);
+        var live = Live.create(SELLER_ID, "Live", null, null, 60);
         live.start();
         return live;
     }

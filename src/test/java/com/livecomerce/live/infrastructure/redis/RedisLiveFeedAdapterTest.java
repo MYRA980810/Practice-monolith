@@ -75,7 +75,7 @@ class RedisLiveFeedAdapterTest {
     }
 
     private static LiveFeedCard card(UUID categoryId) {
-        return new LiveFeedCard(LIVE_ID, SELLER_ID, null, "My Live", "Seller", "https://img/x.png",
+        return new LiveFeedCard(LIVE_ID, SELLER_ID, "My Live", "Seller", "https://img/x.png",
                 99L, Instant.parse("2026-10-06T10:00:00Z"), categoryId);
     }
 
@@ -141,7 +141,7 @@ class RedisLiveFeedAdapterTest {
 
     @Test
     void replaceAll_passesLiveIdCategoryCardTriples_andParsesResync() throws Exception {
-        var other = new LiveFeedCard(UUID.randomUUID(), SELLER_ID, null, "Other", null, null, 5L,
+        var other = new LiveFeedCard(UUID.randomUUID(), SELLER_ID, "Other", null, null, 5L,
                 Instant.parse("2026-10-06T11:00:00Z"), null);
         var call = new ScriptCall().replying("{\"type\":\"resync\",\"seq\":40}");
 
@@ -161,7 +161,7 @@ class RedisLiveFeedAdapterTest {
     @Test
     void snapshot_runsReadScript_andReturnsCardsNewestFirst() throws Exception {
         var older = card(CATEGORY_ID).withCurrentViewers(0);
-        var newer = new LiveFeedCard(UUID.randomUUID(), SELLER_ID, null, "Newer", null, null, 0L,
+        var newer = new LiveFeedCard(UUID.randomUUID(), SELLER_ID, "Newer", null, null, 0L,
                 Instant.parse("2026-10-06T12:00:00Z"), CATEGORY_ID);
         var call = new ScriptCall().replying("{\"version\":9,\"cards\":["
                 + objectMapper.writeValueAsString(older) + "," + objectMapper.writeValueAsString(newer)

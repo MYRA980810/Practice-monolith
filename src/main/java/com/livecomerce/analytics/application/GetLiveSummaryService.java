@@ -20,12 +20,12 @@ class GetLiveSummaryService implements GetLiveSummaryUseCase {
     private final LoadLiveSummarySourcePort loadLiveSummarySourcePort;
 
     @Override
-    public LiveSummaryResult getSummary(UUID liveId, UUID storeId) {
+    public LiveSummaryResult getSummary(UUID liveId, UUID sellerId) {
         var summary = loadLiveSummaryPort.findByLiveId(liveId)
                 .orElseThrow(() -> new LiveSummaryNotFoundException(liveId));
 
-        if (!Objects.equals(summary.getStoreId(), storeId)) {
-            throw new LiveSummaryNotOwnedException(liveId, storeId);
+        if (!Objects.equals(summary.getSellerId(), sellerId)) {
+            throw new LiveSummaryNotOwnedException(liveId, sellerId);
         }
 
         Set<UUID> buyerIds = summary.getOrders().stream()

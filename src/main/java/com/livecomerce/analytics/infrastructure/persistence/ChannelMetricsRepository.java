@@ -49,7 +49,8 @@ interface ChannelMetricsRepository extends JpaRepository<OrderSalesEntity, UUID>
             FROM lives l
             LEFT JOIN order_agg   oa ON oa.live_id = l.id
             LEFT JOIN product_agg pa ON pa.live_id = l.id
-            WHERE l.store_id = :storeId AND l.status = 'ENDED'
+            WHERE l.seller_id = (SELECT st.user_id FROM stores st WHERE st.id = :storeId)
+              AND l.status = 'ENDED'
               AND l.ended_at >= :from AND l.ended_at < :to
             ORDER BY revenue DESC
             """, nativeQuery = true)

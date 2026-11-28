@@ -1,5 +1,6 @@
 package com.livecomerce.live.api;
 
+import com.livecomerce.live.LoadStoreOwnerPort;
 import com.livecomerce.live.application.LiveFeedCardAssembler;
 import com.livecomerce.live.application.port.in.CancelLiveUseCase;
 import com.livecomerce.live.application.port.in.ChangeLiveCategoryUseCase;
@@ -48,6 +49,7 @@ class LiveController {
     private final LoadLivePort loadLivePort;
     private final LiveFeedCardAssembler liveFeedCardAssembler;
     private final LiveFeedPort liveFeedPort;
+    private final LoadStoreOwnerPort loadStoreOwnerPort;
 
     @PostMapping("/api/lives")
     @PreAuthorize("hasRole('SELLER')")
@@ -57,8 +59,6 @@ class LiveController {
 
         var live = createLiveUseCase.createLive(new CreateLiveUseCase.CreateLiveCommand(
                 principal.getUserId(),
-                request.storeId(),
-                request.context(),
                 request.title(),
                 request.thumbnailUrl(),
                 request.scheduledAt(),
@@ -208,9 +208,14 @@ class LiveController {
             @PathVariable UUID storeId,
             @RequestParam(required = false) String status) {
 
+        // A store is the seller's optional catalog channel: its lives are its owner's lives.
+        var ownerId = loadStoreOwnerPort.loadOwnerId(storeId);
+        if (ownerId.isEmpty()) {
+            return ResponseEntity.ok(List.of());
+        }
         var lives = status != null
-                ? loadLivePort.loadByStoreIdAndStatus(storeId, LiveStatus.fromCode(status))
-                : loadLivePort.loadByStoreId(storeId);
+                ? loadLivePort.loadBySellerIdAndStatus(ownerId.get(), LiveStatus.fromCode(status))
+                : loadLivePort.loadBySellerId(ownerId.get());
 
         return ResponseEntity.ok(lives.stream().map(LiveResponse::from).toList());
     }

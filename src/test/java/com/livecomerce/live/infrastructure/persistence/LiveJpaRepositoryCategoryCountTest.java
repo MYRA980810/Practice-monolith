@@ -1,7 +1,6 @@
 package com.livecomerce.live.infrastructure.persistence;
 
 import com.livecomerce.live.domain.Live;
-import com.livecomerce.live.domain.LiveContext;
 import com.livecomerce.live.domain.LiveStatus;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.BeforeEach;
@@ -210,7 +209,7 @@ class LiveJpaRepositoryCategoryCountTest {
     }
 
     private void persistScheduled(UUID categoryId, Instant scheduledAt, Consumer<Live> transition) {
-        var live = Live.create(sellerId, null, LiveContext.SELLER_PROFILE, "Live", null, scheduledAt, 60, categoryId);
+        var live = Live.create(sellerId, "Live", null, scheduledAt, 60, categoryId);
         transition.accept(live);
         entityManager.persist(live);
     }

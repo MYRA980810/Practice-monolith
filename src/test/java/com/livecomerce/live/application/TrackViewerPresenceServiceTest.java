@@ -7,7 +7,6 @@ import com.livecomerce.live.application.port.out.RoomEvent;
 import com.livecomerce.live.application.port.out.SaveLivePort;
 import com.livecomerce.live.application.port.out.ViewerCountPort;
 import com.livecomerce.live.domain.Live;
-import com.livecomerce.live.domain.LiveContext;
 import com.livecomerce.live.domain.LiveNotFoundException;
 import com.livecomerce.live.domain.LiveNotLiveException;
 import org.junit.jupiter.api.BeforeEach;
@@ -44,13 +43,13 @@ class TrackViewerPresenceServiceTest {
     }
 
     private Live startedLive() {
-        var live = Live.create(SELLER_ID, STORE_ID, LiveContext.STORE, "Test Live", null, null, 60);
+        var live = Live.create(SELLER_ID, "Test Live", null, null, 60);
         live.start();
         return live;
     }
 
     private Live scheduledLive() {
-        return Live.create(SELLER_ID, STORE_ID, LiveContext.STORE, "Test Live", null, null, 60);
+        return Live.create(SELLER_ID, "Test Live", null, null, 60);
     }
 
     @Test

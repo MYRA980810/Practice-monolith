@@ -3,7 +3,6 @@ package com.livecomerce.live.infrastructure.scheduler;
 import com.livecomerce.live.application.EndLiveService;
 import com.livecomerce.live.application.port.out.LoadLivePort;
 import com.livecomerce.live.domain.Live;
-import com.livecomerce.live.domain.LiveContext;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -30,7 +29,7 @@ class StaleLiveReconciliationJobTest {
     @InjectMocks StaleLiveReconciliationJob sut;
 
     private Live liveLive() {
-        var live = Live.create(UUID.randomUUID(), UUID.randomUUID(), LiveContext.STORE, "My Live", null, null, 60);
+        var live = Live.create(UUID.randomUUID(), "My Live", null, null, 60);
         live.start();
         return live;
     }

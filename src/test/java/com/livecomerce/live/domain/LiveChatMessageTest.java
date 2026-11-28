@@ -11,7 +11,7 @@ class LiveChatMessageTest {
 
     @Test
     void create_assignsAllFields() {
-        var live      = Live.create(UUID.randomUUID(), UUID.randomUUID(), LiveContext.STORE, "Live Test", null, null, 60);
+        var live      = Live.create(UUID.randomUUID(), "Live Test", null, null, 60);
         var providerMsgId = "provider-msg-001";
         var userId    = UUID.randomUUID();
         var sentAt    = OffsetDateTime.now();
@@ -37,7 +37,7 @@ class LiveChatMessageTest {
 
     @Test
     void create_generatesUniqueIds() {
-        var live = Live.create(UUID.randomUUID(), UUID.randomUUID(), LiveContext.STORE, "Live Test", null, null, 60);
+        var live = Live.create(UUID.randomUUID(), "Live Test", null, null, 60);
         var sentAt = OffsetDateTime.now();
 
         var msg1 = LiveChatMessage.create(live, "msg-001", UUID.randomUUID(), "alice", "Hi", sentAt);

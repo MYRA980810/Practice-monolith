@@ -35,12 +35,11 @@ class GetLiveSummaryServiceTest {
 
     private static final UUID LIVE_ID = UUID.randomUUID();
     private static final UUID SELLER_ID = UUID.randomUUID();
-    private static final UUID STORE_ID = UUID.randomUUID();
     private static final UUID BUYER_ID = UUID.randomUUID();
 
-    private static LiveSummary buildSummary(UUID storeId) {
+    private static LiveSummary buildSummary() {
         var summary = LiveSummary.create(
-                LIVE_ID, SELLER_ID, storeId,
+                LIVE_ID, SELLER_ID,
                 OffsetDateTime.now().minusHours(1), OffsetDateTime.now(),
                 3600, 42);
         summary.addOrder(UUID.randomUUID(), BUYER_ID, "T-Shirt", new BigDecimal("100.00"));
@@ -52,13 +51,13 @@ class GetLiveSummaryServiceTest {
     }
 
     @Test
-    void getSummary_ownerStore_returnsSummaryWithBatchedBuyerNames() {
+    void getSummary_ownerSeller_returnsSummaryWithBatchedBuyerNames() {
         setUp();
-        var summary = buildSummary(STORE_ID);
+        var summary = buildSummary();
         when(loadLiveSummaryPort.findByLiveId(LIVE_ID)).thenReturn(Optional.of(summary));
         when(loadLiveSummarySourcePort.findBuyerNames(Set.of(BUYER_ID))).thenReturn(Map.of(BUYER_ID, "Jane Doe"));
 
-        var result = service.getSummary(LIVE_ID, STORE_ID);
+        var result = service.getSummary(LIVE_ID, SELLER_ID);
 
         assertThat(result.summary()).isSameAs(summary);
         assertThat(result.buyerNames()).containsEntry(BUYER_ID, "Jane Doe");
@@ -70,15 +69,15 @@ class GetLiveSummaryServiceTest {
         setUp();
         when(loadLiveSummaryPort.findByLiveId(LIVE_ID)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> service.getSummary(LIVE_ID, STORE_ID))
+        assertThatThrownBy(() -> service.getSummary(LIVE_ID, SELLER_ID))
                 .isInstanceOf(LiveSummaryNotFoundException.class);
         verify(loadLiveSummarySourcePort, never()).findBuyerNames(any());
     }
 
     @Test
-    void getSummary_differentStore_throwsNotOwned() {
+    void getSummary_differentSeller_throwsNotOwned() {
         setUp();
-        var summary = buildSummary(STORE_ID);
+        var summary = buildSummary();
         when(loadLiveSummaryPort.findByLiveId(LIVE_ID)).thenReturn(Optional.of(summary));
 
         assertThatThrownBy(() -> service.getSummary(LIVE_ID, UUID.randomUUID()))

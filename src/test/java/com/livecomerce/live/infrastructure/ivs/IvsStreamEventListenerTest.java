@@ -5,7 +5,6 @@ import com.livecomerce.live.application.EndLiveService;
 import com.livecomerce.live.application.port.out.LoadLivePort;
 import com.livecomerce.live.application.port.out.SaveLivePort;
 import com.livecomerce.live.domain.Live;
-import com.livecomerce.live.domain.LiveContext;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -35,8 +34,7 @@ class IvsStreamEventListenerTest {
             "arn:aws:ivs:us-west-2:535011710559:channel/UCGaMPGLCbcE";
 
     private Live buildLive() {
-        return Live.create(UUID.randomUUID(), UUID.randomUUID(), LiveContext.STORE,
-                "Test Live", null, null, 60);
+        return Live.create(UUID.randomUUID(), "Test Live", null, null, 60);
     }
 
     private String streamStateEventJson(String eventName, String channelArn) {

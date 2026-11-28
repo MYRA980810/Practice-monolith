@@ -1,7 +1,6 @@
 package com.livecomerce.live.infrastructure.persistence;
 
 import com.livecomerce.live.domain.Live;
-import com.livecomerce.live.domain.LiveContext;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -22,7 +21,7 @@ class LivePersistenceAdapterLoadByChannelTest {
 
     @Test
     void loadByAgoraChannelId_delegatesToRepository() {
-        var live = Live.create(UUID.randomUUID(), UUID.randomUUID(), LiveContext.STORE, "Test", null, null, 60);
+        var live = Live.create(UUID.randomUUID(), "Test", null, null, 60);
         String channelId = live.getAgoraChannelId();
 
         when(repository.findByAgoraChannelId(channelId)).thenReturn(Optional.of(live));

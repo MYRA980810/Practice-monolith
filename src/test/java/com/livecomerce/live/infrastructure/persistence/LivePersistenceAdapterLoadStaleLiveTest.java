@@ -1,7 +1,6 @@
 package com.livecomerce.live.infrastructure.persistence;
 
 import com.livecomerce.live.domain.Live;
-import com.livecomerce.live.domain.LiveContext;
 import com.livecomerce.live.domain.LiveStatus;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -24,7 +23,7 @@ class LivePersistenceAdapterLoadStaleLiveTest {
 
     @Test
     void loadStaleLive_delegatesToRepositoryWithLiveStatus() {
-        var live   = Live.create(UUID.randomUUID(), UUID.randomUUID(), LiveContext.STORE, "Test", null, null, 60);
+        var live   = Live.create(UUID.randomUUID(), "Test", null, null, 60);
         var cutoff = Instant.now();
 
         when(repository.findByStatusAndStreamEndedAtLessThanEqual(LiveStatus.LIVE, cutoff))

@@ -9,7 +9,6 @@ import java.util.UUID;
 public record LiveUpcomingCard(
         UUID id,
         UUID sellerId,
-        @Nullable UUID storeId,
         String title,
         @Nullable String sellerName,
         @Nullable String thumbnailUrl,

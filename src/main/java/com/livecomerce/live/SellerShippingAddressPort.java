@@ -5,7 +5,8 @@ import java.util.UUID;
 
 public interface SellerShippingAddressPort {
 
-    Optional<ShippingAddress> loadByStoreId(UUID storeId);
+    /** The seller's default dispatch address; empty when the seller has none. */
+    Optional<ShippingAddress> loadBySellerId(UUID sellerId);
 
     record ShippingAddress(
             String street,

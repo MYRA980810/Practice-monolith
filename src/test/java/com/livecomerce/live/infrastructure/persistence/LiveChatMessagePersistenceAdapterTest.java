@@ -4,7 +4,6 @@ import com.livecomerce.live.application.port.out.LoadChatMessagePort;
 import com.livecomerce.live.application.port.out.SaveChatMessagePort;
 import com.livecomerce.live.domain.Live;
 import com.livecomerce.live.domain.LiveChatMessage;
-import com.livecomerce.live.domain.LiveContext;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -34,7 +33,7 @@ class LiveChatMessagePersistenceAdapterTest {
 
     @Test
     void saveIfAbsent_insertsThroughOnConflictQuery_andReportsWhetherARowWasInserted() {
-        var live = Live.create(UUID.randomUUID(), UUID.randomUUID(), LiveContext.STORE, "Live", null, null, 60);
+        var live = Live.create(UUID.randomUUID(), "Live", null, null, 60);
         var msg  = LiveChatMessage.create(live, "msg-001", UUID.randomUUID(), "alice", "hi", OffsetDateTime.now());
         when(repository.insertIfAbsent(msg.getId(), live.getId(), "msg-001", msg.getUserId(),
                 "alice", "hi", msg.getSentAt())).thenReturn(1, 0);

@@ -24,10 +24,6 @@ interface LiveJpaRepository extends JpaRepository<Live, UUID> {
 
     Optional<Live> findByIvsChannelArnAndStatusIn(String ivsChannelArn, Collection<LiveStatus> statuses);
 
-    List<Live> findByStoreId(UUID storeId);
-
-    List<Live> findByStoreIdAndStatus(UUID storeId, LiveStatus status);
-
     Page<Live> findByStatus(LiveStatus status, Pageable pageable);
 
     Page<Live> findByStatusAndScheduledAtIsNotNull(LiveStatus status, Pageable pageable);

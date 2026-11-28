@@ -33,7 +33,7 @@ class ReorderProductsServiceTest {
 
     @Test
     void reorderProducts_updatesPositionsByIndex() {
-        var live = Live.create(SELLER_ID, STORE_ID, LiveContext.STORE, "Live", null, null, 60);
+        var live = Live.create(SELLER_ID, "Live", null, null, 60);
         var p1 = LiveProduct.forCatalogProduct(live, UUID.randomUUID(), UUID.randomUUID(), "P1", new BigDecimal("10"), "MXN", 5);
         var p2 = LiveProduct.forCatalogProduct(live, UUID.randomUUID(), UUID.randomUUID(), "P2", new BigDecimal("20"), "MXN", 5);
         var p3 = LiveProduct.forCatalogProduct(live, UUID.randomUUID(), UUID.randomUUID(), "P3", new BigDecimal("30"), "MXN", 5);
@@ -54,7 +54,7 @@ class ReorderProductsServiceTest {
 
     @Test
     void reorderProducts_unknownId_throwsIllegalArgument() {
-        var live = Live.create(SELLER_ID, STORE_ID, LiveContext.STORE, "Live", null, null, 60);
+        var live = Live.create(SELLER_ID, "Live", null, null, 60);
         var p1 = LiveProduct.forCatalogProduct(live, UUID.randomUUID(), UUID.randomUUID(), "P1", new BigDecimal("10"), "MXN", 5);
 
         when(loadLivePort.loadById(live.getId())).thenReturn(Optional.of(live));
@@ -69,7 +69,7 @@ class ReorderProductsServiceTest {
 
     @Test
     void reorderProducts_wrongSeller_throwsLiveNotOwned() {
-        var live = Live.create(SELLER_ID, STORE_ID, LiveContext.STORE, "Live", null, null, 60);
+        var live = Live.create(SELLER_ID, "Live", null, null, 60);
         when(loadLivePort.loadById(live.getId())).thenReturn(Optional.of(live));
 
         assertThatThrownBy(() -> sut.reorderProducts(

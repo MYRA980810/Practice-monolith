@@ -6,7 +6,6 @@ import com.livecomerce.live.application.port.out.LoadLivePort;
 import com.livecomerce.live.application.port.out.LoadLiveSubscriptionPort;
 import com.livecomerce.live.application.port.out.SaveLiveSubscriptionPort;
 import com.livecomerce.live.domain.Live;
-import com.livecomerce.live.domain.LiveContext;
 import com.livecomerce.live.domain.LiveNotFoundException;
 import com.livecomerce.live.domain.LiveNotScheduledException;
 import com.livecomerce.live.domain.LiveSubscription;
@@ -43,17 +42,17 @@ class SubscribeToLiveServiceTest {
     }
 
     private static Live scheduledLive() {
-        return Live.create(SELLER_ID, null, LiveContext.SELLER_PROFILE, "Live", null, null, 60);
+        return Live.create(SELLER_ID, "Live", null, null, 60);
     }
 
     private static Live liveLive() {
-        var live = Live.create(SELLER_ID, null, LiveContext.SELLER_PROFILE, "Live", null, null, 60);
+        var live = Live.create(SELLER_ID, "Live", null, null, 60);
         live.start();
         return live;
     }
 
     private static Live endedLive() {
-        var live = Live.create(SELLER_ID, null, LiveContext.SELLER_PROFILE, "Live", null, null, 60);
+        var live = Live.create(SELLER_ID, "Live", null, null, 60);
         live.start();
         live.end();
         return live;

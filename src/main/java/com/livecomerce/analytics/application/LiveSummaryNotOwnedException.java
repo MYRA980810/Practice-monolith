@@ -8,8 +8,8 @@ import java.util.UUID;
 
 public class LiveSummaryNotOwnedException extends DomainException {
 
-    public LiveSummaryNotOwnedException(UUID liveId, UUID storeId) {
-        super("Live summary %s does not belong to store %s".formatted(liveId, storeId));
+    public LiveSummaryNotOwnedException(UUID liveId, UUID sellerId) {
+        super("Live summary %s does not belong to seller %s".formatted(liveId, sellerId));
     }
 
     @Override

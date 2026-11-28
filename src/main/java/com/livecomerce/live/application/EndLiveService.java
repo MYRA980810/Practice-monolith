@@ -77,7 +77,7 @@ public class EndLiveService implements EndLiveUseCase {
         var saved = saveLivePort.save(live);
 
         eventPublisher.publishEvent(new LiveRevivedEvent(
-                saved.getId(), saved.getSellerId(), saved.getStoreId(), saved.getUpdatedAt().toInstant()));
+                saved.getId(), saved.getSellerId(), saved.getUpdatedAt().toInstant()));
 
         return saved;
     }
@@ -87,7 +87,7 @@ public class EndLiveService implements EndLiveUseCase {
 
         var saved = saveLivePort.save(live);
 
-        eventPublisher.publishEvent(new LiveEndedEvent(saved.getId(), saved.getSellerId(), saved.getStoreId(), saved.getEndedAt()));
+        eventPublisher.publishEvent(new LiveEndedEvent(saved.getId(), saved.getSellerId(), saved.getEndedAt()));
 
         liveRoomCloser.closeRoom(live);
 

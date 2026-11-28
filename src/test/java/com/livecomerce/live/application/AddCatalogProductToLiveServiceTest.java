@@ -32,7 +32,7 @@ class AddCatalogProductToLiveServiceTest {
 
     @Test
     void addCatalogProduct_toScheduledLive_succeeds() {
-        var live = Live.create(SELLER_ID, STORE_ID, LiveContext.STORE, "Live", null, null, 60);
+        var live = Live.create(SELLER_ID, "Live", null, null, 60);
         when(loadLivePort.loadById(live.getId())).thenReturn(Optional.of(live));
         when(saveLiveProductPort.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
@@ -50,7 +50,7 @@ class AddCatalogProductToLiveServiceTest {
 
     @Test
     void addCatalogProduct_withoutImage_savesNullImageUrl() {
-        var live = Live.create(SELLER_ID, STORE_ID, LiveContext.STORE, "Live", null, null, 60);
+        var live = Live.create(SELLER_ID, "Live", null, null, 60);
         when(loadLivePort.loadById(live.getId())).thenReturn(Optional.of(live));
         when(saveLiveProductPort.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
@@ -64,7 +64,7 @@ class AddCatalogProductToLiveServiceTest {
 
     @Test
     void addCatalogProduct_toLiveLive_succeeds() {
-        var live = Live.create(SELLER_ID, STORE_ID, LiveContext.STORE, "Live", null, null, 60);
+        var live = Live.create(SELLER_ID, "Live", null, null, 60);
         live.start();
         when(loadLivePort.loadById(live.getId())).thenReturn(Optional.of(live));
         when(saveLiveProductPort.save(any())).thenAnswer(inv -> inv.getArgument(0));
@@ -79,7 +79,7 @@ class AddCatalogProductToLiveServiceTest {
 
     @Test
     void addCatalogProduct_toReconnectingLive_succeeds() {
-        var live = Live.create(SELLER_ID, STORE_ID, LiveContext.STORE, "Live", null, null, 60);
+        var live = Live.create(SELLER_ID, "Live", null, null, 60);
         live.start();
         live.beginReconnecting();
         when(loadLivePort.loadById(live.getId())).thenReturn(Optional.of(live));
@@ -95,7 +95,7 @@ class AddCatalogProductToLiveServiceTest {
 
     @Test
     void addCatalogProduct_wrongSeller_throwsLiveNotOwned() {
-        var live = Live.create(SELLER_ID, STORE_ID, LiveContext.STORE, "Live", null, null, 60);
+        var live = Live.create(SELLER_ID, "Live", null, null, 60);
         when(loadLivePort.loadById(live.getId())).thenReturn(Optional.of(live));
 
         var cmd = new AddCatalogProductCommand(
@@ -108,7 +108,7 @@ class AddCatalogProductToLiveServiceTest {
 
     @Test
     void addCatalogProduct_toEndedLive_throwsIllegalState() {
-        var live = Live.create(SELLER_ID, STORE_ID, LiveContext.STORE, "Live", null, null, 60);
+        var live = Live.create(SELLER_ID, "Live", null, null, 60);
         live.start();
         live.end();
         when(loadLivePort.loadById(live.getId())).thenReturn(Optional.of(live));

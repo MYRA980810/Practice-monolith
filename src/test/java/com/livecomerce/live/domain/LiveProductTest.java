@@ -17,7 +17,7 @@ class LiveProductTest {
     private static final BigDecimal PRICE   = new BigDecimal("99.90");
 
     private Live buildLive() {
-        return Live.create(SELLER_ID, STORE_ID, LiveContext.STORE, "Test Live", null, null, 60);
+        return Live.create(SELLER_ID, "Test Live", null, null, 60);
     }
 
     // ── forCatalogProduct ─────────────────────────────────────────────────────
