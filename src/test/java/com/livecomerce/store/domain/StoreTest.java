@@ -150,4 +150,32 @@ class StoreTest {
         assertThat(store.getCategoryId()).isNull();
         assertThat(store.getUpdatedAt()).isAfter(before);
     }
+
+    // --- isOpenForSales: the store can sell its catalog (incl. during the owner's lives) ---
+
+    @Test
+    void isOpenForSales_newStore_isTrue() {
+        assertThat(activeStore().isOpenForSales()).isTrue();
+    }
+
+    @Test
+    void isOpenForSales_deactivatedStore_isFalse() {
+        var store = activeStore();
+        store.deactivate();
+
+        assertThat(store.isOpenForSales()).isFalse();
+    }
+
+    @Test
+    void isOpenForSales_suspendedStore_isFalse() {
+        assertThat(suspendedStore().isOpenForSales()).isFalse();
+    }
+
+    @Test
+    void isOpenForSales_temporarilyClosedStore_isFalse() {
+        var store = activeStore();
+        store.closeTemporarily();
+
+        assertThat(store.isOpenForSales()).isFalse();
+    }
 }

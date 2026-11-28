@@ -26,4 +26,11 @@ class StoreOwnerAdapter implements LoadStoreOwnerPort, LoadSellerStoreIdPort {
     public Optional<UUID> findStoreIdBySellerId(UUID sellerId) {
         return loadStorePort.loadByUserId(sellerId).map(Store::getId);
     }
+
+    @Override
+    public Optional<UUID> findOpenStoreIdBySellerId(UUID sellerId) {
+        return loadStorePort.loadByUserId(sellerId)
+                .filter(Store::isOpenForSales)
+                .map(Store::getId);
+    }
 }

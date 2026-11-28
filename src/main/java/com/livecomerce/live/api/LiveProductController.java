@@ -44,9 +44,6 @@ class LiveProductController {
                 principal.getUserId(),
                 request.productId(),
                 request.variantId(),
-                request.nameSnapshot(),
-                request.priceSnapshot(),
-                request.currency(),
                 request.stockAllocated(),
                 request.imageUrl()
         ));
