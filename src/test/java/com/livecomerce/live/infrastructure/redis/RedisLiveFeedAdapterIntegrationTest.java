@@ -95,7 +95,7 @@ class RedisLiveFeedAdapterIntegrationTest {
     }
 
     private static LiveFeedCard card(UUID liveId, UUID categoryId, String startedAt) {
-        return new LiveFeedCard(liveId, UUID.randomUUID(), null, "Live " + liveId, "Seller", null,
+        return new LiveFeedCard(liveId, UUID.randomUUID(), "Live " + liveId, "Seller", null,
                 42L, Instant.parse(startedAt), categoryId);
     }
 

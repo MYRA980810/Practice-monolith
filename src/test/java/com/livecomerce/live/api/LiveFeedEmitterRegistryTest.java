@@ -56,8 +56,7 @@ class LiveFeedEmitterRegistryTest {
     private static final long HANDSHAKE_RETRY_MS        = 15_000L;
     private static final long HANDSHAKE_RETRY_JITTER_MS = 2_000L;
     private static final UUID CATEGORY_ID  = UUID.randomUUID();
-    private static final LiveFeedCard CARD = new LiveFeedCard(UUID.randomUUID(), UUID.randomUUID(), null,
-            "Live", "Jane", null, 0L, Instant.parse("2026-10-07T10:00:00Z"), CATEGORY_ID);
+    private static final LiveFeedCard CARD = new LiveFeedCard(UUID.randomUUID(), UUID.randomUUID(), "Live", "Jane", null, 0L, Instant.parse("2026-10-07T10:00:00Z"), CATEGORY_ID);
     private static final List<CategoryLiveCount> COUNTS = List.of(new CategoryLiveCount(CATEGORY_ID, 1));
 
     @BeforeEach

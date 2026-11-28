@@ -5,7 +5,6 @@ import com.livecomerce.live.application.port.out.LiveRoomEventPort;
 import com.livecomerce.live.application.port.out.RoomEvent;
 import com.livecomerce.live.application.port.out.VideoBroadcastPort;
 import com.livecomerce.live.domain.Live;
-import com.livecomerce.live.domain.LiveContext;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -40,7 +39,7 @@ class LiveRoomCloserTest {
     private static final String CHAT_ROOM_ARN = "arn:ivschat:room";
 
     private Live live() {
-        var live = Live.create(UUID.randomUUID(), UUID.randomUUID(), LiveContext.STORE, "My Live", null, null, 60);
+        var live = Live.create(UUID.randomUUID(), "My Live", null, null, 60);
         live.start();
         return live;
     }

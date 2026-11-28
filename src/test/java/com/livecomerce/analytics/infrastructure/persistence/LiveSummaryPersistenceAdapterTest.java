@@ -74,16 +74,14 @@ class LiveSummaryPersistenceAdapterTest {
     @Test
     void findLiveSnapshot_whenLiveExists_mapsFieldsFromLiveReadEntity() throws Exception {
         var liveId = UUID.randomUUID();
-        var storeId = UUID.randomUUID();
         var startedAt = OffsetDateTime.now().minusHours(1);
         var endedAt = OffsetDateTime.now();
-        var entity = buildLiveReadEntity(liveId, storeId, startedAt, endedAt, 99);
+        var entity = buildLiveReadEntity(liveId, startedAt, endedAt, 99);
         when(liveSummaryReadRepository.findById(liveId)).thenReturn(Optional.of(entity));
 
         var result = ((LoadLiveSummarySourcePort) adapter).findLiveSnapshot(liveId);
 
         assertThat(result).isPresent();
-        assertThat(result.get().storeId()).isEqualTo(storeId);
         assertThat(result.get().startedAt()).isEqualTo(startedAt);
         assertThat(result.get().endedAt()).isEqualTo(endedAt);
         assertThat(result.get().peakViewers()).isEqualTo(99);
@@ -163,13 +161,12 @@ class LiveSummaryPersistenceAdapterTest {
         verify(buyerNameRepository, org.mockito.Mockito.never()).findNamesByIds(org.mockito.ArgumentMatchers.any());
     }
 
-    private LiveReadEntity buildLiveReadEntity(UUID id, UUID storeId, OffsetDateTime startedAt,
+    private LiveReadEntity buildLiveReadEntity(UUID id, OffsetDateTime startedAt,
                                                 OffsetDateTime endedAt, int peakViewers) throws Exception {
         var constructor = LiveReadEntity.class.getDeclaredConstructor();
         constructor.setAccessible(true);
         var entity = constructor.newInstance();
         setField(entity, "id", id);
-        setField(entity, "storeId", storeId);
         setField(entity, "startedAt", startedAt);
         setField(entity, "endedAt", endedAt);
         setField(entity, "peakViewers", peakViewers);

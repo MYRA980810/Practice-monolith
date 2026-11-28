@@ -2,7 +2,7 @@ package com.livecomerce.live.api;
 
 import com.livecomerce.auth.infrastructure.security.ProductionSecurityTestConfig;
 import com.livecomerce.live.LoadSellerNamesPort;
-import com.livecomerce.live.LoadStoreNamesPort;
+import com.livecomerce.live.LoadStoreOwnerPort;
 import com.livecomerce.live.StreamTicketStoreUnavailableException;
 import com.livecomerce.live.application.LiveFeedCardAssembler;
 import com.livecomerce.live.application.port.in.*;
@@ -95,7 +95,7 @@ class LiveFeedBuyerOnlySecurityTest {
     @MockitoBean LoadLivePort loadLivePort;
     @MockitoBean LiveFeedPort liveFeedPort;
     @MockitoBean ViewerCountPort viewerCountPort;
-    @MockitoBean LoadStoreNamesPort loadStoreNamesPort;
+    @MockitoBean LoadStoreOwnerPort loadStoreOwnerPort;
     @MockitoBean LoadSellerNamesPort loadSellerNamesPort;
 
     @BeforeEach

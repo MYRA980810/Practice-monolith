@@ -10,37 +10,25 @@ import static org.assertj.core.api.Assertions.*;
 class LiveTest {
 
     private static final UUID SELLER_ID = UUID.randomUUID();
-    private static final UUID STORE_ID  = UUID.randomUUID();
 
     // ── Factory ──────────────────────────────────────────────────────────────
 
     @Test
-    void create_storeContext_setsCorrectFields() {
-        var live = Live.create(SELLER_ID, STORE_ID, LiveContext.STORE, "My Live", null, null, 60);
+    void create_setsCorrectFields() {
+        var live = Live.create(SELLER_ID, "My Live", null, null, 60);
 
         assertThat(live.getId()).isNotNull();
         assertThat(live.getSellerId()).isEqualTo(SELLER_ID);
-        assertThat(live.getStoreId()).isEqualTo(STORE_ID);
-        assertThat(live.getContext()).isEqualTo(LiveContext.STORE);
         assertThat(live.getTitle()).isEqualTo("My Live");
         assertThat(live.getStatus()).isEqualTo(LiveStatus.SCHEDULED);
         assertThat(live.getAgoraChannelId()).isNotBlank();
     }
 
     @Test
-    void create_sellerProfileContext_allowsNullStore() {
-        var live = Live.create(SELLER_ID, null, LiveContext.SELLER_PROFILE, "Profile Live", null, null, 60);
-
-        assertThat(live.getStoreId()).isNull();
-        assertThat(live.getContext()).isEqualTo(LiveContext.SELLER_PROFILE);
-        assertThat(live.getStatus()).isEqualTo(LiveStatus.SCHEDULED);
-    }
-
-    @Test
     void create_withOptionalFields_setsThemCorrectly() {
         var thumbnail  = "https://cdn.example.com/thumb.jpg";
         var scheduledAt = Instant.now().plusSeconds(3600);
-        var live = Live.create(SELLER_ID, STORE_ID, LiveContext.STORE, "My Live", thumbnail, scheduledAt, 60);
+        var live = Live.create(SELLER_ID, "My Live", thumbnail, scheduledAt, 60);
 
         assertThat(live.getThumbnailUrl()).isEqualTo(thumbnail);
         assertThat(live.getScheduledAt()).isEqualTo(scheduledAt);
@@ -49,14 +37,14 @@ class LiveTest {
     @Test
     void create_withCategory_storesCategoryId() {
         var categoryId = UUID.randomUUID();
-        var live = Live.create(SELLER_ID, STORE_ID, LiveContext.STORE, "My Live", null, null, 60, categoryId);
+        var live = Live.create(SELLER_ID, "My Live", null, null, 60, categoryId);
 
         assertThat(live.getCategoryId()).isEqualTo(categoryId);
     }
 
     @Test
     void create_withoutCategoryArgument_leavesCategoryNull() {
-        var live = Live.create(SELLER_ID, STORE_ID, LiveContext.STORE, "My Live", null, null, 60);
+        var live = Live.create(SELLER_ID, "My Live", null, null, 60);
 
         assertThat(live.getCategoryId()).isNull();
     }
@@ -65,7 +53,7 @@ class LiveTest {
 
     @Test
     void start_fromScheduled_transitionsToLive() {
-        var live = Live.create(SELLER_ID, STORE_ID, LiveContext.STORE, "My Live", null, null, 60);
+        var live = Live.create(SELLER_ID, "My Live", null, null, 60);
 
         live.start();
 
@@ -75,7 +63,7 @@ class LiveTest {
 
     @Test
     void start_fromLive_throwsInvalidLiveStateException() {
-        var live = Live.create(SELLER_ID, STORE_ID, LiveContext.STORE, "My Live", null, null, 60);
+        var live = Live.create(SELLER_ID, "My Live", null, null, 60);
         live.start();
 
         assertThatThrownBy(live::start)
@@ -84,7 +72,7 @@ class LiveTest {
 
     @Test
     void start_fromEnded_throwsInvalidLiveStateException() {
-        var live = Live.create(SELLER_ID, STORE_ID, LiveContext.STORE, "My Live", null, null, 60);
+        var live = Live.create(SELLER_ID, "My Live", null, null, 60);
         live.start();
         live.end();
 
@@ -94,7 +82,7 @@ class LiveTest {
 
     @Test
     void end_fromLive_transitionsToEnded() {
-        var live = Live.create(SELLER_ID, STORE_ID, LiveContext.STORE, "My Live", null, null, 60);
+        var live = Live.create(SELLER_ID, "My Live", null, null, 60);
         live.start();
 
         live.end();
@@ -105,7 +93,7 @@ class LiveTest {
 
     @Test
     void end_fromScheduled_throwsInvalidLiveStateException() {
-        var live = Live.create(SELLER_ID, STORE_ID, LiveContext.STORE, "My Live", null, null, 60);
+        var live = Live.create(SELLER_ID, "My Live", null, null, 60);
 
         assertThatThrownBy(live::end)
                 .isInstanceOf(InvalidLiveStateException.class);
@@ -113,7 +101,7 @@ class LiveTest {
 
     @Test
     void end_fromReconnecting_transitionsToEnded() {
-        var live = Live.create(SELLER_ID, STORE_ID, LiveContext.STORE, "My Live", null, null, 60);
+        var live = Live.create(SELLER_ID, "My Live", null, null, 60);
         live.start();
         live.beginReconnecting();
 
@@ -125,7 +113,7 @@ class LiveTest {
 
     @Test
     void beginReconnecting_fromLive_transitionsToReconnecting_andRestampsStreamEndedAt() {
-        var live = Live.create(SELLER_ID, STORE_ID, LiveContext.STORE, "My Live", null, null, 60);
+        var live = Live.create(SELLER_ID, "My Live", null, null, 60);
         live.start();
 
         live.beginReconnecting();
@@ -136,7 +124,7 @@ class LiveTest {
 
     @Test
     void beginReconnecting_fromNonLive_throwsInvalidLiveState() {
-        var live = Live.create(SELLER_ID, STORE_ID, LiveContext.STORE, "My Live", null, null, 60);
+        var live = Live.create(SELLER_ID, "My Live", null, null, 60);
 
         assertThatThrownBy(live::beginReconnecting)
                 .isInstanceOf(InvalidLiveStateException.class);
@@ -144,7 +132,7 @@ class LiveTest {
 
     @Test
     void revive_fromReconnecting_transitionsToLive_andClearsStreamEndedAt() {
-        var live = Live.create(SELLER_ID, STORE_ID, LiveContext.STORE, "My Live", null, null, 60);
+        var live = Live.create(SELLER_ID, "My Live", null, null, 60);
         live.start();
         live.beginReconnecting();
 
@@ -156,7 +144,7 @@ class LiveTest {
 
     @Test
     void revive_fromNonReconnecting_throwsInvalidLiveState() {
-        var live = Live.create(SELLER_ID, STORE_ID, LiveContext.STORE, "My Live", null, null, 60);
+        var live = Live.create(SELLER_ID, "My Live", null, null, 60);
         live.start();
 
         assertThatThrownBy(live::revive)
@@ -165,7 +153,7 @@ class LiveTest {
 
     @Test
     void cancel_fromScheduled_transitionsToCancelled() {
-        var live = Live.create(SELLER_ID, STORE_ID, LiveContext.STORE, "My Live", null, null, 60);
+        var live = Live.create(SELLER_ID, "My Live", null, null, 60);
 
         live.cancel();
 
@@ -174,7 +162,7 @@ class LiveTest {
 
     @Test
     void cancel_fromLive_transitionsToCancelled() {
-        var live = Live.create(SELLER_ID, STORE_ID, LiveContext.STORE, "My Live", null, null, 60);
+        var live = Live.create(SELLER_ID, "My Live", null, null, 60);
         live.start();
 
         live.cancel();
@@ -184,7 +172,7 @@ class LiveTest {
 
     @Test
     void cancel_fromEnded_throwsInvalidLiveStateException() {
-        var live = Live.create(SELLER_ID, STORE_ID, LiveContext.STORE, "My Live", null, null, 60);
+        var live = Live.create(SELLER_ID, "My Live", null, null, 60);
         live.start();
         live.end();
 
@@ -194,7 +182,7 @@ class LiveTest {
 
     @Test
     void cancel_fromCancelled_throwsInvalidLiveStateException() {
-        var live = Live.create(SELLER_ID, STORE_ID, LiveContext.STORE, "My Live", null, null, 60);
+        var live = Live.create(SELLER_ID, "My Live", null, null, 60);
         live.cancel();
 
         assertThatThrownBy(live::cancel)
@@ -205,7 +193,7 @@ class LiveTest {
 
     @Test
     void markStreamEnded_whileLive_setsStreamEndedAt() {
-        var live = Live.create(SELLER_ID, STORE_ID, LiveContext.STORE, "My Live", null, null, 60);
+        var live = Live.create(SELLER_ID, "My Live", null, null, 60);
         live.start();
         var at = Instant.now();
 
@@ -216,7 +204,7 @@ class LiveTest {
 
     @Test
     void markStreamEnded_whileNotLive_isNoOp() {
-        var live = Live.create(SELLER_ID, STORE_ID, LiveContext.STORE, "My Live", null, null, 60);
+        var live = Live.create(SELLER_ID, "My Live", null, null, 60);
 
         live.markStreamEnded(Instant.now());
 
@@ -225,7 +213,7 @@ class LiveTest {
 
     @Test
     void clearStreamEndedSignal_afterMarked_clearsIt() {
-        var live = Live.create(SELLER_ID, STORE_ID, LiveContext.STORE, "My Live", null, null, 60);
+        var live = Live.create(SELLER_ID, "My Live", null, null, 60);
         live.start();
         live.markStreamEnded(Instant.now());
 
@@ -236,7 +224,7 @@ class LiveTest {
 
     @Test
     void clearStreamEndedSignal_whenNotMarked_isNoOp() {
-        var live = Live.create(SELLER_ID, STORE_ID, LiveContext.STORE, "My Live", null, null, 60);
+        var live = Live.create(SELLER_ID, "My Live", null, null, 60);
         live.start();
 
         assertThatCode(live::clearStreamEndedSignal).doesNotThrowAnyException();
@@ -245,7 +233,7 @@ class LiveTest {
 
     @Test
     void setStreamToken_setsToken() {
-        var live = Live.create(SELLER_ID, STORE_ID, LiveContext.STORE, "My Live", null, null, 60);
+        var live = Live.create(SELLER_ID, "My Live", null, null, 60);
 
         live.setStreamToken("agora-rtc-token-xyz");
 
@@ -256,7 +244,7 @@ class LiveTest {
 
     @Test
     void updatePeakViewers_whenCurrentExceedsPeak_updatesPeak() {
-        var live = Live.create(SELLER_ID, STORE_ID, LiveContext.STORE, "My Live", null, null, 60);
+        var live = Live.create(SELLER_ID, "My Live", null, null, 60);
 
         live.updatePeakViewers(50);
 
@@ -265,7 +253,7 @@ class LiveTest {
 
     @Test
     void updatePeakViewers_whenCurrentLessThanPeak_doesNotDecrease() {
-        var live = Live.create(SELLER_ID, STORE_ID, LiveContext.STORE, "My Live", null, null, 60);
+        var live = Live.create(SELLER_ID, "My Live", null, null, 60);
         live.updatePeakViewers(50);
 
         live.updatePeakViewers(30);
@@ -275,7 +263,7 @@ class LiveTest {
 
     @Test
     void updatePeakViewers_whenCurrentExceedsExistingPeak_updatesToPeak() {
-        var live = Live.create(SELLER_ID, STORE_ID, LiveContext.STORE, "My Live", null, null, 60);
+        var live = Live.create(SELLER_ID, "My Live", null, null, 60);
         live.updatePeakViewers(50);
 
         live.updatePeakViewers(60);
@@ -287,7 +275,7 @@ class LiveTest {
 
     @Test
     void changeCategory_whileScheduled_updatesCategoryAndTimestamp() {
-        var live        = Live.create(SELLER_ID, STORE_ID, LiveContext.STORE, "My Live", null, null, 60, UUID.randomUUID());
+        var live        = Live.create(SELLER_ID, "My Live", null, null, 60, UUID.randomUUID());
         var categoryId  = UUID.randomUUID();
         var beforeEdit  = live.getUpdatedAt();
 
@@ -299,7 +287,7 @@ class LiveTest {
 
     @Test
     void changeCategory_whileLive_updatesCategory() {
-        var live       = Live.create(SELLER_ID, STORE_ID, LiveContext.STORE, "My Live", null, null, 60);
+        var live       = Live.create(SELLER_ID, "My Live", null, null, 60);
         var categoryId = UUID.randomUUID();
         live.start();
 
@@ -310,7 +298,7 @@ class LiveTest {
 
     @Test
     void changeCategory_whileReconnecting_updatesCategory() {
-        var live       = Live.create(SELLER_ID, STORE_ID, LiveContext.STORE, "My Live", null, null, 60);
+        var live       = Live.create(SELLER_ID, "My Live", null, null, 60);
         var categoryId = UUID.randomUUID();
         live.start();
         live.beginReconnecting();
@@ -322,7 +310,7 @@ class LiveTest {
 
     @Test
     void changeCategory_whenEnded_throwsInvalidLiveStateException() {
-        var live = Live.create(SELLER_ID, STORE_ID, LiveContext.STORE, "My Live", null, null, 60);
+        var live = Live.create(SELLER_ID, "My Live", null, null, 60);
         live.start();
         live.end();
 
@@ -333,7 +321,7 @@ class LiveTest {
 
     @Test
     void changeCategory_whenCancelled_throwsInvalidLiveStateException() {
-        var live = Live.create(SELLER_ID, STORE_ID, LiveContext.STORE, "My Live", null, null, 60);
+        var live = Live.create(SELLER_ID, "My Live", null, null, 60);
         live.cancel();
 
         assertThatThrownBy(() -> live.changeCategory(UUID.randomUUID()))
@@ -344,7 +332,7 @@ class LiveTest {
     @Test
     void changeCategory_withNull_throwsNullPointerException() {
         var categoryId = UUID.randomUUID();
-        var live       = Live.create(SELLER_ID, STORE_ID, LiveContext.STORE, "My Live", null, null, 60, categoryId);
+        var live       = Live.create(SELLER_ID, "My Live", null, null, 60, categoryId);
 
         assertThatThrownBy(() -> live.changeCategory(null))
                 .isInstanceOf(NullPointerException.class);
@@ -355,7 +343,7 @@ class LiveTest {
 
     @Test
     void hasIvsChatRoom_withRoomArn_isTrue() {
-        var live = Live.create(SELLER_ID, STORE_ID, LiveContext.STORE, "My Live", null, null, 60);
+        var live = Live.create(SELLER_ID, "My Live", null, null, 60);
         live.setChatRoom("arn:aws:ivschat:us-east-1:123456789012:room/abc");
 
         assertThat(live.hasIvsChatRoom()).isTrue();
@@ -363,14 +351,14 @@ class LiveTest {
 
     @Test
     void hasIvsChatRoom_withoutRoomArn_isFalse() {
-        var live = Live.create(SELLER_ID, STORE_ID, LiveContext.STORE, "My Live", null, null, 60);
+        var live = Live.create(SELLER_ID, "My Live", null, null, 60);
 
         assertThat(live.hasIvsChatRoom()).isFalse();
     }
 
     @Test
     void hasIvsChatRoom_staysTrueAfterLiveEnds() {
-        var live = Live.create(SELLER_ID, STORE_ID, LiveContext.STORE, "My Live", null, null, 60);
+        var live = Live.create(SELLER_ID, "My Live", null, null, 60);
         live.setChatRoom("arn:aws:ivschat:us-east-1:123456789012:room/abc");
         live.start();
         live.end();

@@ -35,7 +35,7 @@ class ExpirePinServiceTest {
     private static final UUID STORE_ID  = UUID.randomUUID();
 
     private Live buildLive() {
-        var live = Live.create(SELLER_ID, STORE_ID, LiveContext.STORE, "Test Live", null, null, 60);
+        var live = Live.create(SELLER_ID, "Test Live", null, null, 60);
         live.start();
         return live;
     }

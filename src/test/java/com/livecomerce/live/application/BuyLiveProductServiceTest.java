@@ -1,6 +1,7 @@
 package com.livecomerce.live.application;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.livecomerce.live.LoadSellerStoreIdPort;
 import com.livecomerce.live.ProfileCompletionPort;
 import com.livecomerce.live.application.port.in.BuyLiveProductUseCase.BuyLiveProductCommand;
 import com.livecomerce.live.application.port.out.AgoraRtmMessagePort;
@@ -45,6 +46,7 @@ class BuyLiveProductServiceTest {
     @Mock LiveRoomEventPort          liveRoomEventPort;
     @Spy  ObjectMapper               objectMapper = new ObjectMapper();
     @Mock ProfileCompletionPort      profileCompletionPort;
+    @Mock LoadSellerStoreIdPort      loadSellerStoreIdPort;
     @InjectMocks BuyLiveProductService sut;
 
     private static final UUID SELLER_ID  = UUID.randomUUID();
@@ -59,7 +61,7 @@ class BuyLiveProductServiceTest {
     }
 
     private Live startedLive() {
-        var live = Live.create(SELLER_ID, STORE_ID, LiveContext.STORE, "Live", null, null, 60);
+        var live = Live.create(SELLER_ID, "Live", null, null, 60);
         live.start();
         return live;
     }
@@ -91,6 +93,40 @@ class BuyLiveProductServiceTest {
     }
 
     @Test
+    void buyLiveProduct_sellerWithStore_attributesTheOrderToTheSellersStore() {
+        var live = startedLive();
+        var lp = LiveProduct.forCatalogProduct(live, PRODUCT_ID, VARIANT_ID, "Shirt", new BigDecimal("99"), "MXN", 10);
+        when(loadLiveProductPort.loadById(lp.getId())).thenReturn(Optional.of(lp));
+        when(loadLivePort.loadById(live.getId())).thenReturn(Optional.of(live));
+        when(atomicStockPort.atomicIncrementStockSold(lp.getId(), 1)).thenReturn(Optional.of(lp.getId()));
+        when(loadSellerStoreIdPort.findStoreIdBySellerId(SELLER_ID)).thenReturn(Optional.of(STORE_ID));
+        when(livePurchasePort.placeItem(any())).thenReturn(mock(Order.class));
+
+        sut.buyLiveProduct(new BuyLiveProductCommand(live.getId(), lp.getId(), BUYER_ID, 1));
+
+        var captor = ArgumentCaptor.forClass(LivePurchaseCommand.class);
+        verify(livePurchasePort).placeItem(captor.capture());
+        assertThat(captor.getValue().storeId()).isEqualTo(STORE_ID);
+    }
+
+    @Test
+    void buyLiveProduct_sellerWithoutStore_placesTheOrderWithoutStore() {
+        var live = startedLive();
+        var lp = LiveProduct.forCatalogProduct(live, PRODUCT_ID, VARIANT_ID, "Shirt", new BigDecimal("99"), "MXN", 10);
+        when(loadLiveProductPort.loadById(lp.getId())).thenReturn(Optional.of(lp));
+        when(loadLivePort.loadById(live.getId())).thenReturn(Optional.of(live));
+        when(atomicStockPort.atomicIncrementStockSold(lp.getId(), 1)).thenReturn(Optional.of(lp.getId()));
+        when(loadSellerStoreIdPort.findStoreIdBySellerId(SELLER_ID)).thenReturn(Optional.empty());
+        when(livePurchasePort.placeItem(any())).thenReturn(mock(Order.class));
+
+        sut.buyLiveProduct(new BuyLiveProductCommand(live.getId(), lp.getId(), BUYER_ID, 1));
+
+        var captor = ArgumentCaptor.forClass(LivePurchaseCommand.class);
+        verify(livePurchasePort).placeItem(captor.capture());
+        assertThat(captor.getValue().storeId()).isNull();
+    }
+
+    @Test
     void buyLiveProduct_hotProduct_callsPlaceItemWithHotProductType() {
         var live = startedLive();
         var lp = LiveProduct.forHotProduct(live, "Mystery Box", new BigDecimal("50"), "MXN", 5, null);
@@ -111,7 +147,7 @@ class BuyLiveProductServiceTest {
 
     @Test
     void buyLiveProduct_liveNotActive_throws() {
-        var live = Live.create(SELLER_ID, STORE_ID, LiveContext.STORE, "Live", null, null, 60); // SCHEDULED
+        var live = Live.create(SELLER_ID, "Live", null, null, 60); // SCHEDULED
         var lp = LiveProduct.forCatalogProduct(live, PRODUCT_ID, VARIANT_ID, "Shirt", new BigDecimal("99"), "MXN", 10);
 
         when(loadLiveProductPort.loadById(lp.getId())).thenReturn(Optional.of(lp));

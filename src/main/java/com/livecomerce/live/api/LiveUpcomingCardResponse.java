@@ -9,7 +9,6 @@ import java.util.UUID;
 public record LiveUpcomingCardResponse(
         UUID id,
         UUID sellerId,
-        @Nullable UUID storeId,
         String title,
         @Nullable String sellerName,
         @Nullable String thumbnailUrl,
@@ -20,7 +19,6 @@ public record LiveUpcomingCardResponse(
         return new LiveUpcomingCardResponse(
                 card.id(),
                 card.sellerId(),
-                card.storeId(),
                 card.title(),
                 card.sellerName(),
                 card.thumbnailUrl(),

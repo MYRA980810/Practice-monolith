@@ -1,6 +1,7 @@
 package com.livecomerce.live.application;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.livecomerce.live.LoadSellerStoreIdPort;
 import com.livecomerce.live.ProfileCompletionPort;
 import com.livecomerce.live.application.port.in.BuyLiveProductUseCase;
 import com.livecomerce.live.application.port.out.AgoraRtmMessagePort;
@@ -37,6 +38,7 @@ public class BuyLiveProductService implements BuyLiveProductUseCase {
     private final LiveRoomEventPort          liveRoomEventPort;
     private final ObjectMapper               objectMapper;
     private final ProfileCompletionPort      profileCompletionPort;
+    private final LoadSellerStoreIdPort      loadSellerStoreIdPort;
 
     @Override
     public Order buyLiveProduct(BuyLiveProductCommand command) {
@@ -61,10 +63,14 @@ public class BuyLiveProductService implements BuyLiveProductUseCase {
 
         var itemType = lp.isHot() ? OrderItemType.HOT_PRODUCT : OrderItemType.PRODUCT;
 
+        // Lives belong to the seller; the order module still keys on store_id, so live orders are
+        // attributed to the seller's store when one exists (null for store-less sellers).
+        var storeId = loadSellerStoreIdPort.findStoreIdBySellerId(live.getSellerId()).orElse(null);
+
         try {
             var order = livePurchasePort.placeItem(new LivePurchasePort.LivePurchaseCommand(
                     command.buyerId(),
-                    live.getStoreId(),
+                    storeId,
                     live.getId(),
                     lp.getProductId(),
                     lp.getVariantId(),

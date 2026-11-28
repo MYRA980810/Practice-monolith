@@ -5,7 +5,6 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * {@code storeId} is nullable (SELLER_PROFILE-context lives have no store).
  * {@code wasLive} is {@code true} when the live was LIVE or RECONNECTING right
  * before it was cancelled: consumers that projected a "live now" state on
  * {@link LiveStartedEvent} must clear it just like on {@link LiveEndedEvent}.
@@ -16,7 +15,6 @@ import java.util.UUID;
 public record LiveCancelledEvent(
         UUID liveId,
         UUID sellerId,
-        UUID storeId,
         String title,
         List<UUID> subscriberIds,
         boolean wasLive,

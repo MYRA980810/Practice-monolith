@@ -97,7 +97,7 @@ class AnalyticsControllerTest {
 
     private static LiveSummary buildSummary() {
         var summary = LiveSummary.create(
-                LIVE_ID, SELLER_ID, STORE_ID,
+                LIVE_ID, SELLER_ID,
                 OffsetDateTime.now().minusHours(1), OffsetDateTime.now(),
                 3600, 42);
         orderIdHolder = UUID.randomUUID();
@@ -111,7 +111,7 @@ class AnalyticsControllerTest {
     @Test
     void getLiveSummary_owner_returns200WithSummary() throws Exception {
         var summary = buildSummary();
-        when(getLiveSummaryUseCase.getSummary(LIVE_ID, STORE_ID))
+        when(getLiveSummaryUseCase.getSummary(LIVE_ID, SELLER_ID))
                 .thenReturn(new LiveSummaryResult(summary, java.util.Map.of(BUYER_ID, "Jane Doe")));
 
         mvc.perform(get("/api/analytics/lives/{liveId}/summary", LIVE_ID))
@@ -135,11 +135,11 @@ class AnalyticsControllerTest {
         // Historical row: never enriched via finalizeTotals' new params, so
         // currency/unitsSold/totalAllocated stay at their post-create nulls.
         var summary = LiveSummary.create(
-                LIVE_ID, SELLER_ID, STORE_ID,
+                LIVE_ID, SELLER_ID,
                 OffsetDateTime.now().minusHours(1), OffsetDateTime.now(),
                 3600, 42);
         summary.addOrder(UUID.randomUUID(), BUYER_ID, "Product A", new BigDecimal("50.00"));
-        when(getLiveSummaryUseCase.getSummary(LIVE_ID, STORE_ID))
+        when(getLiveSummaryUseCase.getSummary(LIVE_ID, SELLER_ID))
                 .thenReturn(new LiveSummaryResult(summary, java.util.Map.of()));
 
         mvc.perform(get("/api/analytics/lives/{liveId}/summary", LIVE_ID))
@@ -160,7 +160,7 @@ class AnalyticsControllerTest {
     @Test
     void getLiveSummary_nonOwner_returns403() throws Exception {
         when(getLiveSummaryUseCase.getSummary(any(), any()))
-                .thenThrow(new LiveSummaryNotOwnedException(LIVE_ID, STORE_ID));
+                .thenThrow(new LiveSummaryNotOwnedException(LIVE_ID, SELLER_ID));
 
         mvc.perform(get("/api/analytics/lives/{liveId}/summary", LIVE_ID))
                 .andExpect(status().isForbidden());

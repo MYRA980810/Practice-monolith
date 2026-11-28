@@ -22,10 +22,6 @@ public interface LoadLivePort {
 
     List<Live> loadBySellerIdAndStatus(UUID sellerId, LiveStatus status);
 
-    List<Live> loadByStoreId(UUID storeId);
-
-    List<Live> loadByStoreIdAndStatus(UUID storeId, LiveStatus status);
-
     Page<Live> loadByStatus(LiveStatus status, Pageable pageable);
 
     Page<Live> loadUpcoming(Pageable pageable);

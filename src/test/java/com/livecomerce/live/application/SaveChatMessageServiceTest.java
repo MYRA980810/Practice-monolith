@@ -30,7 +30,7 @@ class SaveChatMessageServiceTest {
 
     @Test
     void saveChatMessage_newMessage_persists() {
-        var live = Live.create(SELLER_ID, STORE_ID, LiveContext.STORE, "Test Live", null, null, 60);
+        var live = Live.create(SELLER_ID, "Test Live", null, null, 60);
         var cmd  = new SaveChatMessageCommand(
                 live.getId(), "msg-001", UUID.randomUUID(), "alice", "Hello!", OffsetDateTime.now());
 
@@ -57,7 +57,7 @@ class SaveChatMessageServiceTest {
 
     @Test
     void saveChatMessage_concurrentDuplicateLosesInsertRace_noException() {
-        var live = Live.create(SELLER_ID, STORE_ID, LiveContext.STORE, "Test Live", null, null, 60);
+        var live = Live.create(SELLER_ID, "Test Live", null, null, 60);
         var cmd  = new SaveChatMessageCommand(
                 live.getId(), "msg-race", UUID.randomUUID(), "alice", "Hello!", OffsetDateTime.now());
 

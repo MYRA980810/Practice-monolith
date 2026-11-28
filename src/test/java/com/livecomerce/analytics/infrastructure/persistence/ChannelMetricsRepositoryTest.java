@@ -32,7 +32,7 @@ class ChannelMetricsRepositoryTest {
     void findLivePerformances_multiProductMultiItemLive_doesNotMultiplyRevenueUnitsOrAllocation() {
         var store = seedStore();
         var storeId = store.storeId();
-        var liveId = seedLive(storeId, store.sellerId(), "Multi live", 10, OffsetDateTime.now().minusHours(1));
+        var liveId = seedLive(store.sellerId(), "Multi live", 10, OffsetDateTime.now().minusHours(1));
 
         // 3 live_products rows: stock_allocated 10, 20, 5 => total 35
         seedLiveProduct(liveId, storeId, 10);
@@ -59,7 +59,7 @@ class ChannelMetricsRepositoryTest {
     void findLivePerformances_singleProductSingleItemLive_matchesPreFixValues() {
         var store = seedStore();
         var storeId = store.storeId();
-        var liveId = seedLive(storeId, store.sellerId(), "Single live", 7, OffsetDateTime.now().minusHours(2));
+        var liveId = seedLive(store.sellerId(), "Single live", 7, OffsetDateTime.now().minusHours(2));
 
         seedLiveProduct(liveId, storeId, 10);
         seedPaidOrderWithItem(storeId, liveId, new BigDecimal("40.00"), 4);
@@ -73,6 +73,20 @@ class ChannelMetricsRepositoryTest {
         assertThat(toBigDecimal(row[2])).isEqualByComparingTo("40.00");
         assertThat(((Number) row[3]).longValue()).isEqualTo(4L);
         assertThat(((Number) row[5]).longValue()).isEqualTo(10L);
+    }
+
+    @Test
+    void findLivePerformances_returnsOnlyLivesOfTheStoreOwner() {
+        var store = seedStore();
+        var otherStore = seedStore();
+        var ownLive = seedLive(store.sellerId(), "Own live", 3, OffsetDateTime.now().minusHours(1));
+        seedLive(otherStore.sellerId(), "Other seller live", 3, OffsetDateTime.now().minusHours(1));
+
+        var from = OffsetDateTime.now().minusDays(1);
+        var to = OffsetDateTime.now().plusDays(1);
+        var rows = repository.findLivePerformances(store.storeId(), from, to);
+
+        assertThat(rows).extracting(row -> (UUID) row[0]).containsExactly(ownLive);
     }
 
     private static BigDecimal toBigDecimal(Object value) {
@@ -99,12 +113,12 @@ class ChannelMetricsRepositoryTest {
         return new SeededStore(storeId, userId);
     }
 
-    private UUID seedLive(UUID storeId, UUID sellerId, String title, int peakViewers, OffsetDateTime endedAt) {
+    private UUID seedLive(UUID sellerId, String title, int peakViewers, OffsetDateTime endedAt) {
         var liveId = UUID.randomUUID();
         jdbc.update("""
-                INSERT INTO lives (id, store_id, seller_id, title, status, peak_viewers, ended_at)
-                VALUES (?, ?, ?, ?, 'ENDED', ?, ?)
-                """, liveId, storeId, sellerId, title, peakViewers, endedAt);
+                INSERT INTO lives (id, seller_id, title, status, peak_viewers, ended_at)
+                VALUES (?, ?, ?, 'ENDED', ?, ?)
+                """, liveId, sellerId, title, peakViewers, endedAt);
         return liveId;
     }
 

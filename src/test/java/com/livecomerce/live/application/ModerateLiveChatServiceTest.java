@@ -18,7 +18,6 @@ import com.livecomerce.live.domain.ChatRoomNotFoundException;
 import com.livecomerce.live.domain.ChatSelfBanException;
 import com.livecomerce.live.domain.Live;
 import com.livecomerce.live.domain.LiveChatRoomNotAvailableException;
-import com.livecomerce.live.domain.LiveContext;
 import com.livecomerce.live.domain.LiveNotFoundException;
 import com.livecomerce.live.domain.LiveNotLiveException;
 import com.livecomerce.live.domain.LiveNotOwnedBySellerException;
@@ -75,14 +74,14 @@ class ModerateLiveChatServiceTest {
     private static final String MSG_ID    = "ivs-msg-1";
 
     private static Live activeLiveWithRoom() {
-        var live = Live.create(SELLER_ID, UUID.randomUUID(), LiveContext.STORE, "Live", "thumb", null, 60);
+        var live = Live.create(SELLER_ID, "Live", "thumb", null, 60);
         live.start();
         live.setChatRoom(ROOM_ARN);
         return live;
     }
 
     private static Live activeLiveWithoutRoom() {
-        var live = Live.create(SELLER_ID, UUID.randomUUID(), LiveContext.STORE, "Live", "thumb", null, 60);
+        var live = Live.create(SELLER_ID, "Live", "thumb", null, 60);
         live.start();
         return live;
     }
@@ -238,7 +237,7 @@ class ModerateLiveChatServiceTest {
 
     @Test
     void unban_scheduledLive_deletesBan_withoutRoomEvent() {
-        var live = given(Live.create(SELLER_ID, UUID.randomUUID(), LiveContext.STORE, "Live", "thumb", null, 60));
+        var live = given(Live.create(SELLER_ID, "Live", "thumb", null, 60));
         when(chatBanPort.delete(SELLER_ID, BUYER_ID)).thenReturn(true);
 
         sut.unbanUser(new UnbanChatUserCommand(live.getId(), SELLER_ID, BUYER_ID));
@@ -398,7 +397,7 @@ class ModerateLiveChatServiceTest {
 
     @Test
     void listBans_scheduledLiveWithoutRoom_isAllowed() {
-        var live = given(Live.create(SELLER_ID, UUID.randomUUID(), LiveContext.STORE, "Live", "thumb", null, 60));
+        var live = given(Live.create(SELLER_ID, "Live", "thumb", null, 60));
         when(chatBanPort.findBySeller(SELLER_ID, ModerateLiveChatService.MAX_LISTED_BANS)).thenReturn(List.of());
 
         assertThat(sut.listBans(new ListChatBansQuery(live.getId(), SELLER_ID))).isEmpty();

@@ -8,7 +8,6 @@ import com.livecomerce.live.application.port.out.IvsChatTokenPort.ChatToken;
 import com.livecomerce.live.application.port.out.LoadLivePort;
 import com.livecomerce.live.domain.Live;
 import com.livecomerce.live.domain.LiveChatRoomNotAvailableException;
-import com.livecomerce.live.domain.LiveContext;
 import com.livecomerce.live.domain.LiveNotFoundException;
 import com.livecomerce.live.domain.LiveNotLiveException;
 import org.junit.jupiter.api.BeforeEach;
@@ -59,7 +58,7 @@ class GetIvsChatTokenServiceTest {
     }
 
     private static Live liveLiveWithRoom() {
-        var live = Live.create(SELLER_ID, UUID.randomUUID(), LiveContext.STORE, "Live", "thumb", null, 60);
+        var live = Live.create(SELLER_ID, "Live", "thumb", null, 60);
         live.start();
         live.setChatRoom(ROOM_ARN);
         return live;
@@ -137,7 +136,7 @@ class GetIvsChatTokenServiceTest {
 
     @Test
     void scheduledLive_throwsNotLive() {
-        var live = Live.create(SELLER_ID, UUID.randomUUID(), LiveContext.STORE, "Live", "thumb", null, 60);
+        var live = Live.create(SELLER_ID, "Live", "thumb", null, 60);
         givenLive(live);
 
         assertThatThrownBy(() -> sut.getIvsChatToken(new GetIvsChatTokenCommand(live.getId(), BUYER_ID)))
@@ -158,7 +157,7 @@ class GetIvsChatTokenServiceTest {
 
     @Test
     void liveWithoutChatRoom_throwsChatRoomNotAvailable() {
-        var live = Live.create(SELLER_ID, UUID.randomUUID(), LiveContext.STORE, "Live", "thumb", null, 60);
+        var live = Live.create(SELLER_ID, "Live", "thumb", null, 60);
         live.start();
         givenLive(live);
 

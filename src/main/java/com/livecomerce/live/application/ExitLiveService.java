@@ -10,7 +10,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -50,9 +49,7 @@ public class ExitLiveService implements ExitLiveUseCase {
                         order.getId(), command.buyerId(), shippingAddressString));
 
         var sellerDispatchAddress = loadLivePort.loadById(command.liveId())
-                .flatMap(live -> live.getStoreId() != null
-                        ? sellerShippingAddressPort.loadByStoreId(live.getStoreId())
-                        : Optional.empty())
+                .flatMap(live -> sellerShippingAddressPort.loadBySellerId(live.getSellerId()))
                 .orElse(null);
 
         return new ExitLiveResponse(finalized, buyerSavedAddress, sellerDispatchAddress);

@@ -174,8 +174,7 @@ class AnalyticsController {
             @AuthenticationPrincipal UserPrincipal principal,
             @PathVariable UUID liveId) {
 
-        var storeId = getStoreUseCase.getStoreIdByUserId(principal.getUserId());
-        var result = getLiveSummaryUseCase.getSummary(liveId, storeId);
+        var result = getLiveSummaryUseCase.getSummary(liveId, principal.getUserId());
         return ResponseEntity.ok(LiveSummaryResponse.from(result.summary(), result.buyerNames()));
     }
 }

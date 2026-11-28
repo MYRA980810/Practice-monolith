@@ -30,7 +30,7 @@ class AddHotProductToLiveServiceTest {
 
     @Test
     void addHotProduct_toScheduledLive_succeeds() {
-        var live = Live.create(SELLER_ID, STORE_ID, LiveContext.STORE, "Live", null, null, 60);
+        var live = Live.create(SELLER_ID, "Live", null, null, 60);
         when(loadLivePort.loadById(live.getId())).thenReturn(Optional.of(live));
         when(saveLiveProductPort.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
@@ -46,7 +46,7 @@ class AddHotProductToLiveServiceTest {
 
     @Test
     void addHotProduct_toReconnectingLive_succeeds() {
-        var live = Live.create(SELLER_ID, STORE_ID, LiveContext.STORE, "Live", null, null, 60);
+        var live = Live.create(SELLER_ID, "Live", null, null, 60);
         live.start();
         live.beginReconnecting();
         when(loadLivePort.loadById(live.getId())).thenReturn(Optional.of(live));
@@ -61,7 +61,7 @@ class AddHotProductToLiveServiceTest {
 
     @Test
     void addHotProduct_zeroStock_throwsAtDomainLevel() {
-        var live = Live.create(SELLER_ID, STORE_ID, LiveContext.STORE, "Live", null, null, 60);
+        var live = Live.create(SELLER_ID, "Live", null, null, 60);
         when(loadLivePort.loadById(live.getId())).thenReturn(Optional.of(live));
 
         var cmd = new AddHotProductCommand(

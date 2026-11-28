@@ -37,7 +37,6 @@ class LiveEndedSummaryListenerTest {
 
     private static final UUID LIVE_ID   = UUID.randomUUID();
     private static final UUID SELLER_ID = UUID.randomUUID();
-    private static final UUID STORE_ID  = UUID.randomUUID();
 
     @Test
     void on_mixedPaidAndCancelledOrders_savesSnapshotWithAggregatedTotalsAndOrderDetails() {
@@ -45,7 +44,7 @@ class LiveEndedSummaryListenerTest {
         var endedAt   = OffsetDateTime.parse("2026-07-01T11:00:00Z");
         when(saveLiveSummaryPort.existsByLiveId(LIVE_ID)).thenReturn(false);
         when(loadLiveSummarySourcePort.findLiveSnapshot(LIVE_ID))
-                .thenReturn(Optional.of(new LiveSnapshot(STORE_ID, startedAt, endedAt, 42)));
+                .thenReturn(Optional.of(new LiveSnapshot(startedAt, endedAt, 42)));
         var order1Id = UUID.randomUUID();
         var buyer1Id = UUID.randomUUID();
         var order2Id = UUID.randomUUID();
@@ -57,7 +56,7 @@ class LiveEndedSummaryListenerTest {
         when(loadLiveSummarySourcePort.findTotalAllocated(LIVE_ID)).thenReturn(50L);
         when(saveLiveSummaryPort.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        sut.on(new LiveEndedEvent(LIVE_ID, SELLER_ID, STORE_ID, Instant.now()));
+        sut.on(new LiveEndedEvent(LIVE_ID, SELLER_ID, Instant.now()));
 
         var captor = ArgumentCaptor.forClass(LiveSummary.class);
         verify(saveLiveSummaryPort).save(captor.capture());
@@ -65,7 +64,6 @@ class LiveEndedSummaryListenerTest {
 
         assertThat(summary.getLiveId()).isEqualTo(LIVE_ID);
         assertThat(summary.getSellerId()).isEqualTo(SELLER_ID);
-        assertThat(summary.getStoreId()).isEqualTo(STORE_ID);
         assertThat(summary.getDurationSeconds()).isEqualTo(3600L);
         assertThat(summary.getPeakViewers()).isEqualTo(42);
         assertThat(summary.getTotalSales()).isEqualByComparingTo(new BigDecimal("150.00"));
@@ -84,12 +82,12 @@ class LiveEndedSummaryListenerTest {
         var endedAt   = OffsetDateTime.parse("2026-07-01T10:30:00Z");
         when(saveLiveSummaryPort.existsByLiveId(LIVE_ID)).thenReturn(false);
         when(loadLiveSummarySourcePort.findLiveSnapshot(LIVE_ID))
-                .thenReturn(Optional.of(new LiveSnapshot(STORE_ID, startedAt, endedAt, 5)));
+                .thenReturn(Optional.of(new LiveSnapshot(startedAt, endedAt, 5)));
         when(loadLiveSummarySourcePort.findQualifyingOrders(LIVE_ID)).thenReturn(List.of());
         when(loadLiveSummarySourcePort.findTotalAllocated(LIVE_ID)).thenReturn(0L);
         when(saveLiveSummaryPort.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        sut.on(new LiveEndedEvent(LIVE_ID, SELLER_ID, STORE_ID, Instant.now()));
+        sut.on(new LiveEndedEvent(LIVE_ID, SELLER_ID, Instant.now()));
 
         var captor = ArgumentCaptor.forClass(LiveSummary.class);
         verify(saveLiveSummaryPort).save(captor.capture());
@@ -110,14 +108,14 @@ class LiveEndedSummaryListenerTest {
         var endedAt   = OffsetDateTime.parse("2026-07-01T11:00:00Z");
         when(saveLiveSummaryPort.existsByLiveId(LIVE_ID)).thenReturn(false);
         when(loadLiveSummarySourcePort.findLiveSnapshot(LIVE_ID))
-                .thenReturn(Optional.of(new LiveSnapshot(STORE_ID, startedAt, endedAt, 42)));
+                .thenReturn(Optional.of(new LiveSnapshot(startedAt, endedAt, 42)));
         when(loadLiveSummarySourcePort.findQualifyingOrders(LIVE_ID)).thenReturn(List.of(
                 new QualifyingOrder(UUID.randomUUID(), UUID.randomUUID(), "T-Shirt", new BigDecimal("10.00"), 1)
         ));
         when(loadLiveSummarySourcePort.findTotalAllocated(LIVE_ID)).thenReturn(5L);
         when(saveLiveSummaryPort.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        sut.on(new LiveEndedEvent(LIVE_ID, SELLER_ID, STORE_ID, Instant.now()));
+        sut.on(new LiveEndedEvent(LIVE_ID, SELLER_ID, Instant.now()));
 
         var captor = ArgumentCaptor.forClass(LiveSummary.class);
         verify(saveLiveSummaryPort).save(captor.capture());
@@ -128,7 +126,7 @@ class LiveEndedSummaryListenerTest {
     void on_redeliveredEvent_skipsProcessingWithoutThrowingOrDuplicating() {
         when(saveLiveSummaryPort.existsByLiveId(LIVE_ID)).thenReturn(true);
 
-        sut.on(new LiveEndedEvent(LIVE_ID, SELLER_ID, STORE_ID, Instant.now()));
+        sut.on(new LiveEndedEvent(LIVE_ID, SELLER_ID, Instant.now()));
 
         verify(saveLiveSummaryPort, times(1)).existsByLiveId(LIVE_ID);
         verify(loadLiveSummarySourcePort, never()).findLiveSnapshot(any());

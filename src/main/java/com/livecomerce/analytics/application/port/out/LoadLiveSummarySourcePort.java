@@ -31,7 +31,7 @@ public interface LoadLiveSummarySourcePort {
      */
     Map<UUID, String> findBuyerNames(Collection<UUID> buyerIds);
 
-    record LiveSnapshot(UUID storeId, OffsetDateTime startedAt, OffsetDateTime endedAt, int peakViewers) {}
+    record LiveSnapshot(OffsetDateTime startedAt, OffsetDateTime endedAt, int peakViewers) {}
 
     record QualifyingOrder(UUID orderId, UUID buyerId, String itemNames, BigDecimal orderTotal, int unitsSold) {}
 }

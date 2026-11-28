@@ -49,8 +49,7 @@ class GetChatHistoryServiceTest {
 
     @Test
     void getChatHistory_returnedMessagesCarryTheProviderMessageId() {
-        var live = com.livecomerce.live.domain.Live.create(UUID.randomUUID(), UUID.randomUUID(),
-                com.livecomerce.live.domain.LiveContext.STORE, "Live", null, null, 60);
+        var live = com.livecomerce.live.domain.Live.create(UUID.randomUUID(), "Live", null, null, 60);
         var msg  = LiveChatMessage.create(live, "ivs-msg-001", UUID.randomUUID(), "alice", "hi", OffsetDateTime.now());
         when(loadChatMessagePort.findByLiveIdLatest(LIVE_ID, 50)).thenReturn(List.of(msg));
 

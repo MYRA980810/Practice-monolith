@@ -1,7 +1,7 @@
 package com.livecomerce.live.api;
 
 import com.livecomerce.live.LoadSellerNamesPort;
-import com.livecomerce.live.LoadStoreNamesPort;
+import com.livecomerce.live.LoadStoreOwnerPort;
 import com.livecomerce.live.application.LiveFeedCardAssembler;
 import com.livecomerce.live.application.port.in.*;
 import com.livecomerce.live.application.port.out.LiveFeedPort;
@@ -9,7 +9,6 @@ import com.livecomerce.live.application.port.out.LoadLivePort;
 import com.livecomerce.live.application.port.out.ViewerCountPort;
 import com.livecomerce.live.domain.CategoryNotAvailableException;
 import com.livecomerce.live.domain.Live;
-import com.livecomerce.live.domain.LiveContext;
 import com.livecomerce.live.domain.LiveStatus;
 import com.livecomerce.shared.UserPrincipal;
 import org.junit.jupiter.api.AfterEach;
@@ -89,7 +88,7 @@ class LiveControllerTest {
     @MockitoBean LoadLivePort loadLivePort;
     @MockitoBean LiveFeedPort liveFeedPort;
     @MockitoBean ViewerCountPort viewerCountPort;
-    @MockitoBean LoadStoreNamesPort loadStoreNamesPort;
+    @MockitoBean LoadStoreOwnerPort loadStoreOwnerPort;
     @MockitoBean LoadSellerNamesPort loadSellerNamesPort;
 
     private static final UUID SELLER_ID = UUID.randomUUID();
@@ -122,19 +121,15 @@ class LiveControllerTest {
     }
 
     private static Live buildLive() {
-        return Live.create(SELLER_ID, null, LiveContext.SELLER_PROFILE, "Test Live", null, null, 60);
-    }
-
-    private static Live buildLiveWithStore(UUID storeId) {
-        return Live.create(SELLER_ID, storeId, LiveContext.SELLER_PROFILE, "Store Live", null, null, 60);
+        return Live.create(SELLER_ID, "Test Live", null, null, 60);
     }
 
     private static Live buildLiveWithCategory(UUID categoryId, java.time.Instant scheduledAt) {
-        return Live.create(SELLER_ID, null, LiveContext.SELLER_PROFILE, "Category Live", null, scheduledAt, 60, categoryId);
+        return Live.create(SELLER_ID, "Category Live", null, scheduledAt, 60, categoryId);
     }
 
     private static Live buildScheduledLive(java.time.Instant scheduledAt) {
-        return Live.create(SELLER_ID, null, LiveContext.SELLER_PROFILE, "Upcoming Live", null, scheduledAt, 60);
+        return Live.create(SELLER_ID, "Upcoming Live", null, scheduledAt, 60);
     }
 
     // --- POST /api/lives ---
@@ -147,7 +142,6 @@ class LiveControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
-                                  "context": "SELLER_PROFILE",
                                   "title": "My Test Live",
                                   "thumbnailUrl": "https://cdn.example.com/thumb.jpg",
                                   "categoryId": "%s"
@@ -155,7 +149,34 @@ class LiveControllerTest {
                                 """.formatted(CATEGORY_ID)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.title").value("Test Live"))
-                .andExpect(jsonPath("$.status").value("SCHEDULED"));
+                .andExpect(jsonPath("$.status").value("SCHEDULED"))
+                .andExpect(jsonPath("$.sellerId").value(SELLER_ID.toString()))
+                .andExpect(jsonPath("$.storeId").doesNotExist())
+                .andExpect(jsonPath("$.liveContext").doesNotExist());
+
+        var captor = org.mockito.ArgumentCaptor.forClass(CreateLiveUseCase.CreateLiveCommand.class);
+        verify(createLiveUseCase).createLive(captor.capture());
+        org.assertj.core.api.Assertions.assertThat(captor.getValue().sellerId()).isEqualTo(SELLER_ID);
+    }
+
+    @Test
+    void createLive_withLegacyContextAndStoreIdFields_ignoresThemAndReturns201() throws Exception {
+        // Old clients may still send context/storeId: every live now belongs to the seller,
+        // so those fields are ignored instead of rejected.
+        when(createLiveUseCase.createLive(any())).thenReturn(buildLive());
+
+        mvc.perform(post("/api/lives")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "context": "STORE",
+                                  "storeId": "%s",
+                                  "title": "My Test Live",
+                                  "thumbnailUrl": "https://cdn.example.com/thumb.jpg",
+                                  "categoryId": "%s"
+                                }
+                                """.formatted(STORE_ID, CATEGORY_ID)))
+                .andExpect(status().isCreated());
     }
 
     @Test
@@ -163,7 +184,7 @@ class LiveControllerTest {
         mvc.perform(post("/api/lives")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"context": "SELLER_PROFILE", "thumbnailUrl": "https://cdn.example.com/thumb.jpg", "categoryId": "%s"}
+                                {"thumbnailUrl": "https://cdn.example.com/thumb.jpg", "categoryId": "%s"}
                                 """.formatted(CATEGORY_ID)))
                 .andExpect(status().isBadRequest());
     }
@@ -173,18 +194,8 @@ class LiveControllerTest {
         mvc.perform(post("/api/lives")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"context": "SELLER_PROFILE", "title": "My Test Live", "categoryId": "%s"}
+                                {"title": "My Test Live", "categoryId": "%s"}
                                 """.formatted(CATEGORY_ID)))
-                .andExpect(status().isBadRequest());
-    }
-
-    @Test
-    void createLive_withInvalidContext_returns400() throws Exception {
-        mvc.perform(post("/api/lives")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {"context": "INVALID_CONTEXT", "title": "Test"}
-                                """))
                 .andExpect(status().isBadRequest());
     }
 
@@ -389,7 +400,6 @@ class LiveControllerTest {
                 .andExpect(jsonPath("$.content[0].title").value("Test Live"));
 
         verify(loadLivePort, never()).loadBySellerId(any());
-        verify(loadLivePort, never()).loadByStoreId(any());
     }
 
     @Test
@@ -479,7 +489,6 @@ class LiveControllerTest {
                 .andExpect(jsonPath("$.content[0].title").value("Upcoming Live"));
 
         verify(loadLivePort, never()).loadBySellerId(any());
-        verify(loadLivePort, never()).loadByStoreId(any());
         verify(viewerCountPort, never()).get(any());
     }
 
@@ -524,24 +533,7 @@ class LiveControllerTest {
     }
 
     @Test
-    void listActiveLives_withStore_resolvesSellerNameFromStoreName() throws Exception {
-        asBuyer();
-        var live = buildLiveWithStore(STORE_ID);
-        live.start();
-        when(loadLivePort.loadByStatus(eq(LiveStatus.LIVE), any()))
-                .thenReturn(new PageImpl<>(List.of(live)));
-        when(viewerCountPort.get(any())).thenReturn(0L);
-        when(loadStoreNamesPort.loadNames(Set.of(STORE_ID))).thenReturn(Map.of(STORE_ID, "Mi Tienda"));
-
-        mvc.perform(get("/api/lives/active"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.content[0].sellerName").value("Mi Tienda"));
-
-        verify(loadSellerNamesPort, never()).loadNames(any());
-    }
-
-    @Test
-    void listActiveLives_withoutStore_resolvesSellerNameFromUserDisplayName() throws Exception {
+    void listActiveLives_resolvesSellerNameFromUserDisplayName() throws Exception {
         asBuyer();
         var live = buildLive();
         live.start();
@@ -554,45 +546,31 @@ class LiveControllerTest {
         mvc.perform(get("/api/lives/active"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content[0].sellerName").value("Jane Doe"));
-
-        verify(loadStoreNamesPort, never()).loadNames(any());
     }
 
     @Test
-    void listActiveLives_withMultipleCardsFromSameStore_batchesStoreLookupOnce() throws Exception {
+    void listActiveLives_withMultipleCardsFromSameSeller_batchesSellerLookupOnce() throws Exception {
         asBuyer();
-        var live1 = buildLiveWithStore(STORE_ID);
-        var live2 = buildLiveWithStore(STORE_ID);
+        var live1 = buildLive();
+        var live2 = buildLive();
         live1.start();
         live2.start();
         when(loadLivePort.loadByStatus(eq(LiveStatus.LIVE), any()))
                 .thenReturn(new PageImpl<>(List.of(live1, live2)));
         when(viewerCountPort.get(any())).thenReturn(0L);
-        when(loadStoreNamesPort.loadNames(Set.of(STORE_ID))).thenReturn(Map.of(STORE_ID, "Mi Tienda"));
+        when(loadSellerNamesPort.loadNames(Set.of(SELLER_ID))).thenReturn(Map.of(SELLER_ID, "Jane Doe"));
 
         mvc.perform(get("/api/lives/active"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.content[0].sellerName").value("Mi Tienda"))
-                .andExpect(jsonPath("$.content[1].sellerName").value("Mi Tienda"));
+                .andExpect(jsonPath("$.content[0].sellerName").value("Jane Doe"))
+                .andExpect(jsonPath("$.content[0].storeId").doesNotExist())
+                .andExpect(jsonPath("$.content[1].sellerName").value("Jane Doe"));
 
-        verify(loadStoreNamesPort, times(1)).loadNames(any());
+        verify(loadSellerNamesPort, times(1)).loadNames(any());
     }
 
     @Test
-    void listUpcomingLives_withStore_resolvesSellerNameFromStoreName() throws Exception {
-        asBuyer();
-        var live = Live.create(SELLER_ID, STORE_ID, LiveContext.STORE, "Store Upcoming Live",
-                null, java.time.Instant.now().plusSeconds(3600), 60);
-        when(loadLivePort.loadUpcoming(any())).thenReturn(new PageImpl<>(List.of(live)));
-        when(loadStoreNamesPort.loadNames(Set.of(STORE_ID))).thenReturn(Map.of(STORE_ID, "Mi Tienda"));
-
-        mvc.perform(get("/api/lives/upcoming"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.content[0].sellerName").value("Mi Tienda"));
-    }
-
-    @Test
-    void listUpcomingLives_withoutStore_resolvesSellerNameFromUserDisplayName() throws Exception {
+    void listUpcomingLives_resolvesSellerNameFromUserDisplayName() throws Exception {
         asBuyer();
         var live = buildScheduledLive(java.time.Instant.now().plusSeconds(3600));
         when(loadLivePort.loadUpcoming(any())).thenReturn(new PageImpl<>(List.of(live)));
@@ -615,7 +593,6 @@ class LiveControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
-                                  "context": "SELLER_PROFILE",
                                   "title": "My Test Live",
                                   "thumbnailUrl": "https://cdn.example.com/thumb.jpg",
                                   "categoryId": "%s"
@@ -632,7 +609,7 @@ class LiveControllerTest {
         mvc.perform(post("/api/lives")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"context": "SELLER_PROFILE", "title": "T", "thumbnailUrl": "https://cdn.example.com/t.jpg"}
+                                {"title": "T", "thumbnailUrl": "https://cdn.example.com/t.jpg"}
                                 """))
                 .andExpect(status().isBadRequest());
 
@@ -647,7 +624,6 @@ class LiveControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
-                                  "context": "SELLER_PROFILE",
                                   "title": "My Test Live",
                                   "thumbnailUrl": "https://cdn.example.com/thumb.jpg",
                                   "categoryId": "%s"
@@ -884,63 +860,52 @@ class LiveControllerTest {
     }
 
     // --- GET /api/stores/{storeId}/lives ---
+    // A store is the seller's optional catalog channel: its lives are the owner's lives.
 
     @Test
-    void listByStore_withScheduledStatus_returns200WithList() throws Exception {
-        when(loadLivePort.loadByStoreIdAndStatus(eq(STORE_ID), eq(LiveStatus.SCHEDULED)))
-                .thenReturn(List.of(buildLiveWithStore(STORE_ID)));
+    void listByStore_withScheduledStatus_returnsTheOwnersLivesInThatStatus() throws Exception {
+        when(loadStoreOwnerPort.loadOwnerId(STORE_ID)).thenReturn(java.util.Optional.of(SELLER_ID));
+        when(loadLivePort.loadBySellerIdAndStatus(eq(SELLER_ID), eq(LiveStatus.SCHEDULED)))
+                .thenReturn(List.of(buildLive()));
 
         mvc.perform(get("/api/stores/{storeId}/lives", STORE_ID)
                         .param("status", "SCHEDULED"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$").isArray())
-                .andExpect(jsonPath("$[0].status").value("SCHEDULED"));
-    }
-
-    @Test
-    void listByStore_withLiveStatus_returns200() throws Exception {
-        mvc.perform(get("/api/stores/{storeId}/lives", STORE_ID)
-                        .param("status", "LIVE"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$").isArray());
+                .andExpect(jsonPath("$[0].status").value("SCHEDULED"))
+                .andExpect(jsonPath("$[0].sellerId").value(SELLER_ID.toString()));
     }
 
     @Test
     void listByStore_unknownStore_returns200EmptyList() throws Exception {
         UUID unknownId = UUID.randomUUID();
-        when(loadLivePort.loadByStoreId(eq(unknownId))).thenReturn(List.of());
+        when(loadStoreOwnerPort.loadOwnerId(unknownId)).thenReturn(java.util.Optional.empty());
 
         mvc.perform(get("/api/stores/{storeId}/lives", unknownId))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$").isArray())
                 .andExpect(jsonPath("$").isEmpty());
+
+        verify(loadLivePort, never()).loadBySellerId(any());
+        verify(loadLivePort, never()).loadBySellerIdAndStatus(any(), any());
     }
 
     @Test
-    void listByStore_withoutStatusFilter_returns200WithAllLives() throws Exception {
-        when(loadLivePort.loadByStoreId(eq(STORE_ID)))
-                .thenReturn(List.of(buildLiveWithStore(STORE_ID)));
+    void listByStore_withoutStatusFilter_returnsAllOfTheOwnersLives() throws Exception {
+        when(loadStoreOwnerPort.loadOwnerId(STORE_ID)).thenReturn(java.util.Optional.of(SELLER_ID));
+        when(loadLivePort.loadBySellerId(eq(SELLER_ID))).thenReturn(List.of(buildLive()));
 
         mvc.perform(get("/api/stores/{storeId}/lives", STORE_ID))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$").isArray())
-                .andExpect(jsonPath("$[0].storeId").value(STORE_ID.toString()));
+                .andExpect(jsonPath("$[0].sellerId").value(SELLER_ID.toString()))
+                .andExpect(jsonPath("$[0].storeId").doesNotExist());
     }
 
     @Test
-    void listByStore_withEndedStatus_returnsOnlyEndedLives() throws Exception {
-        when(loadLivePort.loadByStoreIdAndStatus(eq(STORE_ID), eq(LiveStatus.ENDED)))
-                .thenReturn(List.of());
-
-        mvc.perform(get("/api/stores/{storeId}/lives", STORE_ID)
-                        .param("status", "ENDED"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$").isArray());
-    }
-
-    @Test
-    void listByStore_storeWithNoLives_returns200EmptyArray() throws Exception {
-        when(loadLivePort.loadByStoreId(eq(STORE_ID))).thenReturn(List.of());
+    void listByStore_ownerWithNoLives_returns200EmptyArray() throws Exception {
+        when(loadStoreOwnerPort.loadOwnerId(STORE_ID)).thenReturn(java.util.Optional.of(SELLER_ID));
+        when(loadLivePort.loadBySellerId(eq(SELLER_ID))).thenReturn(List.of());
 
         mvc.perform(get("/api/stores/{storeId}/lives", STORE_ID))
                 .andExpect(status().isOk())

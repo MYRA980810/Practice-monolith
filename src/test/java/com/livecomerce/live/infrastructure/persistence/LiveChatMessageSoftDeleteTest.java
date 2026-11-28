@@ -3,7 +3,6 @@ package com.livecomerce.live.infrastructure.persistence;
 import com.livecomerce.live.api.ChatMessageResponse;
 import com.livecomerce.live.domain.Live;
 import com.livecomerce.live.domain.LiveChatMessage;
-import com.livecomerce.live.domain.LiveContext;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -100,7 +99,7 @@ class LiveChatMessageSoftDeleteTest {
     }
 
     private Live persistLive(UUID sellerId) {
-        var l = Live.create(sellerId, null, LiveContext.SELLER_PROFILE, "Live", null, null, 60);
+        var l = Live.create(sellerId, "Live", null, null, 60);
         l.start();
         entityManager.persist(l);
         return l;

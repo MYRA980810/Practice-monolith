@@ -33,13 +33,13 @@ class LiveFeedEventListenerTest {
 
     @Test
     void onStarted_syncsLive() {
-        sut.on(new LiveStartedEvent(LIVE_ID, null, "t", List.of(), NOW));
+        sut.on(new LiveStartedEvent(LIVE_ID, SELLER_ID, "t", List.of(), NOW));
         verify(liveFeedSyncService).sync(LIVE_ID);
     }
 
     @Test
     void onEnded_syncsLive() {
-        sut.on(new LiveEndedEvent(LIVE_ID, SELLER_ID, null, NOW));
+        sut.on(new LiveEndedEvent(LIVE_ID, SELLER_ID, NOW));
         verify(liveFeedSyncService).sync(LIVE_ID);
     }
 
@@ -51,7 +51,7 @@ class LiveFeedEventListenerTest {
 
     @Test
     void onRevived_syncsLive() {
-        sut.on(new LiveRevivedEvent(LIVE_ID, SELLER_ID, null, NOW));
+        sut.on(new LiveRevivedEvent(LIVE_ID, SELLER_ID, NOW));
         verify(liveFeedSyncService).sync(LIVE_ID);
     }
 
@@ -63,13 +63,13 @@ class LiveFeedEventListenerTest {
 
     @Test
     void onCancelled_whileLive_syncsLive() {
-        sut.on(new LiveCancelledEvent(LIVE_ID, SELLER_ID, null, "t", List.of(), true, NOW));
+        sut.on(new LiveCancelledEvent(LIVE_ID, SELLER_ID, "t", List.of(), true, NOW));
         verify(liveFeedSyncService).sync(LIVE_ID);
     }
 
     @Test
     void onCancelled_whileScheduled_isIgnored() {
-        sut.on(new LiveCancelledEvent(LIVE_ID, SELLER_ID, null, "t", List.of(), false, NOW));
+        sut.on(new LiveCancelledEvent(LIVE_ID, SELLER_ID, "t", List.of(), false, NOW));
         verifyNoInteractions(liveFeedSyncService);
     }
 
@@ -77,7 +77,7 @@ class LiveFeedEventListenerTest {
     void syncFailure_propagates_soThePublicationStaysIncomplete() {
         doThrow(new IllegalStateException("redis down")).when(liveFeedSyncService).sync(LIVE_ID);
 
-        assertThatThrownBy(() -> sut.on(new LiveEndedEvent(LIVE_ID, SELLER_ID, null, NOW)))
+        assertThatThrownBy(() -> sut.on(new LiveEndedEvent(LIVE_ID, SELLER_ID, NOW)))
                 .isInstanceOf(IllegalStateException.class);
     }
 }

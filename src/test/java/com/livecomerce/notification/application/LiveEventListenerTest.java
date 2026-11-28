@@ -37,14 +37,14 @@ class LiveEventListenerTest {
     @InjectMocks LiveEventListener sut;
 
     private static final UUID LIVE_ID  = UUID.randomUUID();
-    private static final UUID STORE_ID = UUID.randomUUID();
+    private static final UUID SELLER_ID = UUID.randomUUID();
 
     @Test
     @SuppressWarnings("null")
     void onLiveStarted_withSubscribers_savesNotificationsAndSendsPeerMessages() {
         var subscriber1 = UUID.randomUUID();
         var subscriber2 = UUID.randomUUID();
-        var event = new LiveStartedEvent(LIVE_ID, STORE_ID, "Flash Sale", List.of(subscriber1, subscriber2), Instant.now());
+        var event = new LiveStartedEvent(LIVE_ID, SELLER_ID, "Flash Sale", List.of(subscriber1, subscriber2), Instant.now());
         when(saveNotificationPort.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         sut.on(event);
@@ -57,6 +57,10 @@ class LiveEventListenerTest {
         assertThat(notifications).extracting(Notification::getUserId)
                 .containsExactlyInAnyOrder(subscriber1, subscriber2);
 
+        assertThat(notifications.get(0).getPayload())
+                .containsEntry("sellerId", SELLER_ID.toString())
+                .doesNotContainKey("storeId");
+
         verify(sendRtmPeerMessagePort, times(2)).sendPeerMessage(anyString(), anyString());
         verify(sendRtmPeerMessagePort).sendPeerMessage(eq(subscriber1.toString()), anyString());
         verify(sendRtmPeerMessagePort).sendPeerMessage(eq(subscriber2.toString()), anyString());
@@ -64,7 +68,7 @@ class LiveEventListenerTest {
 
     @Test
     void onLiveStarted_withNoSubscribers_doesNothing() {
-        var event = new LiveStartedEvent(LIVE_ID, STORE_ID, "Empty", List.of(), Instant.now());
+        var event = new LiveStartedEvent(LIVE_ID, SELLER_ID, "Empty", List.of(), Instant.now());
 
         sut.on(event);
 
@@ -77,7 +81,7 @@ class LiveEventListenerTest {
     void onLiveCancelled_withSubscribers_savesNotificationsAndSendsPeerMessages() {
         var subscriber1 = UUID.randomUUID();
         var event = new LiveCancelledEvent(
-                LIVE_ID, UUID.randomUUID(), null, "My Show", List.of(subscriber1), false, Instant.now());
+                LIVE_ID, UUID.randomUUID(), "My Show", List.of(subscriber1), false, Instant.now());
         when(saveNotificationPort.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         sut.on(event);
@@ -95,7 +99,7 @@ class LiveEventListenerTest {
     @Test
     void onLiveCancelled_withNoSubscribers_doesNothing() {
         var event = new LiveCancelledEvent(
-                LIVE_ID, UUID.randomUUID(), null, "Empty", List.of(), false, Instant.now());
+                LIVE_ID, UUID.randomUUID(), "Empty", List.of(), false, Instant.now());
 
         sut.on(event);
 

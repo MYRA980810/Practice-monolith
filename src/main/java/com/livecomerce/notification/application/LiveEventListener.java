@@ -33,10 +33,10 @@ public class LiveEventListener {
             return;
         }
         var payload = Map.<String, Object>of(
-                "type",    "live-started",
-                "liveId",  event.liveId().toString(),
-                "title",   event.title(),
-                "storeId", event.storeId() != null ? event.storeId().toString() : ""
+                "type",     "live-started",
+                "liveId",   event.liveId().toString(),
+                "title",    event.title(),
+                "sellerId", event.sellerId().toString()
         );
         for (UUID subscriberId : event.subscriberIds()) {
             notifySubscriber(subscriberId, "live-started", event.liveId(), payload);

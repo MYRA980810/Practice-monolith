@@ -43,7 +43,7 @@ public class CancelLiveService implements CancelLiveUseCase {
 
         var subscriberIds = loadLiveSubscriptionPort.loadSubscriberIdsByLiveId(live.getId());
         eventPublisher.publishEvent(new LiveCancelledEvent(
-                saved.getId(), saved.getSellerId(), saved.getStoreId(), saved.getTitle(),
+                saved.getId(), saved.getSellerId(), saved.getTitle(),
                 subscriberIds, wasLive, saved.getUpdatedAt().toInstant()));
         saveLiveSubscriptionPort.deleteAllByLiveId(live.getId());
 

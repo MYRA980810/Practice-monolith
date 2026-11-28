@@ -34,11 +34,10 @@ class ExitLiveServiceTest {
 
     private static final UUID LIVE_ID   = UUID.randomUUID();
     private static final UUID BUYER_ID  = UUID.randomUUID();
-    private static final UUID STORE_ID  = UUID.randomUUID();
     private static final UUID SELLER_ID = UUID.randomUUID();
 
     private Live buildLive() {
-        return Live.create(SELLER_ID, STORE_ID, com.livecomerce.live.domain.LiveContext.STORE, "Test", null, null, 60);
+        return Live.create(SELLER_ID, "Test", null, null, 60);
     }
 
     @Test
@@ -70,7 +69,7 @@ class ExitLiveServiceTest {
         when(liveOrderFinalizePort.finalize(any())).thenReturn(finalizedOrder);
         when(loadLivePort.loadById(LIVE_ID)).thenReturn(Optional.of(live));
         when(buyerDefaultAddressPort.loadDefaultAddress(BUYER_ID)).thenReturn(Optional.of(buyerAddr));
-        when(sellerShippingAddressPort.loadByStoreId(STORE_ID)).thenReturn(Optional.of(sellerAddr));
+        when(sellerShippingAddressPort.loadBySellerId(SELLER_ID)).thenReturn(Optional.of(sellerAddr));
 
         var cmd    = new ExitLiveCommand(LIVE_ID, BUYER_ID, null, null);
         var result = sut.exitLive(cmd);
@@ -96,7 +95,7 @@ class ExitLiveServiceTest {
                 .thenReturn(Optional.of(mockOrder));
         when(liveOrderFinalizePort.finalize(any())).thenReturn(finalizedOrder);
         when(loadLivePort.loadById(LIVE_ID)).thenReturn(Optional.of(live));
-        when(sellerShippingAddressPort.loadByStoreId(STORE_ID)).thenReturn(Optional.empty());
+        when(sellerShippingAddressPort.loadBySellerId(SELLER_ID)).thenReturn(Optional.empty());
 
         var cmd    = new ExitLiveCommand(LIVE_ID, BUYER_ID, "Av. Corrientes 1234", null);
         var result = sut.exitLive(cmd);

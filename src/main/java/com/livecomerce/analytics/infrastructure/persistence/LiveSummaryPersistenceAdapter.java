@@ -44,7 +44,6 @@ class LiveSummaryPersistenceAdapter implements SaveLiveSummaryPort, LoadLiveSumm
     public Optional<LiveSnapshot> findLiveSnapshot(UUID liveId) {
         return liveSummaryReadRepository.findById(liveId)
                 .map(entity -> new LiveSnapshot(
-                        entity.getStoreId(),
                         entity.getStartedAt(),
                         entity.getEndedAt(),
                         entity.getPeakViewers()));

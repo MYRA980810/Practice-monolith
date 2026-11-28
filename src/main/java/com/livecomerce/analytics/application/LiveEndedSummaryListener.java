@@ -53,7 +53,6 @@ public class LiveEndedSummaryListener {
         var summary = LiveSummary.create(
                 event.liveId(),
                 event.sellerId(),
-                snapshot.storeId(),
                 snapshot.startedAt(),
                 snapshot.endedAt(),
                 durationSeconds,

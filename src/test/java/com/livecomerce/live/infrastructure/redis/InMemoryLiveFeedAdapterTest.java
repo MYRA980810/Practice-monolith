@@ -40,7 +40,7 @@ class InMemoryLiveFeedAdapterTest {
     }
 
     private static LiveFeedCard card(UUID liveId, UUID categoryId) {
-        return new LiveFeedCard(liveId, UUID.randomUUID(), null, "Live " + liveId, "Seller", null,
+        return new LiveFeedCard(liveId, UUID.randomUUID(), "Live " + liveId, "Seller", null,
                 42L, Instant.parse("2026-10-06T10:00:00Z"), categoryId);
     }
 
@@ -117,9 +117,9 @@ class InMemoryLiveFeedAdapterTest {
 
     @Test
     void snapshot_returnsVersionCardsNewestFirstAndCounts() {
-        var older = new LiveFeedCard(UUID.randomUUID(), UUID.randomUUID(), null, "Older", null, null, 0,
+        var older = new LiveFeedCard(UUID.randomUUID(), UUID.randomUUID(), "Older", null, null, 0,
                 Instant.parse("2026-10-06T09:00:00Z"), CATEGORY_A);
-        var newer = new LiveFeedCard(UUID.randomUUID(), UUID.randomUUID(), null, "Newer", null, null, 0,
+        var newer = new LiveFeedCard(UUID.randomUUID(), UUID.randomUUID(), "Newer", null, null, 0,
                 Instant.parse("2026-10-06T11:00:00Z"), CATEGORY_A);
         adapter.upsert(older);
         adapter.upsert(newer);
